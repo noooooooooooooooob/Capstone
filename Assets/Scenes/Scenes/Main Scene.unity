@@ -162,6 +162,7 @@ GameObject:
   - component: {fileID: 110877628}
   - component: {fileID: 110877630}
   - component: {fileID: 110877629}
+  - component: {fileID: 110877631}
   m_Layer: 0
   m_Name: Prototype Runner
   m_TagString: Untagged
@@ -265,6 +266,31 @@ MonoBehaviour:
   m_Script: {fileID: -1199893898, guid: e725a070cec140c4caffb81624c8c787, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkRunner
+--- !u!114 &110877631
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 110877627}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a64a3f9ee71a0d54bb1762f7946ab767, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Capstone.Network.RoomLauncher
+  gameMode: 2
+  roomName: 
+  connectOnStart: 0
+  playerCount: 2
+  connectionCriterias: 1
+  additionalSessionProperties: []
+  runner: {fileID: 0}
+  loadSceneMode: 0
+  userPrefab: {fileID: 0}
+  onWillConnect:
+    m_PersistentCalls:
+      m_Calls: []
+  actualSessionProperties: []
 --- !u!1 &158329997 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -6754674874353905211, guid: 00c9c177e828a57439e290aef2a23b3f, type: 3}
@@ -406,7 +432,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 18a18a192472780488d5fc1d2a3c51db, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Capstone.UI.RoomMatchingUI
-  launcher: {fileID: 1011721599}
+  launcher: {fileID: 0}
   roomCodeInput: {fileID: 2033675647}
   enterButton: {fileID: 1938678147}
   statusText: {fileID: 555129622}
@@ -1201,51 +1227,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 910453959}
   m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
---- !u!1 &1011721597
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1011721598}
-  - component: {fileID: 1011721599}
-  m_Layer: 0
-  m_Name: Room Launcher
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1011721598
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1011721597}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1748585604}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1011721599
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1011721597}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a64a3f9ee71a0d54bb1762f7946ab767, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Capstone.Network.RoomLauncher
-  playerCount: 2
 --- !u!1 &1032589399
 GameObject:
   m_ObjectHideFlags: 0
@@ -2337,7 +2318,6 @@ Transform:
   m_Children:
   - {fileID: 1046874606}
   - {fileID: 110877628}
-  - {fileID: 1011721598}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1827450358
