@@ -19,13 +19,10 @@ namespace Capstone.Network
         public event Action<string> OnConnected;
         public event Action<string> OnFailed;
 
-        public Task<StartGameResult> CreateRoom(string roomCode) => StartShared(roomCode);
-        public Task<StartGameResult> JoinRoom(string roomCode) => StartShared(roomCode);
-
-        async Task<StartGameResult> StartShared(string sessionName)
+        public async Task<StartGameResult> EnterRoom(string roomCode)
         {
             if (IsBusy) return default;
-            if (string.IsNullOrEmpty(sessionName))
+            if (string.IsNullOrEmpty(roomCode))
             {
                 OnFailed?.Invoke("session name is empty");
                 return default;
@@ -42,17 +39,17 @@ namespace Capstone.Network
                     Runner.ProvideInput = true;
                 }
 
-                OnConnecting?.Invoke(sessionName);
+                OnConnecting?.Invoke(roomCode);
 
                 var args = new StartGameArgs
                 {
                     GameMode = GameMode.Shared,
-                    SessionName = sessionName,
+                    SessionName = roomCode,
                     PlayerCount = playerCount,
                 };
 
                 var result = await Runner.StartGame(args);
-                if (result.Ok) OnConnected?.Invoke(sessionName);
+                if (result.Ok) OnConnected?.Invoke(roomCode);
                 else OnFailed?.Invoke(result.ShutdownReason.ToString());
                 return result;
             }

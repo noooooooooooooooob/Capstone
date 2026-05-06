@@ -12,9 +12,9 @@
   <Project Path="Unity.Burst.csproj" />
   <Project Path="Fusion.Unity.Editor.csproj" />
   <Project Path="Unity.Tutorials.Core.Editor.csproj" />
+  <Project Path="PhotonRealtime.csproj" />
   <Project Path="Unity.XR.ARSubsystems.csproj" />
   <Project Path="Unity.XR.Interaction.Toolkit.csproj" />
-  <Project Path="PhotonRealtime.csproj" />
   <Project Path="Unity.VisualStudio.Editor.csproj" />
   <Project Path="Unity.InputSystem.csproj" />
   <Project Path="Unity.XR.ARFoundation.csproj" />
