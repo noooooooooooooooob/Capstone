@@ -21,6 +21,7 @@ namespace Capstone.Network
         [Header("로컬(자기 자신) 시점에서 숨길 비주얼 — 머리·손 메시 등")]
         [SerializeField] GameObject[] hideOnLocal;
 
+        Transform _xrOrigin;   // 상대좌표 계산용 기준 프레임
         Transform _xrHead;
         Transform _xrLeftHand;
         Transform _xrRightHand;
@@ -47,6 +48,7 @@ namespace Capstone.Network
                 return;
             }
 
+            _xrOrigin = origin.transform;
             _xrHead = origin.Camera != null ? origin.Camera.transform : null;
 
             // XRI 기본 리그 명명 규약 우선, 폴백으로 짧은 이름.
@@ -60,15 +62,36 @@ namespace Capstone.Network
             // 권한자만 자기 포즈를 갱신 — 자식 NetworkTransform이 원격 피어로 전파.
             if (!HasStateAuthority) return;
 
-            CopyPose(_xrHead, headAnchor);
-            CopyPose(_xrLeftHand, leftHandAnchor);
-            CopyPose(_xrRightHand, rightHandAnchor);
+            CopyPoseRelativeToOrigin(_xrHead, headAnchor);
+            CopyPoseRelativeToOrigin(_xrLeftHand, leftHandAnchor);
+            CopyPoseRelativeToOrigin(_xrRightHand, rightHandAnchor);
         }
 
-        static void CopyPose(Transform src, Transform dst)
+        /// <summary>
+        /// XR Origin 기준 상대 pose를 프리팹 루트 기준 local pose로 매핑.
+        /// 이렇게 동기화하면 양쪽 피어의 XROrigin 월드 좌표/회전이 달라도
+        /// 각자의 spawn 위치 기준으로 일관되게 재구성됨.
+        /// </summary>
+        void CopyPoseRelativeToOrigin(Transform src, Transform dst)
         {
-            if (src == null || dst == null) return;
-            dst.SetPositionAndRotation(src.position, src.rotation);
+            if (src == null || dst == null || _xrOrigin == null) return;
+
+            // src의 월드 pose를 _xrOrigin의 로컬(상대) 좌표계로 변환.
+            var relPos = _xrOrigin.InverseTransformPoint(src.position);
+            var relRot = Quaternion.Inverse(_xrOrigin.rotation) * src.rotation;
+
+            // dst가 _xrOrigin의 자식이면 local 값을 그대로 적용.
+            // 그렇지 않으면 수신자(로컬)에서 재구성한 월드 포즈를 직접 할당한다.
+            if (dst.parent == _xrOrigin)
+            {
+                dst.localPosition = relPos;
+                dst.localRotation = relRot;
+            }
+            else
+            {
+                dst.position = _xrOrigin.TransformPoint(relPos);
+                dst.rotation = _xrOrigin.rotation * relRot;
+            }
         }
 
         static Transform FindDeep(Transform root, string name)
