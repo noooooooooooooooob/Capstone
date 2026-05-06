@@ -1,5 +1,9 @@
 fileFormatVersion: 2
+<<<<<<< feat/stage-1-batteryControl
 guid: 97d9fdfe8efa5354492bce5cd1a233af
+=======
+guid: 52db8f8fee3d9d64c8c30866eaaffd70
+>>>>>>> main
 folderAsset: yes
 DefaultImporter:
   externalObjects: {}
