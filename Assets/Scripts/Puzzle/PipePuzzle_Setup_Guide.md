@@ -1,5 +1,32 @@
 # Pipe Scene — RadiatorA / RadiatorB 셋업 가이드
 
+## ⚡ 가장 빠른 방법: 메뉴 한 번 클릭
+
+`Editor/PipePuzzleSetupTool.cs` 가 자동 셋업을 합니다.
+
+1. Unity Hub에서 Capstone 프로젝트를 열어 컴파일이 끝나길 기다립니다.
+2. `Pipe Scene.unity` 를 엽니다.
+3. 상단 메뉴 → **Tools / Capstone / Setup Pipe Puzzle (RadiatorA & B)** 클릭.
+4. Console에 "셋업 완료" 로그가 뜨고 Hierarchy에 다음이 자동 추가/수정됩니다:
+   - `VirtualWall`, `MirrorController` (루트)
+   - RadiatorA의 Valve에 `RadiatorValve`(없을 시), ValveHandle에 `ValveRotationGrab` + `XRControllerValveGrabber` + SphereCollider
+   - RadiatorB의 Valve에 `RadiatorValveLink`(invertAxis=true), ValveHandle에 동일한 그랩 셋업
+   - RadiatorA에 시각용 `Pipe_Extra_A`
+   - RadiatorB에 `PipeSocket_B` (XRSocketInteractor + RadiatorPipeSocket), `Pipe_Broke`, `Pipe_New` (XRGrabInteractable + Pipe + Rigidbody + CapsuleCollider)
+   - RadiatorA에 `LeakFog_A` (Translucent), RadiatorB에 `LeakFog_B` (Opaque)
+   - 양 라디에이터에 `NetworkObject` 보장
+   - 기존 `RadiatorFogVisual` 비활성화 (반대 동작이므로)
+5. 인스펙터에서 위치/색/반경 등 미세 조정 후 씬 저장.
+6. Ctrl+Z 로 한 번에 되돌릴 수 있습니다.
+
+> 메뉴를 다시 눌러도 멱등하게 동작 — 이미 있는 컴포넌트는 다시 추가하지 않습니다.
+
+생성된 위치는 임의의 기본값이라 두 라디에이터의 메시 모양에 맞게 약간 옮겨야 자연스럽습니다. `MirrorController` 인스펙터의 우상단 ⋮ → **Apply Mirror Now** 로 RadiatorB를 RadiatorA의 거울상으로 한번 더 정리할 수 있습니다.
+
+---
+
+## 🔧 수동 셋업 (자동 메뉴를 쓰지 않는 경우)
+
 이 문서는 새로 추가된 5개 스크립트를 Pipe Scene 안의 RadiatorA, RadiatorB에 어떻게 붙이고 인스펙터를 어떻게 채우는지 단계별로 설명합니다. 이 가이드대로 따라가면 다음이 동작합니다.
 
 - 가상벽 기준으로 RadiatorA / RadiatorB가 좌우 대칭

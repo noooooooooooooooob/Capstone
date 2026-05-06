@@ -58,29 +58,40 @@ namespace Capstone.Puzzle
         public bool IsNewConnected   => ConnectedKind == SocketState.New;
 
         Pipe _lastPipe;
+        bool _listenersHooked;
 
-        protected void Reset()
+        void Reset()
         {
             if (socket == null) socket = GetComponent<XRSocketInteractor>();
         }
 
-        protected void OnEnable()
+        // NOTE: NetworkBehaviour 와 충돌하지 않도록 OnEnable / OnDisable 대신 Awake / OnDestroy 사용.
+        void Awake()
         {
-            if (socket == null) socket = GetComponent<XRSocketInteractor>();
-            if (socket != null)
-            {
-                socket.selectEntered.AddListener(OnSocketEntered);
-                socket.selectExited.AddListener(OnSocketExited);
-            }
+            HookListeners();
         }
 
-        protected void OnDisable()
+        void OnDestroy()
         {
-            if (socket != null)
-            {
-                socket.selectEntered.RemoveListener(OnSocketEntered);
-                socket.selectExited.RemoveListener(OnSocketExited);
-            }
+            UnhookListeners();
+        }
+
+        void HookListeners()
+        {
+            if (_listenersHooked) return;
+            if (socket == null) socket = GetComponent<XRSocketInteractor>();
+            if (socket == null) return;
+            socket.selectEntered.AddListener(OnSocketEntered);
+            socket.selectExited.AddListener(OnSocketExited);
+            _listenersHooked = true;
+        }
+
+        void UnhookListeners()
+        {
+            if (!_listenersHooked || socket == null) return;
+            socket.selectEntered.RemoveListener(OnSocketEntered);
+            socket.selectExited.RemoveListener(OnSocketExited);
+            _listenersHooked = false;
         }
 
         public override void Spawned()

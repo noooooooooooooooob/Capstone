@@ -56,9 +56,9 @@ namespace Capstone.Puzzle
         [Range(0f, 1f)]
         [SerializeField] float opaqueAlpha = 0.85f;
 
-        [Tooltip("Translucent 모드의 입자 시작 알파")]
+        [Tooltip("Translucent 모드의 입자 시작 알파 (RadiatorA 측). 더 투명하게 하려면 0에 가깝게.")]
         [Range(0f, 1f)]
-        [SerializeField] float translucentAlpha = 0.25f;
+        [SerializeField] float translucentAlpha = 0.08f;
 
         [Tooltip("연기 색")]
         [SerializeField] Color fogColor = new Color(0.85f, 0.88f, 0.92f, 1f);
