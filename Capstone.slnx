@@ -1,6 +1,17 @@
 ﻿<Solution>
   <Project Path="Unity.XR.Interaction.Toolkit.Samples.StarterAssets.csproj" />
   <Project Path="PhotonVoice.API.csproj" />
+<<<<<<< feat/stage-1-batteryControl
+  <Project Path="Fusion.Unity.Editor.csproj" />
+  <Project Path="PhotonRealtime.csproj" />
+  <Project Path="PhotonUnityNetworking.Editor.csproj" />
+  <Project Path="PhotonUnityNetworking.csproj" />
+  <Project Path="Unity.XR.Hands.Samples.VisualizerSample.csproj" />
+  <Project Path="PhotonVoice.PUN.Editor.csproj" />
+  <Project Path="Unity.XR.Interaction.Toolkit.Samples.SpatialKeyboard.csproj" />
+  <Project Path="PhotonVoice.csproj" />
+  <Project Path="Assembly-CSharp.csproj" />
+=======
   <Project Path="Assembly-CSharp-Editor.csproj" />
   <Project Path="Fusion.Unity.Editor.csproj" />
 <<<<<<< test_jin
@@ -24,6 +35,7 @@
   <Project Path="PhotonVoice.PUN.Editor.csproj" />
   <Project Path="Unity.XR.Interaction.Toolkit.Samples.SpatialKeyboard.csproj" />
   <Project Path="PhotonVoice.csproj" />
+>>>>>>> main
   <Project Path="Unity.XR.Interaction.Toolkit.Samples.Hands.csproj" />
   <Project Path="PhotonUnityNetworking.Utilities.csproj" />
   <Project Path="Fusion.Unity.csproj" />
