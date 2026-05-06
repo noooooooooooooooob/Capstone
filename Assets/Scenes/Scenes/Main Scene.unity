@@ -164,7 +164,6 @@ GameObject:
   - component: {fileID: 110877629}
   - component: {fileID: 110877631}
   - component: {fileID: 110877633}
-  - component: {fileID: 110877632}
   m_Layer: 0
   m_Name: Prototype Runner
   m_TagString: Untagged
@@ -286,56 +285,13 @@ MonoBehaviour:
   playerCount: 2
   connectionCriterias: 1
   additionalSessionProperties: []
-  runner: {fileID: 0}
+  runner: {fileID: 110877630}
   loadSceneMode: 0
   userPrefab: {fileID: 4349981609490419893, guid: e1b5ff57275667541be85e2ae615072a, type: 3}
   onWillConnect:
     m_PersistentCalls:
       m_Calls: []
   actualSessionProperties: []
---- !u!114 &110877632
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 110877627}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 91175dcc15224463780e01a8a98b1b60, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: PhotonVoice::Photon.Voice.Unity.Recorder
-  voiceDetection: 1
-  voiceDetectionThreshold: 0.01
-  voiceDetectionDelayMs: 500
-  interestGroup: 0
-  useTargetPlayers: 0
-  targetPlayers: 
-  debugEchoMode: 0
-  reliableMode: 0
-  encrypt: 0
-  transmitEnabled: 1
-  samplingRate: 16000
-  frameDuration: 40000
-  bitrate: 30000
-  sourceType: 0
-  microphoneType: 0
-  audioClip: {fileID: 0}
-  loopAudioClip: 1
-  recordingEnabled: 1
-  audioSessionParameters:
-    Category: 4
-    Mode: 1
-    CategoryOptions: 0800000004000000
-  editorAudioSessionPreset: 1
-  androidMicrophoneSettings:
-    EnableAEC: 1
-    EnableAGC: 1
-    EnableNS: 1
-  stopRecordingWhenPaused: 0
-  useOnAudioFilterRead: 0
-  useMicrophoneTypeFallback: 1
-  recordWhenJoined: 1
 --- !u!114 &110877633
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -354,8 +310,8 @@ MonoBehaviour:
   runInBackground: 1
   statsResetInterval: 1000
   speakerPrefab: {fileID: 0}
-  primaryRecorder: {fileID: 110877632}
-  usePrimaryRecorder: 1
+  primaryRecorder: {fileID: 0}
+  usePrimaryRecorder: 0
   cppCompatibilityMode: 0
   Settings:
     AppIdRealtime: 
@@ -9440,7 +9396,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 40, y: -23}
-  m_SizeDelta: {x: 39.07, y: 18}
+  m_SizeDelta: {x: 0, y: 18}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2439010977835334715
 MonoBehaviour:
@@ -30962,7 +30918,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 40, y: -23}
-  m_SizeDelta: {x: 34.8, y: 18}
+  m_SizeDelta: {x: 0, y: 18}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &9157282635236995505
 MonoBehaviour:
@@ -31789,7 +31745,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 40, y: -23}
-  m_SizeDelta: {x: 35.73, y: 18}
+  m_SizeDelta: {x: 0, y: 18}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &9157282636346195769
 MonoBehaviour:

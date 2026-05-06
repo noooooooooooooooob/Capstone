@@ -198,11 +198,16 @@ namespace Capstone.Network
 
         public void OnPlayerJoinedSharedMode(NetworkRunner runner, PlayerRef player)
         {
-            // Shared 모드: 각 피어가 자기 자신만 스폰 (자기 자신이 State Authority).
-            if (player == runner.LocalPlayer && userPrefab != null)
-            {
-                runner.Spawn(userPrefab, position: transform.position, rotation: transform.rotation, player);
-            }
+            // Shared 모드: 각 피어가 자기 자신만 스폰 (자기 자신이 State + Input Authority).
+            if (player != runner.LocalPlayer || userPrefab == null) return;
+
+            // 진단 로그 — NetworkTypeId가 invalid면 Fusion 프리팹 테이블에 미등록 상태.
+            Debug.Log($"[RoomLauncher] Spawn userPrefab='{userPrefab.name}' " +
+                      $"localPlayer={runner.LocalPlayer} typeId={userPrefab.NetworkTypeId} " +
+                      $"valid={userPrefab.NetworkTypeId.IsValid}");
+
+            // inputAuthority 인자는 Shared 모드에서 불필요 — 스폰 호출자가 자동으로 권한자.
+            runner.Spawn(userPrefab, transform.position, transform.rotation);
         }
 
         public void OnPlayerJoinedHostMode(NetworkRunner runner, PlayerRef player)
