@@ -16,6 +16,7 @@
    - RadiatorA에 `LeakFog_A` (Translucent), RadiatorB에 `LeakFog_B` (Opaque)
    - 양 라디에이터에 `NetworkObject` 보장
    - 기존 `RadiatorFogVisual` 비활성화 (반대 동작이므로)
+   - **미러 구체 한 쌍** — `MirrorSphere_B`(그랩 가능, 황색 광원) + `MirrorSphere_A`(자동 미러, 청색 광원). 둘 다 `Light`(Point) + `FogClearZone`을 갖고 있어 주변 일정 반경의 연기 입자가 즉시 죽고, 어두워도 그 영역 안은 보이게 됨. B를 잡고 움직이면 A가 가상벽 기준으로 자동 대칭 이동, 둘 다 벽을 넘지 못함.
 5. 인스펙터에서 위치/색/반경 등 미세 조정 후 씬 저장.
 6. Ctrl+Z 로 한 번에 되돌릴 수 있습니다.
 

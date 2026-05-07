@@ -76,9 +76,13 @@ namespace Capstone.Puzzle
         ParticleSystem.ShapeModule _shape;
         ParticleSystem.VelocityOverLifetimeModule _vel;
         ParticleSystem.ColorOverLifetimeModule _colorOverLife;
+        ParticleSystem.TriggerModule _trigger;
         ParticleSystemRenderer _renderer;
 
         float _smoothedIntensity;
+
+        // 외부 콜라이더 등록 — 입자가 그 영역 안에 들어오면 죽인다 (시야 확보용 광원 영역).
+        readonly System.Collections.Generic.List<Collider> _clearColliders = new System.Collections.Generic.List<Collider>();
 
         void Reset()
         {
@@ -212,7 +216,63 @@ namespace Capstone.Puzzle
             _renderer.minParticleSize = 0f;
             _renderer.maxParticleSize = 4f;
 
+            // 트리거 모듈 — 외부에서 등록한 광원 콜라이더 안으로 들어오는 입자를 죽인다.
+            _trigger = _ps.trigger;
+            _trigger.enabled = true;
+            _trigger.inside = ParticleSystemOverlapAction.Kill;
+            _trigger.outside = ParticleSystemOverlapAction.Ignore;
+            _trigger.enter = ParticleSystemOverlapAction.Ignore;
+            _trigger.exit = ParticleSystemOverlapAction.Ignore;
+
+            // PS 가 만들어지기 전에 등록 요청이 들어왔던 콜라이더들을 지금 반영
+            for (int i = 0; i < _clearColliders.Count; i++)
+            {
+                _trigger.SetCollider(i, _clearColliders[i]);
+            }
+
             _ps.Stop(false, ParticleSystemStopBehavior.StopEmitting);
+        }
+
+        // ---------------------------------------------------------------------
+        // 외부 API — 광원 / 시야 확보 영역 등록
+        // ---------------------------------------------------------------------
+
+        /// <summary>
+        /// 입자가 이 콜라이더 안에 들어오면 즉시 사라지게 한다.
+        /// MirrorSphere / FogClearZone 가 자기 콜라이더를 등록하는 용도.
+        /// </summary>
+        public void AddFogClearCollider(Collider c)
+        {
+            if (c == null) return;
+            if (_ps == null)
+            {
+                // 아직 빌드 전에 호출되었다면 일단 큐에 보관 (BuildParticleSystem 후 적용)
+                if (!_clearColliders.Contains(c)) _clearColliders.Add(c);
+                return;
+            }
+            if (_clearColliders.Contains(c)) return;
+            _clearColliders.Add(c);
+
+            int idx = _trigger.colliderCount;
+            _trigger.SetCollider(idx, c);
+        }
+
+        /// <summary>등록 해제 (오브젝트 파괴 시 등).</summary>
+        public void RemoveFogClearCollider(Collider c)
+        {
+            if (c == null || _ps == null) return;
+            int found = _clearColliders.IndexOf(c);
+            if (found < 0) return;
+            _clearColliders.RemoveAt(found);
+
+            // ParticleSystem.trigger 는 인덱스 단위 SetCollider 만 지원 — 모두 다시 등록.
+            // (자주 호출되지 않는다고 가정)
+            for (int i = 0; i < _clearColliders.Count; i++)
+            {
+                _trigger.SetCollider(i, _clearColliders[i]);
+            }
+            // 마지막 슬롯 비우기
+            _trigger.SetCollider(_clearColliders.Count, null);
         }
 
         static Material CreateFogMaterial()
