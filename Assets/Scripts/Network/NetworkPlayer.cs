@@ -28,6 +28,12 @@ namespace Capstone.Network
 
         public PlayerRef Owner => Object.StateAuthority;
 
+        /// <summary>
+        /// 0 = Player 1 (먼저 입장), 1 = Player 2. RoomLauncher가 스폰 직전에 세팅.
+        /// 비대칭 환경(방 A/B), 역할 배정, 통신 채널 권한 등에서 분기 키로 사용.
+        /// </summary>
+        [Networked] public int Slot { get; set; }
+
         public override void Spawned()
         {
             if (HasStateAuthority)

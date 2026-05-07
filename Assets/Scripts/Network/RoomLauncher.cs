@@ -55,6 +55,10 @@ namespace Capstone.Network
         [Header("Local user spawner")]
         public NetworkObject userPrefab;
 
+        [Tooltip("플레이어 슬롯별 스폰 위치 (index 0 = Player 1, 1 = Player 2). " +
+                 "비어 있거나 인덱스가 범위를 벗어나면 이 GameObject의 transform을 사용.")]
+        public Transform[] spawnPoints;
+
         [Header("Events")]
         public UnityEvent onWillConnect = new UnityEvent();
 
@@ -201,13 +205,21 @@ namespace Capstone.Network
             // Shared 모드: 각 피어가 자기 자신만 스폰 (자기 자신이 State + Input Authority).
             if (player != runner.LocalPlayer || userPrefab == null) return;
 
+            int slot = ComputeSharedSlot(runner);
+            var sp = GetSpawnPoint(slot);
+
             // 진단 로그 — NetworkTypeId가 invalid면 Fusion 프리팹 테이블에 미등록 상태.
             Debug.Log($"[RoomLauncher] Spawn userPrefab='{userPrefab.name}' " +
-                      $"localPlayer={runner.LocalPlayer} typeId={userPrefab.NetworkTypeId} " +
-                      $"valid={userPrefab.NetworkTypeId.IsValid}");
+                      $"localPlayer={runner.LocalPlayer} slot={slot} pos={sp.position} " +
+                      $"typeId={userPrefab.NetworkTypeId} valid={userPrefab.NetworkTypeId.IsValid}");
 
             // inputAuthority 인자는 Shared 모드에서 불필요 — 스폰 호출자가 자동으로 권한자.
-            runner.Spawn(userPrefab, transform.position, transform.rotation);
+            // onBeforeSpawned로 NetworkPlayer.Slot을 Spawned() 호출 전에 세팅.
+            runner.Spawn(userPrefab, sp.position, sp.rotation, onBeforeSpawned: (r, no) =>
+            {
+                var np = no.GetComponent<NetworkPlayer>();
+                if (np != null) np.Slot = slot;
+            });
         }
 
         public void OnPlayerJoinedHostMode(NetworkRunner runner, PlayerRef player)
@@ -215,9 +227,42 @@ namespace Capstone.Network
             // Host 모드: 호스트가 들어오는 모든 player를 스폰하면서 input authority를 그 player에게 부여.
             if (runner.IsServer && userPrefab != null)
             {
-                var no = runner.Spawn(userPrefab, position: transform.position, rotation: transform.rotation, inputAuthority: player);
+                int slot = _spawnedUsers.Count;
+                var sp = GetSpawnPoint(slot);
+
+                var no = runner.Spawn(userPrefab, position: sp.position, rotation: sp.rotation, inputAuthority: player,
+                    onBeforeSpawned: (r, n) =>
+                    {
+                        var np = n.GetComponent<NetworkPlayer>();
+                        if (np != null) np.Slot = slot;
+                    });
                 _spawnedUsers[player] = no;
             }
+        }
+
+        /// <summary>
+        /// Shared 모드에서 자기보다 먼저 들어온 PlayerId 수 = 자신의 슬롯.
+        /// 모든 피어가 같은 ActivePlayers 집합을 보므로 결정적.
+        /// </summary>
+        int ComputeSharedSlot(NetworkRunner runner)
+        {
+            int rank = 0;
+            foreach (var p in runner.ActivePlayers)
+            {
+                if (p == runner.LocalPlayer) continue;
+                if (p.PlayerId < runner.LocalPlayer.PlayerId) rank++;
+            }
+            return rank;
+        }
+
+        Transform GetSpawnPoint(int slot)
+        {
+            if (spawnPoints != null && spawnPoints.Length > 0)
+            {
+                int i = Mathf.Clamp(slot, 0, spawnPoints.Length - 1);
+                if (spawnPoints[i] != null) return spawnPoints[i];
+            }
+            return transform;
         }
 
         public void OnPlayerLeftHostMode(NetworkRunner runner, PlayerRef player)
