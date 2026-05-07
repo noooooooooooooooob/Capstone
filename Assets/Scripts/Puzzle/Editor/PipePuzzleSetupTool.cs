@@ -50,6 +50,9 @@ namespace Capstone.Puzzle.EditorTools
         const string LEAK_FOG_A_NAME = "LeakFog_A";
         const string LEAK_FOG_B_NAME = "LeakFog_B";
 
+        const string MIRROR_SPHERE_A_NAME = "MirrorSphere_A";
+        const string MIRROR_SPHERE_B_NAME = "MirrorSphere_B";
+
         [MenuItem(MENU_PATH)]
         public static void RunSetup()
         {
@@ -109,6 +112,9 @@ namespace Capstone.Puzzle.EditorTools
                 // 8. 기존 RadiatorFogVisual 비활성화 (반대 동작이므로)
                 DisableExistingRadiatorFogVisual(radA);
                 DisableExistingRadiatorFogVisual(radB);
+
+                // 9. 미러 구체 한 쌍 (B = 그랩 가능, A = 자동 미러). 각각 광원 + 시야 확보 영역.
+                EnsureMirrorSpheres(radA, radB, wall);
 
                 EditorSceneManagerSetSceneDirty(scene);
                 Undo.CollapseUndoOperations(undoGroup);
@@ -425,7 +431,148 @@ namespace Capstone.Puzzle.EditorTools
         }
 
         // =====================================================================
-        // 9. 기존 RadiatorFogVisual 비활성화
+        // 9. 미러 구체 한 쌍 — B = 그랩 가능, A = 자동 미러. 광원 + 시야 확보.
+        // =====================================================================
+        static void EnsureMirrorSpheres(GameObject radA, GameObject radB, GameObject wall)
+        {
+            // 기본 시작 위치 — 라디에이터 위쪽 0.6m 정도
+            Vector3 bStart = radB.transform.position + Vector3.up * 0.6f + radB.transform.forward * 0.3f;
+
+            var sphereB = EnsureSingleSphere(radB, MIRROR_SPHERE_B_NAME, bStart, MirrorSphere.Side.B,
+                                              new Color(1f, 0.85f, 0.4f, 1f) /* 따뜻한 황색 */);
+            // A 측 — 비상호작용 (XRGrab/Rigidbody 미부착)
+            Vector3 aStart = ReflectPoint(bStart, wall.transform.position, wall.transform.forward.normalized);
+            var sphereA = EnsureSingleSphere(radA, MIRROR_SPHERE_A_NAME, aStart, MirrorSphere.Side.A,
+                                              new Color(0.6f, 0.85f, 1f, 1f) /* 차가운 청색 */);
+
+            // 서로 counterpart 와 virtualWall 설정
+            WireMirrorSphere(sphereB, MirrorSphere.Side.B, sphereA, wall);
+            WireMirrorSphere(sphereA, MirrorSphere.Side.A, sphereB, wall);
+
+            // NetworkObject — Fusion 동기화용 (B 만 있으면 충분하나 양쪽에 추가하면 안전)
+            if (sphereB.GetComponent<NetworkObject>() == null) Undo.AddComponent<NetworkObject>(sphereB);
+            if (sphereA.GetComponent<NetworkObject>() == null) Undo.AddComponent<NetworkObject>(sphereA);
+        }
+
+        static GameObject EnsureSingleSphere(GameObject radiatorRoot, string name, Vector3 worldPos,
+                                              MirrorSphere.Side side, Color tint)
+        {
+            Transform existing = FindChildByName(radiatorRoot.transform, name);
+            GameObject go;
+            if (existing != null)
+            {
+                go = existing.gameObject;
+            }
+            else
+            {
+                go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                go.name = name;
+                Undo.RegisterCreatedObjectUndo(go, "Create " + name);
+                go.transform.SetParent(radiatorRoot.transform, true);
+                go.transform.position = worldPos;
+                go.transform.localScale = Vector3.one * 0.18f;
+            }
+
+            // 기본 mesh material 색상 (URP/_BaseColor 우선, fallback _Color)
+            var rend = go.GetComponent<Renderer>();
+            if (rend != null)
+            {
+                var mat = rend.sharedMaterial != null ? new Material(rend.sharedMaterial) : null;
+                if (mat == null)
+                {
+                    var sh = Shader.Find("Universal Render Pipeline/Unlit") ?? Shader.Find("Unlit/Color");
+                    mat = new Material(sh != null ? sh : Shader.Find("Hidden/InternalErrorShader"));
+                }
+                if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", tint);
+                if (mat.HasProperty("_Color")) mat.SetColor("_Color", tint);
+                if (mat.HasProperty("_EmissionColor"))
+                {
+                    mat.EnableKeyword("_EMISSION");
+                    mat.SetColor("_EmissionColor", tint * 1.5f);
+                }
+                rend.sharedMaterial = mat;
+            }
+
+            // SphereCollider — 광원 영역 + (B 라면) 그랩 감지
+            var col = go.GetComponent<SphereCollider>();
+            if (col == null) col = Undo.AddComponent<SphereCollider>(go);
+            // 시야 확보 영역은 시각 메시보다 약간 크게
+            col.isTrigger = false;
+            col.radius = 1.2f; // local radius — 메시 스케일이 0.18 이므로 실제 월드 반경은 약 0.2m,
+                               // 트리거/시야 영역 반경은 별도 자식으로 만들거나 큰 값으로.
+                               // 단일 콜라이더 사용: 메시는 작게 보이지만 영향 영역은 큼.
+
+            // FogClearZone (PipeLeakFog 입자를 죽이는 영역으로 등록)
+            var fcz = go.GetComponent<FogClearZone>();
+            if (fcz == null) fcz = Undo.AddComponent<FogClearZone>(go);
+            var fczSo = new SerializedObject(fcz);
+            fczSo.FindProperty("zoneCollider").objectReferenceValue = col;
+            fczSo.ApplyModifiedPropertiesWithoutUndo();
+
+            // Light — Point 광원
+            var light = go.GetComponent<Light>();
+            if (light == null) light = Undo.AddComponent<Light>(go);
+            light.type = LightType.Point;
+            light.range = 1.5f;
+            light.intensity = 2.0f;
+            light.color = tint;
+            light.shadows = LightShadows.None;
+
+            // 측별 추가 컴포넌트
+            if (side == MirrorSphere.Side.B)
+            {
+                // Rigidbody — Kinematic
+                var rb = go.GetComponent<Rigidbody>();
+                if (rb == null) rb = Undo.AddComponent<Rigidbody>(go);
+                rb.useGravity = false;
+                rb.isKinematic = false; // XRGrab 가 토글하지만 시작 시 false 권장
+                rb.linearDamping = 2f;
+                rb.angularDamping = 4f;
+
+                var grab = go.GetComponent<XRGrabInteractable>();
+                if (grab == null) grab = Undo.AddComponent<XRGrabInteractable>(go);
+                grab.movementType = XRBaseInteractable.MovementType.Kinematic;
+                grab.throwOnDetach = false;
+                grab.useDynamicAttach = true;
+            }
+            else
+            {
+                // A 측: 절대 그랩 안 되게 — Rigidbody / XRGrab 제거 보장
+                var grab = go.GetComponent<XRGrabInteractable>();
+                if (grab != null) Undo.DestroyObjectImmediate(grab);
+                var rb = go.GetComponent<Rigidbody>();
+                if (rb != null) Undo.DestroyObjectImmediate(rb);
+            }
+
+            // MirrorSphere
+            var mirror = go.GetComponent<MirrorSphere>();
+            if (mirror == null) mirror = Undo.AddComponent<MirrorSphere>(go);
+            var mirrorSo = new SerializedObject(mirror);
+            mirrorSo.FindProperty("side").enumValueIndex = (int)side;
+            mirrorSo.ApplyModifiedPropertiesWithoutUndo();
+
+            return go;
+        }
+
+        static void WireMirrorSphere(GameObject sphereGo, MirrorSphere.Side side, GameObject counterpartGo, GameObject wallGo)
+        {
+            var mirror = sphereGo.GetComponent<MirrorSphere>();
+            if (mirror == null) return;
+            var so = new SerializedObject(mirror);
+            so.FindProperty("side").enumValueIndex = (int)side;
+            so.FindProperty("virtualWall").objectReferenceValue = wallGo != null ? wallGo.transform : null;
+            so.FindProperty("counterpart").objectReferenceValue = counterpartGo != null ? counterpartGo.GetComponent<MirrorSphere>() : null;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        static Vector3 ReflectPoint(Vector3 point, Vector3 planePoint, Vector3 planeNormal)
+        {
+            float d = Vector3.Dot(point - planePoint, planeNormal);
+            return point - 2f * d * planeNormal;
+        }
+
+        // =====================================================================
+        // 10. 기존 RadiatorFogVisual 비활성화
         // =====================================================================
         static void DisableExistingRadiatorFogVisual(GameObject root)
         {
