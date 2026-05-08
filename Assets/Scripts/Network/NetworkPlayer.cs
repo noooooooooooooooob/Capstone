@@ -22,6 +22,7 @@ namespace Capstone.Network
         [SerializeField] GameObject[] hideOnLocal;
 
         Transform _xrOrigin;   // 상대좌표 계산용 기준 프레임
+        XROrigin _xrOriginComp; // 카메라 정렬용 (MoveCameraToWorldLocation 등)
         Transform _xrHead;
         Transform _xrLeftHand;
         Transform _xrRightHand;
@@ -38,10 +39,21 @@ namespace Capstone.Network
         {
             if (HasStateAuthority)
             {
+                // 로컬 사이드 캐시 — OwnerSelectFilter / OwnerVisualCue 등이 이 값으로 분기.
+                LocalPlayerSide.Set(LocalPlayerSide.FromSlot(Slot));
+
                 BindLocalRig();
+                AlignLocalCameraToSpawn();
+
                 foreach (var go in hideOnLocal)
                     if (go != null) go.SetActive(false);
             }
+        }
+
+        public override void Despawned(NetworkRunner runner, bool hasState)
+        {
+            if (HasStateAuthority)
+                LocalPlayerSide.Clear();
         }
 
         void BindLocalRig()
@@ -54,6 +66,7 @@ namespace Capstone.Network
                 return;
             }
 
+            _xrOriginComp = origin;
             _xrOrigin = origin.transform;
             _xrHead = origin.Camera != null ? origin.Camera.transform : null;
 
@@ -61,6 +74,41 @@ namespace Capstone.Network
             var rigRoot = origin.transform;
             _xrLeftHand  = FindDeep(rigRoot, "Left Controller")  ?? FindDeep(rigRoot, "LeftHand Controller")  ?? FindDeep(rigRoot, "LeftHand");
             _xrRightHand = FindDeep(rigRoot, "Right Controller") ?? FindDeep(rigRoot, "RightHand Controller") ?? FindDeep(rigRoot, "RightHand");
+        }
+
+        /// <summary>
+        /// 단일 공유 방 디자인: 로컬 카메라(=내 머리)가 NetworkPlayer 스폰 위치/회전에 도착하도록
+        /// 로컬 XROrigin을 옮긴다. 그렇게 하지 않으면 RoomLauncher.spawnPoints는 NetworkPlayer
+        /// 프리팹 루트만 옮길 뿐, head/hand anchor는 _xrOrigin 기준으로 매 프레임 월드 좌표가 다시
+        /// 산출되어 결국 모든 플레이어가 자기 XROrigin 자리에 겹쳐 그려진다 → spawnPoint 무의미.
+        ///
+        /// spawnPoint는 "발을 두는 바닥 위치"로 해석한다. 사용자의 헤드셋 높이(cam.y - origin.y)를
+        /// 보존해야 신장이 다른 사용자에게 자연스럽고, 디자이너가 spawnPoint.y=0(바닥)을 그대로 쓸 수 있다.
+        /// MoveCameraToWorldLocation은 사용자가 자기 플레이스페이스의 어디에 서 있든
+        /// 카메라가 desiredWorldLocation에 정확히 위치하도록 origin 변위를 보정한다.
+        /// </summary>
+        void AlignLocalCameraToSpawn()
+        {
+            if (_xrOriginComp == null) return;
+            var cam = _xrOriginComp.Camera != null ? _xrOriginComp.Camera.transform : null;
+            if (cam == null) return;
+
+            // 사용자의 현재 머리 높이(origin 기준 상대). VR 룸스케일에서는 보통 1.4~1.9m.
+            float headHeightAboveOrigin = cam.position.y - _xrOriginComp.transform.position.y;
+
+            // 1) XZ는 spawnPoint에 스냅, Y는 spawnPoint.y + 사용자 머리 높이 (= 자연스러운 신장 유지)
+            Vector3 targetHead = new Vector3(
+                transform.position.x,
+                transform.position.y + headHeightAboveOrigin,
+                transform.position.z);
+            _xrOriginComp.MoveCameraToWorldLocation(targetHead);
+
+            // 2) 카메라 yaw → 스폰 yaw. origin을 카메라 주위로 회전 → 사용자의 물리 위치 보존.
+            float currentYaw = cam.eulerAngles.y;
+            float targetYaw  = transform.eulerAngles.y;
+            float deltaYaw   = Mathf.DeltaAngle(currentYaw, targetYaw);
+            if (Mathf.Abs(deltaYaw) > 0.01f)
+                _xrOriginComp.RotateAroundCameraUsingOriginUp(deltaYaw);
         }
 
         public override void FixedUpdateNetwork()

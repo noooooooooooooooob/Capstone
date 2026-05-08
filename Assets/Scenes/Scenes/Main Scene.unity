@@ -288,7 +288,9 @@ MonoBehaviour:
   runner: {fileID: 110877630}
   loadSceneMode: 0
   userPrefab: {fileID: 4349981609490419893, guid: e1b5ff57275667541be85e2ae615072a, type: 3}
-  spawnPoints: []
+  spawnPoints:
+  - {fileID: 0}
+  - {fileID: 0}
   onWillConnect:
     m_PersistentCalls:
       m_Calls: []
