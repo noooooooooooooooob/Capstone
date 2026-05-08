@@ -40,26 +40,19 @@ public class BatteryMelter : MonoBehaviour
             hingeClosedRot.eulerAngles.y,
             hingeClosedRot.eulerAngles.z
         );
-
         glassButtonOrigin    = glassButton.localPosition;
         activateButtonOrigin = activateButton.localPosition;
     }
 
     void Update()
     {
-        // LightBall 스냅/해제
-        if (snappedLightBall == null)
-            CheckLightBallSnap();
-        else
-            CheckLightBallRelease();
+        if (snappedLightBall == null) CheckLightBallSnap();
+        else CheckLightBallRelease();
 
-        // 배터리: 유리 열렸을 때만 스냅/해제
         if (isOpen && !isAnimating)
         {
-            if (snappedBattery == null)
-                CheckBatterySnap();
-            else
-                CheckBatteryRelease();
+            if (snappedBattery == null) CheckBatterySnap();
+            else CheckBatteryRelease();
         }
     }
 
@@ -100,9 +93,8 @@ public class BatteryMelter : MonoBehaviour
         }
 
         if (closest == null) return;
-        Debug.Log($"Closest battery dist: {closestDist:F2}");
         if (closestDist < snapDistance)
-            SnapObject(closest, batterySlot, ref snappedBattery, "Battery snapped!");
+            SnapObject(closest, batterySlot, ref snappedBattery, "Battery snapped into melter!");
     }
 
     void CheckBatteryRelease()
@@ -110,14 +102,18 @@ public class BatteryMelter : MonoBehaviour
         if (snappedBattery == null) return;
         var grab = snappedBattery.GetComponent<XRGrabInteractable>();
         if (grab != null && grab.isSelected)
-            ReleaseObject(ref snappedBattery, "Battery released!");
+            ReleaseObject(ref snappedBattery, "Battery released from melter!");
     }
 
-    // ── 공통 Snap/Release ──────────────────────────────────
+    // ── Snap/Release ───────────────────────────────────────
 
     void SnapObject(GameObject obj, Transform slot, ref GameObject snapRef, string log)
     {
         snapRef = obj;
+
+        // Throw On Detach 끄기 (kinematic 에러 방지)
+        var grab = obj.GetComponent<XRGrabInteractable>();
+        if (grab) grab.throwOnDetach = false;
 
         var rb = obj.GetComponent<Rigidbody>();
         if (rb) rb.isKinematic = true;
@@ -127,7 +123,6 @@ public class BatteryMelter : MonoBehaviour
         obj.transform.localPosition = Vector3.zero;
         obj.transform.localRotation = Quaternion.identity;
 
-        // Scale 왜곡 방지
         Vector3 parentLossy = slot.lossyScale;
         obj.transform.localScale = new Vector3(
             worldScale.x / (parentLossy.x != 0 ? parentLossy.x : 1),
@@ -141,14 +136,25 @@ public class BatteryMelter : MonoBehaviour
     void ReleaseObject(ref GameObject snapRef, string log)
     {
         if (snapRef == null) return;
+
+        var grab = snapRef.GetComponent<XRGrabInteractable>();
+        if (grab) grab.throwOnDetach = true; // 다시 켜줌
+
         snapRef.transform.SetParent(null, true);
+
         var rb = snapRef.GetComponent<Rigidbody>();
-        if (rb) { rb.isKinematic = false; rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+        if (rb)
+        {
+            rb.isKinematic = false;
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+
         snapRef = null;
         Debug.Log(log);
     }
 
-    // ── Glass Button: 열고 닫기만 ─────────────────────────
+    // ── Glass Button ───────────────────────────────────────
 
     public void OnGlassButtonPressed()
     {
@@ -174,27 +180,16 @@ public class BatteryMelter : MonoBehaviour
         }
         glassHinge.localRotation = targetRot;
         isAnimating = false;
-
         Debug.Log($"Glass {(isOpen ? "OPEN" : "CLOSED")}");
     }
 
-    // ── Activate Button: 조건 충족 시 색상 변경만 ─────────
+    // ── Activate Button ────────────────────────────────────
 
     public void OnActivateButtonPressed()
     {
-        // 조건: 유리 닫혀있고 + 배터리 + 공 둘 다 있어야
-        if (isOpen)
-        {
-            Debug.Log("Glass must be closed to activate!"); return;
-        }
-        if (snappedBattery == null)
-        {
-            Debug.Log("No battery inside!"); return;
-        }
-        if (snappedLightBall == null)
-        {
-            Debug.Log("No light ball!"); return;
-        }
+        if (isOpen) { Debug.Log("Close glass first!"); return; }
+        if (snappedBattery == null) { Debug.Log("No battery!"); return; }
+        if (snappedLightBall == null) { Debug.Log("No light ball!"); return; }
 
         StartCoroutine(PressButton(activateButton, activateButtonOrigin));
         MeltBatteryInstant();
@@ -202,23 +197,20 @@ public class BatteryMelter : MonoBehaviour
 
     void MeltBatteryInstant()
     {
-        // Battery_Core 찾아서 즉시 머티리얼 교체
         foreach (Transform child in snappedBattery.GetComponentsInChildren<Transform>())
         {
             if (child.name.ToLower().Contains("core"))
             {
                 var rend = child.GetComponent<Renderer>();
                 if (rend && meltedBatteryCore != null)
-                {
                     rend.material = meltedBatteryCore;
-                    Debug.Log("Battery core turned green!");
-                }
+                Debug.Log("Battery core turned green!");
                 break;
             }
         }
     }
 
-    // ── Button Press Animation ─────────────────────────────
+    // ── Button Press ───────────────────────────────────────
 
     IEnumerator PressButton(Transform btn, Vector3 origin)
     {
