@@ -33690,6 +33690,8 @@ GameObject:
   - component: {fileID: 6196486444273240259}
   - component: {fileID: 6196486444273240258}
   - component: {fileID: 6196486444273240260}
+  - component: {fileID: 6196486444273240262}
+  - component: {fileID: 6196486444273240261}
   m_Layer: 0
   m_Name: Battery (1)
   m_TagString: Battery
@@ -33712,6 +33714,8 @@ GameObject:
   - component: {fileID: 6196486443830805003}
   - component: {fileID: 6196486443830805002}
   - component: {fileID: 6196486443830805004}
+  - component: {fileID: 6196486443830805006}
+  - component: {fileID: 6196486443830805005}
   m_Layer: 0
   m_Name: Battery
   m_TagString: Battery
@@ -51807,6 +51811,42 @@ MonoBehaviour:
   tintRenderers: 0
   nonOwnerTint: {r: 1, g: 0, b: 0.14044952, a: 1}
   treatUnknownAsNonOwner: 0
+--- !u!114 &6196486443830805005
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 446344913145286776}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &6196486443830805006
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 446344913145286776}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 3064776348
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 6196486443830805005}
+  ForceRemoteRenderTimeframe: 0
 --- !u!114 &6196486444273240257
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -51979,6 +52019,42 @@ MonoBehaviour:
   tintRenderers: 0
   nonOwnerTint: {r: 1, g: 0, b: 0.24949217, a: 1}
   treatUnknownAsNonOwner: 0
+--- !u!114 &6196486444273240261
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 446344912438483632}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &6196486444273240262
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 446344912438483632}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 4249171845
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 6196486444273240261}
+  ForceRemoteRenderTimeframe: 0
 --- !u!1 &6198279722647937188
 GameObject:
   m_ObjectHideFlags: 0

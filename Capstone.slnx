@@ -66,6 +66,7 @@
   <Project Path="Unity.XR.Hands.Editor.csproj" />
   <Project Path="Unity.Tutorials.Core.csproj" />
   <Project Path="Unity.XR.MetaOpenXR.Editor.csproj" />
+  <Project Path="ParrelSync.csproj" />
   <Project Path="Unity.XR.CompositionLayers.UIInteraction.Editor.csproj" />
   <Project Path="Unity.Settings.Editor.csproj" />
   <Project Path="Unity.InputSystem.TestFramework.csproj" />
