@@ -6,15 +6,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **비대칭 협력 멀티플레이어 VR 방탈출 게임** — Meta Quest 3 전용 캡스톤 프로젝트.
 
-- Player A와 Player B는 각자 분리된 VR 환경에 위치하며, 자기 환경의 오브젝트만 직접 조작 가능
-- 퍼즐은 두 플레이어가 서로 소통·협력해야만 풀 수 있도록 비대칭으로 설계
-- 스테이지마다 통신 채널이 변화하며 퍼즐 복잡도 상승: 유선전화 → 음성전용 → 시각전용 → 워키토키
+- Player A와 Player B는 **같은 VR 방을 공유**하고 서로의 아바타·위치를 볼 수 있음 — 직접 음성 대화 가능
+- 비대칭은 **상호작용 권한**으로만 구현: 각 오브젝트는 Player1 또는 Player2 중 한쪽만 조작 가능
+- 자기 권한이 아닌 오브젝트는 **시각 단서**로 구분 (예: 색상 차이, 글리치 셰이더 효과) — "이건 내가 못 만진다"는 즉각적 피드백 제공
+- 퍼즐은 두 플레이어가 서로 정보·행동을 교환해야만 풀리도록 권한 분리 기반으로 설계
 - **Product name:** Capstone (`ProjectSettings/ProjectSettings.asset`)
 - **Unity:** 6000.3.11f1 (Unity 6)
 - **Target platform:** Android (ARM64), Meta Quest 3
 - **Render pipeline:** URP 17.3.0, Mobile/PC 렌더러 분리 (`Assets/Settings/Project Configuration/`)
 
-> **Note:** 초기 구상은 MR(Passthrough + Scene API) 기반이었으나, 안정성 문제로 2026-04-28 순수 VR로 전환. AR Foundation / Meta-OpenXR Passthrough·Scene 기능은 dependency에는 남아있지만 사용하지 않음 — 다시 활성화하지 말 것. 두 플레이어의 비대칭 환경을 어떤 방식(프리셋 / 절차적 생성 등)으로 구현할지는 미결정.
+> **Note (피벗 이력):**
+> - 2026-04-28 — MR(Passthrough + Scene API) → 순수 VR로 전환. AR Foundation / Meta-OpenXR Passthrough·Scene 기능은 dependency에 남아있지만 사용하지 않음. 다시 활성화하지 말 것.
+> - 2026-05-08 — **분리된 비대칭 환경 → 단일 공유 방으로 전환.** 두 플레이어가 동일한 씬·좌표계의 같은 방에서 플레이하며, 비대칭성은 오브젝트별 인터랙션 권한 + 시각 단서로만 표현. 스테이지별 통신 채널 제약(유선전화/음성/시각/워키토키)도 함께 폐기 — 같은 방이라 직접 대화로 충분.
 
 ## 핵심 패키지 (Packages/manifest.json)
 
@@ -81,6 +84,7 @@ Packages/             # manifest.json — 패키지 의존성
 - **Hand Tracking은 `com.unity.xr.hands`** 사용 (Meta XR SDK가 아닌 Unity 공식 패키지)
 - **퍼즐/스테이지는 모듈화** — 추가 콘텐츠 삽입이 용이한 구조 유지
 - **네트워크 상태**는 Photon Fusion 2의 `NetworkBehaviour` / `NetworkObject` / `[Networked]` 프로퍼티로 동기화, 일회성 이벤트는 RPC
+- **상호작용 권한 분리** — 인터랙터블 오브젝트는 소유자(P1/P2) 태그/필드를 가지며, `XRGrabInteractable` 등의 `selectFilters` 또는 커스텀 게이트로 비소유자의 select·activate를 차단. 비소유자에게는 색상/글리치 셰이더로 시각 차이 표시 (URP 셰이더 그래프 활용)
 
 ## VR / XR 핵심 사항
 
@@ -91,29 +95,24 @@ Packages/             # manifest.json — 패키지 의존성
 ## 게임 아키텍처 방향 (설계 기준)
 
 ```
-[Player A Device]                          [Player B Device]
-  VR 환경 A                                  VR 환경 B
-  (자기 방 오브젝트 직접 조작 가능)          (자기 방 오브젝트 직접 조작 가능)
-        ↓                                         ↑
-        └──────── Photon Fusion 2 네트워크 동기화 ─┘
+[Player 1 Device]                          [Player 2 Device]
+        \                                         /
+         \                                       /
+          \─────── 동일한 VR 방 (공유 씬) ───────/
+                  · 두 아바타가 같은 좌표계에 존재
+                  · 모든 오브젝트는 양쪽 모두 시각적으로 보임
+                  · 인터랙션 권한만 P1/P2로 분리 (비권한자에게 글리치/색상 표시)
 
-퍼즐 오브젝트 상태, 플레이어 위치/애니메이션 → NetworkObject / [Networked] / RPC
-통신 채널 (Photon Voice 2 / 텍스트 / 시각 채널) → 스테이지별 제약 적용
+  ↑↓ Photon Fusion 2: NetworkObject / [Networked] / RPC
+  ↑↓ Photon Voice 2: 항시 양방향 (스테이지별 제약 없음)
 ```
 
+- 두 플레이어는 **하나의 룸/씬**에서 같은 좌표계를 공유 — 별개의 씬 인스턴스를 사용하지 않음
 - 퍼즐 오브젝트 상태(위치, 활성화 여부 등)는 Fusion `NetworkObject`로 동기화
-- 상대방 환경에 간접적으로 영향을 주는 인터랙션은 **RPC** (`[Rpc]`)로 처리
-- 각 환경에는 서로 다른 퍼즐 조각/정보가 배치되어 반드시 협동이 필요한 구조
-- Photon Voice 2의 `Recorder` / `Speaker`는 스테이지 컨트롤러가 활성·뮤트하여 채널 제약을 적용
-
-## 비대칭 통신 채널 (스테이지별)
-
-| 스테이지 | 채널        | 제약                                       |
-|----------|-------------|-------------------------------------------|
-| 1        | 유선 전화   | 텍스트 타이핑, 실시간성 제한               |
-| 2        | 음성 전용   | Photon Voice 2, 시각 정보 차단            |
-| 3        | 시각 전용   | 스케치/이모지 공유만 가능, 언어 소통 차단 |
-| 4        | 워키토키    | Push-to-Talk, 단방향 음성                  |
+- 인터랙터블에는 `OwnerSide` (P1/P2) 메타가 부여되며, 비소유자의 `XRBaseInteractable` select/activate는 게이팅
+- 권한 표시는 **셰이더 단**에서 처리 (소유자별 머티리얼 프로퍼티 토글) — 매 프레임 게임오브젝트 활성/비활성 토글 회피
+- 협동성은 환경 분리가 아니라 **퍼즐 단계 순서와 정보 비대칭**으로 보장 (예: P1만 보이는 단서 → P2만 조작 가능한 메커니즘)
+- Photon Voice 2는 항시 양방향 음성 — 스테이지별 채널 제약은 폐기됨
 
 ## 비기능적 목표
 
