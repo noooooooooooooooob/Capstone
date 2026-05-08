@@ -38,10 +38,19 @@ namespace Capstone.Network
         {
             if (HasStateAuthority)
             {
+                // 로컬 사이드 캐시 — OwnerSelectFilter / OwnerVisualCue 등이 이 값으로 분기.
+                LocalPlayerSide.Set(LocalPlayerSide.FromSlot(Slot));
+
                 BindLocalRig();
                 foreach (var go in hideOnLocal)
                     if (go != null) go.SetActive(false);
             }
+        }
+
+        public override void Despawned(NetworkRunner runner, bool hasState)
+        {
+            if (HasStateAuthority)
+                LocalPlayerSide.Clear();
         }
 
         void BindLocalRig()
