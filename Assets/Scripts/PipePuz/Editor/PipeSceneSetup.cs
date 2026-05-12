@@ -6,8 +6,12 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 namespace PipePuz.EditorTools
 {
     /// <summary>
-    /// Pipe Scene 의 RadiatorA / RadiatorB 안에 벽·파이프·밸브·소켓·연기를
-    /// 좌우 대칭으로 자동 생성해 주는 에디터 메뉴.
+    /// Pipe Scene 의 RadiatorA / RadiatorB 안에 벽·파이프·밸브·소켓·연기를 자동 생성해 주는 에디터 메뉴.
+    ///
+    /// 좌우 미러링은 사용하지 않는다 — 두 라디에이터 모두 동일한 로컬 X 좌표로 빌드되고,
+    /// 차이는 컴포넌트 구성에서만 발생한다 (RadiatorA = 일반 파이프 4 개,
+    /// RadiatorB = 그 중 1 개가 Pipe_Broke 로 교체 + PipeSocket + Pipe_New + Smoke).
+    /// 양쪽 Valve 의 Openness 동기화는 PairedValve 로 그대로 유지.
     ///
     /// 사용법: Unity 메뉴 > Tools > PipePuz > Build Pipe Scene
     /// 다시 누르면 RadiatorA / RadiatorB 안의 자식을 모두 지우고 새로 만든다.
@@ -84,9 +88,9 @@ namespace PipePuz.EditorTools
             var socketMat = MakeUrpMaterial("PipeSocketMat", new Color(1f, 1f, 1f, 0.22f), true);
             var planeInvisibleMat = MakeUrpMaterial("PlaneInvisibleMat", new Color(1f, 1f, 1f, 0f), true);
 
-            var resA = BuildRadiator(radA, mirrorX: false, includeBrokeAndSocket: false,
+            var resA = BuildRadiator(radA, includeBrokeAndSocket: false,
                 pipeMat, wallMat, valveMat, brokeMat, socketMat);
-            var resB = BuildRadiator(radB, mirrorX: true, includeBrokeAndSocket: true,
+            var resB = BuildRadiator(radB, includeBrokeAndSocket: true,
                 pipeMat, wallMat, valveMat, brokeMat, socketMat);
 
             // 밸브 페어링 — 두 밸브 모두 LocalAxis=forward, InvertDirection=false 로 통일.
@@ -114,43 +118,36 @@ namespace PipePuz.EditorTools
             // 중앙 Plane 정리
             MakePlaneNonInteractive(radiator.transform, planeInvisibleMat);
 
-            // LightBallA / LightBallB
-            var plane = radiator.transform.Find("Plane");
-            BuildLightBalls(plane);
+            // LightBall (단일 + 옆 버튼)
+            BuildLightBalls();
 
             EditorUtility.SetDirty(radA.gameObject);
             EditorUtility.SetDirty(radB.gameObject);
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(radA.gameObject.scene);
 
             Undo.CollapseUndoOperations(undoGroup);
-            Debug.Log("[PipePuz] Pipe Scene 자동 생성 완료. RadiatorA / RadiatorB · Plane · LightBallA/B 를 확인하세요.");
+            Debug.Log("[PipePuz] Pipe Scene 자동 생성 완료. RadiatorA / RadiatorB · Plane · LightBall(+Button) 을 확인하세요.");
         }
 
         [MenuItem("Tools/PipePuz/Build Light Balls Only")]
         public static void BuildLightBallsOnly()
         {
-            var radiator = GameObject.Find("Radiator");
-            if (radiator == null)
+            var lightBall = GameObject.Find("LightBall");
+            if (lightBall == null)
             {
-                EditorUtility.DisplayDialog("PipePuz", "Radiator 오브젝트가 필요합니다.", "OK");
-                return;
-            }
-            var plane = radiator.transform.Find("Plane");
-            if (plane == null)
-            {
-                EditorUtility.DisplayDialog("PipePuz", "Radiator 안에 Plane 이 필요합니다.", "OK");
+                EditorUtility.DisplayDialog("PipePuz", "씬에 'LightBall' 오브젝트가 필요합니다.", "OK");
                 return;
             }
 
             Undo.IncrementCurrentGroup();
             int undoGroup = Undo.GetCurrentGroup();
-            Undo.SetCurrentGroupName("Build Light Balls");
+            Undo.SetCurrentGroupName("Build Light Ball");
 
-            BuildLightBalls(plane);
+            BuildLightBalls();
 
-            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(plane.gameObject.scene);
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(lightBall.scene);
             Undo.CollapseUndoOperations(undoGroup);
-            Debug.Log("[PipePuz] LightBallA / LightBallB 빌드 완료.");
+            Debug.Log("[PipePuz] LightBall + Button 빌드 완료.");
         }
 
         // --------------------------------------------------------------------
@@ -165,11 +162,10 @@ namespace PipePuz.EditorTools
             public PipeGrabbable newPipe;
         }
 
-        static BuildResult BuildRadiator(Transform parent, bool mirrorX, bool includeBrokeAndSocket,
+        static BuildResult BuildRadiator(Transform parent, bool includeBrokeAndSocket,
             Material pipeMat, Material wallMat, Material valveMat, Material brokeMat, Material socketMat)
         {
             var res = new BuildResult();
-            float xs = mirrorX ? -1f : 1f;
 
             // 벽
             var wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -185,7 +181,7 @@ namespace PipePuz.EditorTools
             // 4 개의 파이프
             for (int i = 0; i < PipeXs.Length; i++)
             {
-                float x = PipeXs[i] * xs;
+                float x = PipeXs[i];
                 bool isBrokeSlot = includeBrokeAndSocket && i == BrokeIdx;
                 if (isBrokeSlot)
                 {
@@ -215,7 +211,7 @@ namespace PipePuz.EditorTools
 
                     res.newPipe = CreateGrabbablePipe(parent, "Pipe_New", pipeMat, PipeKind.New);
                     res.newPipe.transform.SetParent(parent, false);
-                    res.newPipe.transform.localPosition = new Vector3(x + 0.55f * xs, 0.4f, PipeZ + 0.45f);
+                    res.newPipe.transform.localPosition = new Vector3(x + 0.55f, 0.4f, PipeZ + 0.45f);
                     res.newPipe.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
                 }
                 else
@@ -239,7 +235,7 @@ namespace PipePuz.EditorTools
             {
                 var smokeGo = new GameObject("Smoke");
                 smokeGo.transform.SetParent(parent, false);
-                float bx = PipeXs[BrokeIdx] * xs;
+                float bx = PipeXs[BrokeIdx];
                 smokeGo.transform.localPosition = new Vector3(bx, PipeY, PipeZ);
                 var ps = smokeGo.AddComponent<ParticleSystem>();
                 ConfigureSmokeParticleSystem(ps);
@@ -472,10 +468,14 @@ namespace PipePuz.EditorTools
         }
 
         // --------------------------------------------------------------------
-        // LightBall A / B
+        // LightBall (단일, 옆 버튼으로 ON)
         // --------------------------------------------------------------------
 
-        static void BuildLightBalls(Transform planeRef)
+        // 버튼 위치 (LightBall 로컬 좌표) — 공의 X 와 같은 라인, Y 는 손이 닿는 높이, Z 는 살짝 앞쪽.
+        const float LightBallButtonY = 1.00f;
+        const float LightBallButtonZOffset = 0.50f;
+
+        static void BuildLightBalls()
         {
             var lightBallRoot = GameObject.Find("LightBall");
             if (lightBallRoot == null)
@@ -484,43 +484,100 @@ namespace PipePuz.EditorTools
                 return;
             }
 
-            // 기존 자식 LightBallA/LightBallB 가 있으면 제거(이름이 겹칠 때만 — LightBall 의 다른 자식은 보존).
-            var oldA = lightBallRoot.transform.Find("LightBallA");
-            if (oldA != null) Undo.DestroyObjectImmediate(oldA.gameObject);
-            var oldB = lightBallRoot.transform.Find("LightBallB");
-            if (oldB != null) Undo.DestroyObjectImmediate(oldB.gameObject);
+            // 이름이 겹치는 기존 자식 제거 (Plane 등 다른 자식은 보존).
+            DestroyChildIfExists(lightBallRoot.transform, "LightBallA");
+            DestroyChildIfExists(lightBallRoot.transform, "LightBallB");
+            DestroyChildIfExists(lightBallRoot.transform, "Ball");
+            DestroyChildIfExists(lightBallRoot.transform, "Button");
 
-            // 발광 머티리얼
-            var ballMat = MakeEmissiveMaterial(
-                "LightBallMat",
+            // 머티리얼: ON / OFF 두 종류씩.
+            var ballOffMat = MakeEmissiveMaterial(
+                "LightBall_BallOff",
+                baseColor: new Color(0.35f, 0.36f, 0.4f, 1f),
+                emissionColor: new Color(0.04f, 0.05f, 0.08f));
+            var ballOnMat = MakeEmissiveMaterial(
+                "LightBall_BallOn",
                 baseColor: new Color(1f, 0.92f, 0.65f, 1f),
                 emissionColor: new Color(2.5f, 2.2f, 1.4f) * 1.4f);
+            var buttonOffMat = MakeEmissiveMaterial(
+                "LightBall_ButtonOff",
+                baseColor: new Color(0.9f, 0.25f, 0.25f),
+                emissionColor: new Color(1.4f, 0.3f, 0.3f));
+            var buttonOnMat = MakeEmissiveMaterial(
+                "LightBall_ButtonOn",
+                baseColor: new Color(0.25f, 0.9f, 0.4f),
+                emissionColor: new Color(0.4f, 1.5f, 0.5f));
 
-            // LightBallA — 비상호작용
-            var lA = CreateLightBall(
-                name: "LightBallA",
-                parent: lightBallRoot.transform,
-                localPos: new Vector3(-LightBallLocalX, LightBallLocalY, LightBallLocalZ),
-                ballMat: ballMat,
-                interactable: false);
-
-            // LightBallB — 잡기 가능
-            var lB = CreateLightBall(
-                name: "LightBallB",
+            // 단일 LightBall (잡기 가능). 처음엔 Light off 라 OFF 머티리얼로 시작.
+            var ball = CreateLightBall(
+                name: "Ball",
                 parent: lightBallRoot.transform,
                 localPos: new Vector3(LightBallLocalX, LightBallLocalY, LightBallLocalZ),
-                ballMat: ballMat,
+                ballMat: ballOffMat,
                 interactable: true);
 
-            // 미러 동기화
-            var mirror = lB.AddComponent<LightBallMirror>();
-            mirror.Plane = planeRef;
-            mirror.Mirror = lA.transform;
-            // Plane 은 Z 90° 회전된 Plane 프리미티브이므로 world 기준 법선이 곧 Plane.up.
-            mirror.NormalAxis = LightBallMirror.PlaneAxis.Up;
-            mirror.MirrorRotation = false;
+            // Light 초기 꺼짐 상태.
+            var pointLight = ball.GetComponentInChildren<Light>(true);
+            if (pointLight != null) pointLight.enabled = false;
+
+            var ballVisualT = ball.transform.Find("Visual");
+            var ballRenderer = ballVisualT != null ? ballVisualT.GetComponent<Renderer>() : null;
+
+            // 옆에 버튼.
+            var buttonGo = BuildLightBallButton(lightBallRoot.transform, buttonOffMat);
+            var buttonInteractable = buttonGo.GetComponent<XRSimpleInteractable>();
+            var buttonHeadT = buttonGo.transform.Find("Head");
+            var buttonRenderer = buttonHeadT != null ? buttonHeadT.GetComponent<Renderer>() : null;
+
+            // Toggle 컴포넌트 — ball 에 부착, 버튼 누르면 light on.
+            var toggle = ball.AddComponent<LightBallToggle>();
+            toggle.TargetLight = pointLight;
+            toggle.BallRenderer = ballRenderer;
+            toggle.Button = buttonInteractable;
+            toggle.ButtonRenderer = buttonRenderer;
+            toggle.BallOffMaterial = ballOffMat;
+            toggle.BallOnMaterial = ballOnMat;
+            toggle.ButtonOffMaterial = buttonOffMat;
+            toggle.ButtonOnMaterial = buttonOnMat;
+            toggle.StartOn = false;
 
             EditorUtility.SetDirty(lightBallRoot);
+        }
+
+        static GameObject BuildLightBallButton(Transform parent, Material headMat)
+        {
+            var buttonGo = new GameObject("Button");
+            buttonGo.transform.SetParent(parent, false);
+            buttonGo.transform.localPosition = new Vector3(LightBallLocalX, LightBallButtonY, LightBallLocalZ + LightBallButtonZOffset);
+            buttonGo.transform.localRotation = Quaternion.identity;
+
+            // Base (작은 받침 큐브).
+            var baseGo = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            baseGo.name = "Base";
+            Object.DestroyImmediate(baseGo.GetComponent<Collider>());
+            baseGo.transform.SetParent(buttonGo.transform, false);
+            baseGo.transform.localPosition = Vector3.zero;
+            baseGo.transform.localScale = new Vector3(0.10f, 0.025f, 0.10f);
+            var baseMat = MakeUrpMaterial("LightBall_ButtonBase", new Color(0.2f, 0.2f, 0.22f), false);
+            AssignMat(baseGo, baseMat);
+
+            // Head (눌리는 색 변경 부위).
+            var headGo = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            headGo.name = "Head";
+            Object.DestroyImmediate(headGo.GetComponent<Collider>());
+            headGo.transform.SetParent(buttonGo.transform, false);
+            headGo.transform.localPosition = new Vector3(0f, 0.025f, 0f);
+            headGo.transform.localScale = new Vector3(0.08f, 0.018f, 0.08f);
+            AssignMat(headGo, headMat);
+
+            // Press 용 콜라이더 — Head 영역.
+            var col = buttonGo.AddComponent<SphereCollider>();
+            col.center = new Vector3(0f, 0.025f, 0f);
+            col.radius = 0.06f;
+            col.isTrigger = false;
+
+            buttonGo.AddComponent<XRSimpleInteractable>();
+            return buttonGo;
         }
 
         static GameObject CreateLightBall(string name, Transform parent, Vector3 localPos, Material ballMat, bool interactable)
@@ -626,6 +683,12 @@ namespace PipePuz.EditorTools
             }
             var rc = t.GetComponent<RadiatorController>();
             if (rc != null) Undo.DestroyObjectImmediate(rc);
+        }
+
+        static void DestroyChildIfExists(Transform parent, string childName)
+        {
+            var t = parent.Find(childName);
+            if (t != null) Undo.DestroyObjectImmediate(t.gameObject);
         }
     }
 }
