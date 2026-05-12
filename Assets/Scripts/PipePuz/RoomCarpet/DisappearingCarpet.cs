@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
-using UnityEngine.XR.Interaction.Toolkit.Locomotion.Teleportation;
 
 namespace PipePuz.RoomCarpet
 {
@@ -13,7 +12,9 @@ namespace PipePuz.RoomCarpet
     ///   Anchored 후 <see cref="Lifetime"/> 초 동안 유효, 마지막 <see cref="WarningSeconds"/> 동안 알파 깜빡,
     ///   그 후 Destroy.
     ///
-    /// TeleportationArea 는 Anchored 가 되어야 활성화되어 B 가 텔레포트할 수 있다.
+    /// 카펫은 텔레포트 대상이 아닌 물리적 발판으로 사용된다 —
+    /// <see cref="DisappearingCarpetController"/> 가 사용자의 카메라 위치를 카펫 BoxCollider 범위와 비교해
+    /// "걸쳐있음" 을 판정한다.
     /// </summary>
     [DefaultExecutionOrder(50)]
     public class DisappearingCarpet : MonoBehaviour
@@ -22,7 +23,6 @@ namespace PipePuz.RoomCarpet
 
         [Header("Refs (Dispenser 가 빌드 시 채움)")]
         public Renderer VisualRenderer;
-        public BaseTeleportationInteractable TeleportArea;
         public CarpetDispenser Dispenser;
 
         [Header("Timing")]
@@ -62,7 +62,6 @@ namespace PipePuz.RoomCarpet
                 _matInstance = VisualRenderer.material; // 자동 instance
                 _baseColor = ReadColor(_matInstance);
             }
-            if (TeleportArea != null) TeleportArea.enabled = false;
         }
 
         void OnDestroy()
@@ -124,8 +123,6 @@ namespace PipePuz.RoomCarpet
             if (fwd.sqrMagnitude < 1e-4f) fwd = Vector3.ProjectOnPlane(Vector3.forward, normal);
             transform.position = point + normal.normalized * 0.005f;
             transform.rotation = Quaternion.LookRotation(fwd.normalized, normal.normalized);
-
-            if (TeleportArea != null) TeleportArea.enabled = true;
         }
 
         void Update()

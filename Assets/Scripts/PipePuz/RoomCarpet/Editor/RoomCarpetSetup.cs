@@ -1,21 +1,20 @@
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.XR.Interaction.Toolkit.Locomotion.Teleportation;
 
 namespace PipePuz.RoomCarpet.EditorTools
 {
     /// <summary>
     /// 메뉴 Tools/PipePuz/Build Room Carpet.
-    /// puz... 가 아닌 'RoomCarpet' 이름의 GameObject 안에 Floor / StartZone / GoalZone /
+    /// 'RoomCarpet' 이름의 GameObject 안에 Floor / StartZone / GoalZone /
     /// Dispenser / ActiveCarpets / Controller 를 자동 생성한다.
     ///
     /// 게임 진행:
-    ///   1. 사용자가 StartZone 에서 시작 (XR Origin 위치는 수동 셋업).
+    ///   1. 사용자가 StartZone 위에서 시작 (XR Origin 의 위치 셋업은 수동).
     ///   2. Dispenser 위에 떠 있는 카펫을 잡아 던짐.
-    ///   3. 카펫이 Floor (CarpetFloor 마커) 에 닿으면 거기 안착 + TeleportationArea 활성.
-    ///   4. 사용자는 그 카펫 위로 텔레포트.
-    ///   5. 카펫은 5 초 후 사라짐 (마지막 1.5초 깜빡 경고).
-    ///   6. 카펫 → 카펫 → ... → GoalZone 도달 시 OnSolved.
+    ///   3. 카펫이 Floor (CarpetFloor 마커) 에 닿으면 거기 안착 (5초 수명).
+    ///   4. 사용자는 그 카펫 위를 **직접 걸어서** 이동 (continuous locomotion).
+    ///   5. 카펫 / StartZone / GoalZone 어디에도 걸쳐있지 않으면 StartZone 으로 즉시 리스폰.
+    ///   6. GoalZone 도달 시 OnSolved.
     /// </summary>
     public static class RoomCarpetSetup
     {
@@ -102,14 +101,13 @@ namespace PipePuz.RoomCarpet.EditorTools
             AssignMat(floor, floorMat);
             floor.AddComponent<CarpetFloor>();
 
-            // StartZone — 시작 안전 영역.
+            // StartZone — 시작 안전 영역. 직접 걸어다니므로 TeleportationArea 는 부착하지 않는다.
             var start = GameObject.CreatePrimitive(PrimitiveType.Cube);
             start.name = "StartZone";
             start.transform.SetParent(room.transform, false);
             start.transform.localPosition = new Vector3(-ZoneOffsetX, ZoneTopY, 0f);
             start.transform.localScale = new Vector3(ZoneWidth, ZoneThickness, ZoneDepth);
             AssignMat(start, startMat);
-            start.AddComponent<TeleportationArea>();
 
             // GoalZone — 빈 root + trigger BoxCollider + CarpetGoalZone.
             // Visual 자식은 실제 텔레포트할 평면.
@@ -130,7 +128,6 @@ namespace PipePuz.RoomCarpet.EditorTools
             goalVis.transform.localPosition = new Vector3(0f, ZoneTopY - (GoalTriggerHeight * 0.5f), 0f);
             goalVis.transform.localScale = new Vector3(ZoneWidth, ZoneThickness, ZoneDepth);
             AssignMat(goalVis, goalMat);
-            goalVis.AddComponent<TeleportationArea>();
 
             // Dispenser — 받침 + spawn point + 컴포넌트.
             var disp = new GameObject("Dispenser");
@@ -167,13 +164,22 @@ namespace PipePuz.RoomCarpet.EditorTools
             // 컨트롤러 wire-up.
             ctrl.Dispenser = dispComp;
             ctrl.Goal = goalComp;
+            ctrl.ActiveCarpetsRoot = active.transform;
+            ctrl.FloorCollider = floor.GetComponent<BoxCollider>();
+            ctrl.StartZoneCollider = start.GetComponent<BoxCollider>();
+            ctrl.GoalZoneCollider = goalTrigger;
+            ctrl.StartPoint = start.transform;
+            ctrl.OverlapRadius = 0.15f;
+            ctrl.RespawnCooldown = 1.0f;
+            // ctrl.XROriginRef 는 비워둠 — 런타임 Start 에서 자동 검색.
 
             EditorUtility.SetDirty(room);
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(room.scene);
             Undo.CollapseUndoOperations(undoGroup);
             Debug.Log("[RoomCarpet] Build 완료. " +
                       "Play 모드 진입 시 Dispenser 위에 첫 카펫이 spawn 됩니다. " +
-                      "XR Origin 을 StartZone 위에 배치해 두세요.");
+                      "XR Origin 에 Continuous Move Provider 가 있어야 직접 걷기로 이동 가능. " +
+                      "초기 위치는 StartZone 위로 수동 셋업하세요.");
         }
 
         // ----- Util -----

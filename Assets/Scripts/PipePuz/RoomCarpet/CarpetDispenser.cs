@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
-using UnityEngine.XR.Interaction.Toolkit.Locomotion.Teleportation;
 
 namespace PipePuz.RoomCarpet
 {
@@ -85,14 +84,9 @@ namespace PipePuz.RoomCarpet
             grab.smoothPosition = false;
             grab.smoothRotation = false;
 
-            // 텔레포트 — 처음엔 비활성, 안착 후 활성.
-            var tele = go.AddComponent<TeleportationArea>();
-            tele.enabled = false;
-
-            // 라이프사이클 컴포넌트.
+            // 라이프사이클 컴포넌트. 카펫은 물리적 발판이므로 TeleportationArea 는 부착하지 않는다.
             var carpet = go.AddComponent<DisappearingCarpet>();
             carpet.VisualRenderer = vis.GetComponent<Renderer>();
-            carpet.TeleportArea = tele;
             carpet.Lifetime = CarpetLifetime;
             carpet.WarningSeconds = CarpetWarningSeconds;
 
