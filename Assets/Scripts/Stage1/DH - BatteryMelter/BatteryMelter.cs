@@ -137,18 +137,18 @@ public class BatteryMelter : MonoBehaviour
     {
         if (snapRef == null) return;
 
-        var grab = snapRef.GetComponent<XRGrabInteractable>();
-        if (grab) grab.throwOnDetach = true; // 다시 켜줌
-
         snapRef.transform.SetParent(null, true);
 
         var rb = snapRef.GetComponent<Rigidbody>();
         if (rb)
         {
-            rb.isKinematic = false;
+            rb.isKinematic = false;  // 먼저 꺼주고
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
         }
+
+        var grab = snapRef.GetComponent<XRGrabInteractable>();
+        if (grab) grab.throwOnDetach = true;  // 그다음에 켜기
 
         snapRef = null;
         Debug.Log(log);
