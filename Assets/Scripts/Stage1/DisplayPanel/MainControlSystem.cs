@@ -13,6 +13,7 @@ public class MainControlSystem : MonoBehaviour
     public TextMeshProUGUI statusText;
     public GameObject batteryWarningPanel;
     public Image barFill;
+    public Button startButton;
 
     [Header("Settings")]
     public float stabilityDuration = 5f;
@@ -41,6 +42,9 @@ public class MainControlSystem : MonoBehaviour
         stabilityBar.maxValue = maxStability;
         UpdateUI(0f);
         if (batteryWarningPanel) batteryWarningPanel.SetActive(false);
+
+        if (startButton != null)
+            startButton.onClick.AddListener(OnStabilizeButtonPressed);
     }
 
     void Update()
