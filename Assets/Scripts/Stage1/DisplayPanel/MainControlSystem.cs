@@ -4,8 +4,9 @@ using UnityEngine.UI;
 using TMPro;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
+using Fusion;
 
-public class MainControlSystem : MonoBehaviour
+public class MainControlSystem : NetworkBehaviour
 {
     [Header("UI References")]
     public Slider stabilityBar;
@@ -21,46 +22,107 @@ public class MainControlSystem : MonoBehaviour
     public float maxStability = 100f;
 
     [Header("Lighting")]
-    public Light[] roomLights;
+    public Stage1.RoomLightingController roomLightingController;
 
     [Header("Battery Slot")]
     public Transform batterySlot;          // MainControlPanel 배터리 슬롯 위치
     public float snapDistance = 0.35f;     // 스냅 거리
 
     public enum SystemState { Idle, Stabilizing, BatteryLow, PowerOff, Rebooting }
-    public SystemState currentState = SystemState.Idle;
+    
+    [Networked]
+    public SystemState CurrentState { get; set; } = SystemState.Idle;
+
+    [Networked]
+    public float Stability { get; set; }
 
     public static MainControlSystem Instance;
 
     GameObject snappedBattery = null;
 
+    private SystemState _lastState = SystemState.Idle;
+
     void Awake() { Instance = this; }
 
-    void Start()
+    public override void Spawned()
     {
-        stabilityBar.value = 0f;
+        if (Object.HasStateAuthority)
+        {
+            CurrentState = SystemState.Idle;
+            Stability = 0f;
+        }
+        
         stabilityBar.maxValue = maxStability;
-        UpdateUI(0f);
-        if (batteryWarningPanel) batteryWarningPanel.SetActive(false);
-
+        UpdateVisuals();
+        
         if (startButton != null)
             startButton.onClick.AddListener(OnStabilizeButtonPressed);
     }
 
-    void Update()
+    public override void Render()
     {
-        // PowerOff 상태일 때만 배터리 슬롯 스냅 체크
-        if (currentState == SystemState.PowerOff && snappedBattery == null)
-            CheckBatterySnap();
+        // 시각적 동기화
+        UpdateVisuals();
     }
 
-    // ── Battery Slot Snap ──────────────────────────────────
+    void UpdateVisuals()
+    {
+        // Stability UI 업데이트
+        stabilityBar.value = Stability;
+        int percent = Mathf.RoundToInt(Stability);
+        if (stabilityText) stabilityText.text = $"STABILITY: {percent}%";
+        if (barFill)
+            barFill.color = Color.Lerp(Color.red, Color.green, Stability / maxStability);
+
+        // 상태 기반 UI 및 조명 업데이트
+        if (_lastState != CurrentState)
+        {
+            UpdateStateVisuals(CurrentState);
+            _lastState = CurrentState;
+        }
+    }
+
+    void UpdateStateVisuals(SystemState state)
+    {
+        switch (state)
+        {
+            case SystemState.Idle:
+                if (statusText) statusText.text = "SYSTEM ONLINE";
+                if (batteryWarningPanel) batteryWarningPanel.SetActive(false);
+                RestoreLights();
+                break;
+            case SystemState.Stabilizing:
+                if (statusText) statusText.text = "STABILIZING...";
+                break;
+            case SystemState.BatteryLow:
+                if (statusText) statusText.text = "BATTERY CRITICAL!";
+                if (batteryWarningPanel) batteryWarningPanel.SetActive(true);
+                break;
+            case SystemState.PowerOff:
+                if (statusText) statusText.text = "POWER OFFLINE";
+                if (batteryWarningPanel) batteryWarningPanel.SetActive(true);
+                TurnOffLights();
+                break;
+            case SystemState.Rebooting:
+                if (statusText) statusText.text = "REBOOTING...";
+                if (batteryWarningPanel) batteryWarningPanel.SetActive(false);
+                RestoreLights();
+                break;
+        }
+    }
+
+    void Update()
+    {
+        if (!Object || !Object.HasStateAuthority) return;
+
+        if (CurrentState == SystemState.PowerOff && snappedBattery == null)
+            CheckBatterySnap();
+    }
 
     void CheckBatterySnap()
     {
         if (batterySlot == null) return;
 
-        // 해동된 배터리 (초록) 찾기 - 태그로
         GameObject[] allBatteries = GameObject.FindGameObjectsWithTag("Battery");
         GameObject closest = null;
         float closestDist = float.MaxValue;
@@ -101,102 +163,72 @@ public class MainControlSystem : MonoBehaviour
             worldScale.z / (parentLossy.z != 0 ? parentLossy.z : 1)
         );
 
-        Debug.Log("Melted battery inserted into main panel!");
         OnBatteryInserted();
     }
 
-    // ── Stabilize Button ───────────────────────────────────
-
     public void OnStabilizeButtonPressed()
     {
-        if (currentState != SystemState.Idle) return;
+        if (CurrentState != SystemState.Idle) return;
+        
+        if (!Object.HasStateAuthority)
+            Object.RequestStateAuthority();
+        
         StartCoroutine(StabilizeSequence());
     }
 
     IEnumerator StabilizeSequence()
     {
-        currentState = SystemState.Stabilizing;
-        if (statusText) statusText.text = "STABILIZING...";
+        CurrentState = SystemState.Stabilizing;
         float elapsed = 0f;
 
         while (elapsed < stabilityDuration)
         {
             elapsed += Time.deltaTime;
-            float value = Mathf.Lerp(startStability, maxStability, elapsed / stabilityDuration);
-            stabilityBar.value = value;
-            UpdateUI(value);
+            Stability = Mathf.Lerp(startStability, maxStability, elapsed / stabilityDuration);
             yield return null;
         }
 
-        // 배터리 부족
-        currentState = SystemState.BatteryLow;
-        stabilityBar.value = maxStability;
-        UpdateUI(maxStability);
-
+        CurrentState = SystemState.BatteryLow;
+        Stability = maxStability;
         yield return new WaitForSeconds(1f);
-        if (statusText) statusText.text = "BATTERY CRITICAL!";
-        if (batteryWarningPanel) batteryWarningPanel.SetActive(true);
-
         yield return new WaitForSeconds(1.5f);
-
-        // 전원 꺼짐
-        currentState = SystemState.PowerOff;
-        TurnOffLights();
-        if (statusText) statusText.text = "POWER OFFLINE";
-        stabilityBar.value = 0f;
-        UpdateUI(0f);
-    }
-
-    void UpdateUI(float value)
-    {
-        int percent = Mathf.RoundToInt(value);
-        if (stabilityText) stabilityText.text = $"STABILITY: {percent}%";
-        if (barFill)
-            barFill.color = Color.Lerp(Color.red, Color.green, value / maxStability);
+        CurrentState = SystemState.PowerOff;
+        Stability = 0f;
     }
 
     void TurnOffLights()
     {
-        foreach (var light in roomLights)
-            if (light) light.enabled = false;
+        if (roomLightingController != null) roomLightingController.DimLights();
     }
 
-    // ── Battery Inserted → Reboot ──────────────────────────
+    void RestoreLights()
+    {
+        if (roomLightingController != null) roomLightingController.RestoreLights();
+    }
 
     public void OnBatteryInserted()
     {
-        if (currentState != SystemState.PowerOff) return;
+        if (CurrentState != SystemState.PowerOff) return;
+        
+        if (!Object.HasStateAuthority)
+            Object.RequestStateAuthority();
+        
         StartCoroutine(Reboot());
     }
 
     IEnumerator Reboot()
     {
-        currentState = SystemState.Rebooting;
-        if (statusText) statusText.text = "REBOOTING...";
-
-        // 조명 켜기
-        foreach (var light in roomLights)
-            if (light) light.enabled = true;
-
-        if (batteryWarningPanel) batteryWarningPanel.SetActive(false);
-
-        // Stability 0 → 100 채우기 (초록색으로)
+        CurrentState = SystemState.Rebooting;
         float elapsed = 0f;
         float rebootDuration = 2f;
         while (elapsed < rebootDuration)
         {
             elapsed += Time.deltaTime;
-            float value = Mathf.Lerp(0f, maxStability, elapsed / rebootDuration);
-            stabilityBar.value = value;
-            UpdateUI(value);
+            Stability = Mathf.Lerp(0f, maxStability, elapsed / rebootDuration);
             yield return null;
         }
 
-        stabilityBar.value = maxStability;
-        UpdateUI(maxStability);
-
-        currentState = SystemState.Idle;
-        if (statusText) statusText.text = "SYSTEM ONLINE";
-        Debug.Log("System rebooted!");
+        Stability = maxStability;
+        CurrentState = SystemState.Idle;
     }
 }
