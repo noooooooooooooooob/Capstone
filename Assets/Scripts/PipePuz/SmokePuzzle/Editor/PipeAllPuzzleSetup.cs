@@ -149,6 +149,10 @@ namespace PipePuz.SmokePuzzle.EditorTools
             ctrl.MaxSmoke = InitialSmokeForController;
             EditorUtility.SetDirty(ctrl);
 
+            // ===== 8) Smoke Gauge — RadiatorA 옆에 반원 게이지 =====
+            var radiatorAT = dupRadiator.transform.Find("RadiatorA");
+            BuildSmokeGauge(container.transform, radiatorAT, ctrl);
+
             EditorUtility.SetDirty(pipeAll);
             EditorSceneManager.MarkSceneDirty(pipeAll.scene);
             Undo.CollapseUndoOperations(undoGroup);
@@ -218,6 +222,218 @@ namespace PipePuz.SmokePuzzle.EditorTools
             var a = root.Find(l1);
             if (a == null) return null;
             return a.Find(l2);
+        }
+
+        // ===== Smoke Gauge =====
+        // RadiatorA 옆에 반원 게이지 생성. 흰 배경 + 빨간 동적 fill + 회전 포인터.
+
+        static readonly Vector3 GaugeLocalOffset = new Vector3(0.8f, 1.4f, 0f); // RadiatorA 기준 +X/+Y
+        const float GaugeRadius = 0.18f;
+        const int GaugeSegments = 48;
+        const float PointerThickness = 0.008f;
+        const float PointerHeadSize = 0.025f;
+
+        static void BuildSmokeGauge(Transform parent, Transform radiatorARef, PipeAllPuzzleController controller)
+        {
+            var root = new GameObject("SmokeGauge");
+            Undo.RegisterCreatedObjectUndo(root, "Create SmokeGauge");
+            root.transform.SetParent(parent, false);
+
+            // RadiatorA 의 월드 위치 옆 위로 둔다. 평면은 일단 월드 XY (normal +Z).
+            // 사용자가 인스펙터에서 회전 조정 가능.
+            if (radiatorARef != null)
+            {
+                root.transform.position = radiatorARef.position + GaugeLocalOffset;
+            }
+            root.transform.localRotation = Quaternion.identity;
+            root.transform.localScale = Vector3.one;
+
+            // 머티리얼 — Unlit + 양면 (앞뒤에서 동일하게 보이도록)
+            var whiteMat = MakeGaugeUnlitMaterial("SmokeGauge_White", new Color(0.95f, 0.95f, 0.97f));
+            var redMat   = MakeGaugeUnlitMaterial("SmokeGauge_Red",   new Color(0.90f, 0.18f, 0.18f));
+            var darkMat  = MakeGaugeUnlitMaterial("SmokeGauge_Dark",  new Color(0.10f, 0.10f, 0.12f));
+            var frameMat = MakeGaugeUnlitMaterial("SmokeGauge_Frame", new Color(0.20f, 0.20f, 0.24f));
+
+            // === 배경: 흰 반원 (static mesh) ===
+            var bg = new GameObject("Background");
+            bg.transform.SetParent(root.transform, false);
+            var bgMf = bg.AddComponent<MeshFilter>();
+            var bgMr = bg.AddComponent<MeshRenderer>();
+            bgMf.sharedMesh = CreateStaticSectorMesh(GaugeRadius, GaugeSegments, 0f, 180f);
+            bgMr.sharedMaterial = whiteMat;
+
+            // === 빨간 fill: 동적 mesh (SmokeGauge.Awake 가 mesh 할당) ===
+            // 양쪽(+Z·-Z 각각의 시점) 에서 모두 Background 보다 카메라에 가까워야 하므로
+            // 두 사본을 z = ±0.0015f 위치에 둔다. 둘 다 같은 동적 mesh 를 공유.
+            var redFront = new GameObject("RedFill_Front");
+            redFront.transform.SetParent(root.transform, false);
+            redFront.transform.localPosition = new Vector3(0f, 0f, -0.0015f);
+            var redFrontMf = redFront.AddComponent<MeshFilter>();
+            var redFrontMr = redFront.AddComponent<MeshRenderer>();
+            redFrontMr.sharedMaterial = redMat;
+
+            var redBack = new GameObject("RedFill_Back");
+            redBack.transform.SetParent(root.transform, false);
+            redBack.transform.localPosition = new Vector3(0f, 0f, +0.0015f);
+            var redBackMf = redBack.AddComponent<MeshFilter>();
+            var redBackMr = redBack.AddComponent<MeshRenderer>();
+            redBackMr.sharedMaterial = redMat;
+
+            // === 외곽 프레임(반원 테두리) ===
+            BuildGaugeFrame(root.transform, frameMat);
+
+            // === 포인터(화살표) — Z축 회전 ===
+            var pointer = new GameObject("Pointer");
+            pointer.transform.SetParent(root.transform, false);
+            pointer.transform.localPosition = new Vector3(0f, 0f, -0.003f);
+            pointer.transform.localRotation = Quaternion.identity;
+
+            // Pointer 자식: 막대(+X로 길게) + 화살촉
+            var bar = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            bar.name = "Bar";
+            Object.DestroyImmediate(bar.GetComponent<Collider>());
+            bar.transform.SetParent(pointer.transform, false);
+            bar.transform.localPosition = new Vector3(GaugeRadius * 0.5f, 0f, 0f);
+            bar.transform.localScale = new Vector3(GaugeRadius * 0.95f, PointerThickness, PointerThickness);
+            bar.GetComponent<Renderer>().sharedMaterial = darkMat;
+
+            var head = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            head.name = "Head";
+            Object.DestroyImmediate(head.GetComponent<Collider>());
+            head.transform.SetParent(pointer.transform, false);
+            head.transform.localPosition = new Vector3(GaugeRadius * 0.92f, 0f, 0f);
+            head.transform.localScale = new Vector3(PointerHeadSize, PointerHeadSize, PointerThickness);
+            head.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            head.GetComponent<Renderer>().sharedMaterial = darkMat;
+
+            // 허브 — 중심 검은 점
+            var hub = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            hub.name = "Hub";
+            Object.DestroyImmediate(hub.GetComponent<Collider>());
+            hub.transform.SetParent(root.transform, false);
+            hub.transform.localPosition = new Vector3(0f, 0f, -0.004f);
+            hub.transform.localScale = new Vector3(GaugeRadius * 0.12f, GaugeRadius * 0.12f, PointerThickness);
+            hub.GetComponent<Renderer>().sharedMaterial = darkMat;
+
+            // SmokeGauge 컴포넌트
+            var gauge = Undo.AddComponent<SmokeGauge>(root);
+            gauge.Controller = controller;
+            gauge.Pointer = pointer.transform;
+            gauge.RedFillFilter = redFrontMf;
+            gauge.RedFillFilterBack = redBackMf;
+            gauge.Radius = GaugeRadius;
+            gauge.Segments = GaugeSegments;
+        }
+
+        /// <summary>반원 외곽 호 — 얇은 cube 들로 호를 따라 깐다.</summary>
+        static void BuildGaugeFrame(Transform root, Material frameMat)
+        {
+            var frame = new GameObject("Frame");
+            frame.transform.SetParent(root, false);
+
+            int segs = GaugeSegments / 2;
+            float thickness = 0.012f;
+            for (int i = 0; i < segs; i++)
+            {
+                float t0 = i / (float)segs;
+                float t1 = (i + 1) / (float)segs;
+                float a0 = Mathf.Lerp(0f, 180f, t0) * Mathf.Deg2Rad;
+                float a1 = Mathf.Lerp(0f, 180f, t1) * Mathf.Deg2Rad;
+                Vector3 p0 = new Vector3(Mathf.Cos(a0) * GaugeRadius, Mathf.Sin(a0) * GaugeRadius, 0f);
+                Vector3 p1 = new Vector3(Mathf.Cos(a1) * GaugeRadius, Mathf.Sin(a1) * GaugeRadius, 0f);
+                Vector3 mid = (p0 + p1) * 0.5f;
+                Vector3 dir = (p1 - p0);
+                float len = dir.magnitude;
+                float angDeg = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+
+                var seg = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                seg.name = $"FrameSeg_{i}";
+                Object.DestroyImmediate(seg.GetComponent<Collider>());
+                seg.transform.SetParent(frame.transform, false);
+                seg.transform.localPosition = new Vector3(mid.x, mid.y, 0.0005f);
+                seg.transform.localRotation = Quaternion.Euler(0f, 0f, angDeg);
+                seg.transform.localScale = new Vector3(len * 1.05f, thickness, thickness);
+                seg.GetComponent<Renderer>().sharedMaterial = frameMat;
+            }
+
+            // 바닥 선 — 좌측에서 우측까지 직선 frame
+            var baseLine = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            baseLine.name = "FrameBase";
+            Object.DestroyImmediate(baseLine.GetComponent<Collider>());
+            baseLine.transform.SetParent(frame.transform, false);
+            baseLine.transform.localPosition = new Vector3(0f, 0f, 0.0005f);
+            baseLine.transform.localScale = new Vector3(GaugeRadius * 2.05f, thickness, thickness);
+            baseLine.GetComponent<Renderer>().sharedMaterial = frameMat;
+        }
+
+        /// <summary>fan(부채꼴) mesh — 중심점 + 호 위 (Segments+1) 개 점, Segments 개 삼각형.</summary>
+        static Mesh CreateStaticSectorMesh(float radius, int segments, float startDeg, float endDeg)
+        {
+            var mesh = new Mesh { name = "GaugeSector" };
+            var verts = new Vector3[segments + 2];
+            var tris = new int[segments * 3];
+            verts[0] = Vector3.zero;
+            for (int i = 0; i <= segments; i++)
+            {
+                float u = i / (float)segments;
+                float ang = Mathf.Lerp(startDeg, endDeg, u) * Mathf.Deg2Rad;
+                verts[i + 1] = new Vector3(Mathf.Cos(ang) * radius, Mathf.Sin(ang) * radius, 0f);
+            }
+            for (int i = 0; i < segments; i++)
+            {
+                tris[i * 3]     = 0;
+                tris[i * 3 + 1] = i + 1;
+                tris[i * 3 + 2] = i + 2;
+            }
+            mesh.vertices = verts;
+            mesh.triangles = tris;
+            mesh.RecalculateNormals();
+            mesh.RecalculateBounds();
+            return mesh;
+        }
+
+        // ===== Material 헬퍼 =====
+
+        /// <summary>
+        /// 게이지 전용 — URP Unlit + 양면(Cull Off). 조명 영향 없고 앞/뒤 어느 쪽에서 봐도 동일한 색.
+        /// Sector mesh 는 한쪽 normal 만 가지지만 Cull Off 라서 뒷면도 정상 렌더된다.
+        /// </summary>
+        static Material MakeGaugeUnlitMaterial(string name, Color color)
+        {
+            var shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null) shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null) shader = Shader.Find("Standard");
+            var m = new Material(shader) { name = name };
+            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", color);
+            else if (m.HasProperty("_Color")) m.SetColor("_Color", color);
+            // 양면. URP 셰이더의 _Cull 프로퍼티: 0=Off, 1=Front, 2=Back(default).
+            if (m.HasProperty("_Cull")) m.SetFloat("_Cull", 0f);
+            m.doubleSidedGI = true;
+            return m;
+        }
+
+        static Material MakeUrpMaterial(string name, Color color, bool transparent)
+        {
+            var shader = Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null) shader = Shader.Find("Standard");
+            var m = new Material(shader) { name = name };
+            if (m.HasProperty("_BaseColor")) m.SetColor("_BaseColor", color);
+            else if (m.HasProperty("_Color")) m.SetColor("_Color", color);
+
+            if (transparent)
+            {
+                if (m.HasProperty("_Surface")) m.SetFloat("_Surface", 1f);
+                if (m.HasProperty("_Blend"))   m.SetFloat("_Blend", 0f);
+                m.SetOverrideTag("RenderType", "Transparent");
+                m.SetInt("_ZWrite", 0);
+                m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                if (m.HasProperty("_SrcBlend"))
+                    m.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                if (m.HasProperty("_DstBlend"))
+                    m.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            }
+            return m;
         }
 
         // ===== ParticleSystem 설정 =====
