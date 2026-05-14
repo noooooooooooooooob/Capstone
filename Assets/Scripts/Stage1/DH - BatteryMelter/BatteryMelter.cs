@@ -46,112 +46,116 @@ public class BatteryMelter : MonoBehaviour
 
     void Update()
     {
-        if (snappedLightBall == null) CheckLightBallSnap();
-        else CheckLightBallRelease();
-
-        if (isOpen && !isAnimating)
-        {
-            if (snappedBattery == null) CheckBatterySnap();
-            else CheckBatteryRelease();
-        }
+        HandleLightBall();
+        HandleBattery();
     }
 
     // ── LightBall ──────────────────────────────────────────
 
-    void CheckLightBallSnap()
+    void HandleLightBall()
     {
         GameObject lb = GameObject.FindGameObjectWithTag("LightBall");
         if (lb == null) return;
-        var grab = lb.GetComponent<XRGrabInteractable>();
-        if (grab != null && grab.isSelected) return;
-        if (Vector3.Distance(lb.transform.position, lightBallHole.position) < snapDistance)
-            SnapObject(lb, lightBallHole, ref snappedLightBall, "LightBall snapped!");
-    }
 
-    void CheckLightBallRelease()
-    {
-        if (snappedLightBall == null) return;
-        var grab = snappedLightBall.GetComponent<XRGrabInteractable>();
-        if (grab != null && grab.isSelected)
-            ReleaseObject(ref snappedLightBall, "LightBall released!");
+        var grab = lb.GetComponent<XRGrabInteractable>();
+        bool isHeld = grab != null && grab.isSelected;
+
+        if (snappedLightBall != null)
+        {
+            if (isHeld)
+            {
+                StartCoroutine(UnsnapNextFrame(snappedLightBall, false));
+            }
+            else
+            {
+                lb.transform.position = lightBallHole.position;
+                lb.transform.rotation = lightBallHole.rotation;
+            }
+        }
+        else
+        {
+            if (!isHeld && Vector3.Distance(lb.transform.position, lightBallHole.position) < snapDistance)
+            {
+                Snap(lb, lightBallHole, ref snappedLightBall);
+            }
+        }
     }
 
     // ── Battery ────────────────────────────────────────────
 
-    void CheckBatterySnap()
+    void HandleBattery()
     {
-        GameObject[] allBatteries = GameObject.FindGameObjectsWithTag("Battery");
-        GameObject closest = null;
-        float closestDist = float.MaxValue;
+        if (!isOpen || isAnimating) return;
 
+        if (snappedBattery != null)
+        {
+            var grab = snappedBattery.GetComponent<XRGrabInteractable>();
+            bool isHeld = grab != null && grab.isSelected;
+
+            if (isHeld)
+            {
+                StartCoroutine(UnsnapNextFrame(snappedBattery, true));
+            }
+            else
+            {
+                snappedBattery.transform.position = batterySlot.position;
+                snappedBattery.transform.rotation = batterySlot.rotation;
+            }
+            return;
+        }
+
+        GameObject[] allBatteries = GameObject.FindGameObjectsWithTag("Battery");
         foreach (var bat in allBatteries)
         {
             var grab = bat.GetComponent<XRGrabInteractable>();
             if (grab != null && grab.isSelected) continue;
-            float dist = Vector3.Distance(bat.transform.position, batterySlot.position);
-            if (dist < closestDist) { closestDist = dist; closest = bat; }
+
+            if (Vector3.Distance(bat.transform.position, batterySlot.position) < snapDistance)
+            {
+                Snap(bat, batterySlot, ref snappedBattery);
+                break;
+            }
         }
-
-        if (closest == null) return;
-        if (closestDist < snapDistance)
-            SnapObject(closest, batterySlot, ref snappedBattery, "Battery snapped into melter!");
     }
 
-    void CheckBatteryRelease()
-    {
-        if (snappedBattery == null) return;
-        var grab = snappedBattery.GetComponent<XRGrabInteractable>();
-        if (grab != null && grab.isSelected)
-            ReleaseObject(ref snappedBattery, "Battery released from melter!");
-    }
+    // ── Snap / Unsnap ──────────────────────────────────────
 
-    // ── Snap/Release ───────────────────────────────────────
-
-    void SnapObject(GameObject obj, Transform slot, ref GameObject snapRef, string log)
+    void Snap(GameObject obj, Transform slot, ref GameObject snapRef)
     {
         snapRef = obj;
 
-        // Throw On Detach 끄기 (kinematic 에러 방지)
+        var rb = obj.GetComponent<Rigidbody>();
+        if (rb)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+            rb.constraints = RigidbodyConstraints.FreezeAll;  // kinematic 대신 이걸로
+        }
+
+        obj.transform.position = slot.position;
+        obj.transform.rotation = slot.rotation;
+
+        Debug.Log($"{obj.name} snapped!");
+    }
+
+    IEnumerator UnsnapNextFrame(GameObject obj, bool isBattery)
+    {
+        if (isBattery) snappedBattery = null;
+        else snappedLightBall = null;
+
         var grab = obj.GetComponent<XRGrabInteractable>();
         if (grab) grab.throwOnDetach = false;
 
+        yield return null;
+
         var rb = obj.GetComponent<Rigidbody>();
-        if (rb) rb.isKinematic = true;
-
-        Vector3 worldScale = obj.transform.lossyScale;
-        obj.transform.SetParent(slot, true);
-        obj.transform.localPosition = Vector3.zero;
-        obj.transform.localRotation = Quaternion.identity;
-
-        Vector3 parentLossy = slot.lossyScale;
-        obj.transform.localScale = new Vector3(
-            worldScale.x / (parentLossy.x != 0 ? parentLossy.x : 1),
-            worldScale.y / (parentLossy.y != 0 ? parentLossy.y : 1),
-            worldScale.z / (parentLossy.z != 0 ? parentLossy.z : 1)
-        );
-
-        Debug.Log(log);
-    }
-
-    void ReleaseObject(ref GameObject snapRef, string log)
-    {
-        if (snapRef == null) return;
-
-        snapRef.transform.SetParent(null, true);
-
-        var rb = snapRef.GetComponent<Rigidbody>();
         if (rb)
         {
-            rb.isKinematic = false;  // 먼저 꺼주고
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
+            rb.constraints = RigidbodyConstraints.None;  // constraints 해제
+            rb.useGravity = true;
         }
 
-        var grab = snapRef.GetComponent<XRGrabInteractable>();
-        if (grab) grab.throwOnDetach = true;  // 그다음에 켜기
-
-        snapRef = null;
-        Debug.Log(log);
+        Debug.Log($"{obj.name} unsnapped!");
     }
 
     // ── Glass Button ───────────────────────────────────────
@@ -204,7 +208,7 @@ public class BatteryMelter : MonoBehaviour
                 var rend = child.GetComponent<Renderer>();
                 if (rend && meltedBatteryCore != null)
                     rend.material = meltedBatteryCore;
-                Debug.Log("Battery core turned green!");
+                Debug.Log("Battery core melted!");
                 break;
             }
         }
