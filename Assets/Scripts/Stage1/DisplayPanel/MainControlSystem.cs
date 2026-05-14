@@ -42,7 +42,28 @@ public class MainControlSystem : NetworkBehaviour
 
     private SystemState _lastState = SystemState.Idle;
 
-    void Awake() { Instance = this; }
+    void Awake() 
+    { 
+        Instance = this; 
+        if (stabilityBar) 
+        {
+            stabilityBar.maxValue = maxStability;
+            stabilityBar.value = 0f;
+        }
+        if (stabilityText) stabilityText.text = "STABILITY: 0%";
+        if (statusText) statusText.text = "OFFLINE";
+        if (batteryWarningPanel) batteryWarningPanel.SetActive(false);
+    }
+
+    void Start()
+    {
+        // UI 버튼 리스너는 네트워크 여부와 관계없이 등록 (테스트 편의성)
+        if (startButton != null)
+        {
+            startButton.onClick.RemoveAllListeners();
+            startButton.onClick.AddListener(OnStabilizeButtonPressed);
+        }
+    }
 
     public override void Spawned()
     {
@@ -52,29 +73,23 @@ public class MainControlSystem : NetworkBehaviour
             Stability = 0f;
         }
         
-        stabilityBar.maxValue = maxStability;
         UpdateVisuals();
-        
-        if (startButton != null)
-            startButton.onClick.AddListener(OnStabilizeButtonPressed);
     }
 
     public override void Render()
     {
-        // 시각적 동기화
+        if (!Object || !Object.IsValid) return;
         UpdateVisuals();
     }
 
     void UpdateVisuals()
     {
-        // Stability UI 업데이트
-        stabilityBar.value = Stability;
+        if (stabilityBar) stabilityBar.value = Stability;
         int percent = Mathf.RoundToInt(Stability);
         if (stabilityText) stabilityText.text = $"STABILITY: {percent}%";
         if (barFill)
             barFill.color = Color.Lerp(Color.red, Color.green, Stability / maxStability);
 
-        // 상태 기반 UI 및 조명 업데이트
         if (_lastState != CurrentState)
         {
             UpdateStateVisuals(CurrentState);
@@ -113,7 +128,7 @@ public class MainControlSystem : NetworkBehaviour
 
     void Update()
     {
-        if (!Object || !Object.HasStateAuthority) return;
+        if (!Object || !Object.IsValid || !Object.HasStateAuthority) return;
 
         if (CurrentState == SystemState.PowerOff && snappedBattery == null)
             CheckBatterySnap();
@@ -144,10 +159,8 @@ public class MainControlSystem : NetworkBehaviour
     void SnapBattery(GameObject bat)
     {
         snappedBattery = bat;
-
         var grab = bat.GetComponent<XRGrabInteractable>();
         if (grab) grab.throwOnDetach = false;
-
         var rb = bat.GetComponent<Rigidbody>();
         if (rb) rb.isKinematic = true;
 
@@ -168,12 +181,49 @@ public class MainControlSystem : NetworkBehaviour
 
     public void OnStabilizeButtonPressed()
     {
-        if (CurrentState != SystemState.Idle) return;
+        // 1. 네트워크 연결 체크
+        if (!Object || !Object.IsValid)
+        {
+            Debug.LogWarning("[MainControlSystem] Network not ready. Please connect to a room first.");
+            return;
+        }
+
+        // 2. 상태 체크
+        if (CurrentState != SystemState.Idle) 
+        {
+            Debug.Log($"[MainControlSystem] Cannot start: Current state is {CurrentState}");
+            return;
+        }
         
+        // 3. 권한 획득 및 시작
+        StartCoroutine(RequestAuthorityAndStart());
+    }
+
+    IEnumerator RequestAuthorityAndStart()
+    {
         if (!Object.HasStateAuthority)
+        {
+            Debug.Log("[MainControlSystem] Requesting State Authority...");
             Object.RequestStateAuthority();
-        
-        StartCoroutine(StabilizeSequence());
+            
+            // 권한이 넘어올 때까지 잠시 대기 (Shared Mode)
+            float timeout = 2f;
+            while (!Object.HasStateAuthority && timeout > 0)
+            {
+                timeout -= Time.deltaTime;
+                yield return null;
+            }
+        }
+
+        if (Object.HasStateAuthority)
+        {
+            Debug.Log("[MainControlSystem] Starting Stabilize Sequence.");
+            StartCoroutine(StabilizeSequence());
+        }
+        else
+        {
+            Debug.LogError("[MainControlSystem] Failed to get State Authority.");
+        }
     }
 
     IEnumerator StabilizeSequence()
@@ -208,11 +258,19 @@ public class MainControlSystem : NetworkBehaviour
 
     public void OnBatteryInserted()
     {
+        if (!Object || !Object.IsValid) return;
         if (CurrentState != SystemState.PowerOff) return;
         
+        StartCoroutine(RequestAuthorityAndReboot());
+    }
+
+    IEnumerator RequestAuthorityAndReboot()
+    {
         if (!Object.HasStateAuthority)
+        {
             Object.RequestStateAuthority();
-        
+            while (!Object.HasStateAuthority) yield return null;
+        }
         StartCoroutine(Reboot());
     }
 
