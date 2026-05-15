@@ -69,6 +69,9 @@ namespace Capstone.Network
         public event Action<string> OnConnecting;
         public event Action<string> OnConnected;
         public event Action<string> OnFailed;
+        public event Action OnRoomFull;
+
+        bool _roomFullFired;
 
         public NetworkRunner Runner => runner;
         public bool IsBusy { get; private set; }
@@ -282,6 +285,22 @@ namespace Capstone.Network
         {
             if (runner.Topology == Topologies.ClientServer) OnPlayerJoinedHostMode(runner, player);
             else OnPlayerJoinedSharedMode(runner, player);
+
+            CheckRoomFull(runner);
+        }
+
+        void CheckRoomFull(NetworkRunner runner)
+        {
+            if (_roomFullFired || playerCount <= 0) return;
+
+            int count = 0;
+            foreach (var _ in runner.ActivePlayers) count++;
+
+            if (count >= playerCount)
+            {
+                _roomFullFired = true;
+                OnRoomFull?.Invoke();
+            }
         }
 
         public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
