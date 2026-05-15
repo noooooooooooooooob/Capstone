@@ -23,6 +23,7 @@ public class MainControlSystem : NetworkBehaviour
 
     [Header("Lighting")]
     public Stage1.RoomLightingController roomLightingController;
+    public Light lightBallLight;
 
     [Header("Battery Slot")]
     public Transform batterySlot;          // MainControlPanel 배터리 슬롯 위치
@@ -53,6 +54,7 @@ public class MainControlSystem : NetworkBehaviour
         if (stabilityText) stabilityText.text = "STABILITY: 0%";
         if (statusText) statusText.text = "OFFLINE";
         if (batteryWarningPanel) batteryWarningPanel.SetActive(false);
+        SetLightBallBrightness(0f);
     }
 
     void Start()
@@ -121,7 +123,7 @@ public class MainControlSystem : NetworkBehaviour
             case SystemState.Rebooting:
                 if (statusText) statusText.text = "REBOOTING...";
                 if (batteryWarningPanel) batteryWarningPanel.SetActive(false);
-                RestoreLights();
+                // RestoreLights() removed from here
                 break;
         }
     }
@@ -230,30 +232,54 @@ public class MainControlSystem : NetworkBehaviour
     {
         CurrentState = SystemState.Stabilizing;
         float elapsed = 0f;
+        float failurePoint = maxStability * 0.8f; // Lose power at 80%
 
         while (elapsed < stabilityDuration)
         {
             elapsed += Time.deltaTime;
-            Stability = Mathf.Lerp(startStability, maxStability, elapsed / stabilityDuration);
+            float currentProgress = Mathf.Lerp(startStability, maxStability, elapsed / stabilityDuration);
+            
+            if (currentProgress >= failurePoint)
+            {
+                Stability = failurePoint;
+                break; 
+            }
+            
+            Stability = currentProgress;
             yield return null;
         }
 
         CurrentState = SystemState.BatteryLow;
-        Stability = maxStability;
         yield return new WaitForSeconds(1f);
         yield return new WaitForSeconds(1.5f);
         CurrentState = SystemState.PowerOff;
         Stability = 0f;
+
+        // NEW: Trigger fire spawning when power goes off
+        if (Stage1.FireHazardController.Instance != null)
+        {
+            Stage1.FireHazardController.Instance.ActivateFires();
+        }
     }
 
     void TurnOffLights()
     {
         if (roomLightingController != null) roomLightingController.DimLights();
+        SetLightBallBrightness(2f);
     }
 
     void RestoreLights()
     {
         if (roomLightingController != null) roomLightingController.RestoreLights();
+        SetLightBallBrightness(0f);
+    }
+
+    void SetLightBallBrightness(float intensity)
+    {
+        if (lightBallLight == null) return;
+
+        lightBallLight.enabled = true;
+        lightBallLight.intensity = intensity;
     }
 
     public void OnBatteryInserted()
