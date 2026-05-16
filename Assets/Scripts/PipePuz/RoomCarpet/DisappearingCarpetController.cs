@@ -9,9 +9,10 @@ namespace PipePuz.RoomCarpet
     ///
     /// 매 프레임 안전 검사:
     ///   - 카메라(머리)의 X/Z 위치가 Floor X/Z 범위 안인가? (즉, 위험 바닥 위에 있는가)
-    ///   - 위에 있다면, StartZone / GoalZone / Anchored 카펫 중 하나의 X/Z 범위 (± Overlap 반경) 에 걸쳐있는가?
+    ///   - 위에 있다면, StartZone / GoalZone / P1 안전 영역 / Anchored 카펫 중 하나의
+    ///     X/Z 범위 (± Overlap 반경) 에 걸쳐있는가?
     ///   - 어디에도 걸쳐있지 않으면 → XR Origin 을 StartPoint 로 즉시 이동 (카메라 X/Z 오프셋 보정).
-    /// IsSolved (GoalZone 도달) 이후엔 안전 검사를 건너뛴다 — 자유로운 탐험 허용.
+    /// IsSolved (GoalZone 도달 또는 HintBoard 클리어) 이후엔 안전 검사를 건너뛴다.
     /// </summary>
     public class DisappearingCarpetController : MonoBehaviour
     {
@@ -20,10 +21,16 @@ namespace PipePuz.RoomCarpet
         public CarpetGoalZone Goal;
         public Transform ActiveCarpetsRoot;
 
+        [Tooltip("단서공 슬롯 보드. 모두 채워지면 OnSolved 가 발행됨.")]
+        public HintPuzzleBoard HintBoard;
+
         [Header("Refs — 안전 검사용 콜라이더")]
         public Collider FloorCollider;
         public Collider StartZoneCollider;
         public Collider GoalZoneCollider;
+
+        [Tooltip("P1 이 서 있는 단단한 바닥(P1Platform 등). 이 영역에 머리가 있을 때도 safe 로 간주.")]
+        public Collider[] P1SafeColliders;
 
         [Header("Refs — 리스폰")]
         [Tooltip("리스폰 위치 (보통 StartZone 의 Transform).")]
@@ -52,12 +59,14 @@ namespace PipePuz.RoomCarpet
         void Start()
         {
             if (Goal != null) Goal.OnReached.AddListener(HandleSolved);
+            if (HintBoard != null) HintBoard.OnSolved.AddListener(HandleHintPuzzleSolved);
             if (XROriginRef == null) XROriginRef = FindFirstObjectByType<XROrigin>();
         }
 
         void OnDestroy()
         {
             if (Goal != null) Goal.OnReached.RemoveListener(HandleSolved);
+            if (HintBoard != null) HintBoard.OnSolved.RemoveListener(HandleHintPuzzleSolved);
         }
 
         void Update()
@@ -105,6 +114,14 @@ namespace PipePuz.RoomCarpet
                 return true;
             if (GoalZoneCollider != null && IsWithinXZ(head, GoalZoneCollider.bounds, OverlapRadius))
                 return true;
+            if (P1SafeColliders != null)
+            {
+                for (int i = 0; i < P1SafeColliders.Length; i++)
+                {
+                    var c = P1SafeColliders[i];
+                    if (c != null && IsWithinXZ(head, c.bounds, OverlapRadius)) return true;
+                }
+            }
 
             if (ActiveCarpetsRoot != null)
             {
@@ -171,6 +188,21 @@ namespace PipePuz.RoomCarpet
             IsSolved = true;
             OnSolved?.Invoke();
             Debug.Log("[RoomCarpet] Solved!");
+        }
+
+        void HandleHintPuzzleSolved()
+        {
+            Debug.Log("[RoomCarpet] HintPuzzleBoard 클리어 → 퍼즐 솔브 처리.");
+            HandleSolved();
+        }
+
+        /// <summary>
+        /// Editor 시 UnityEvent persistent listener 로 연결하기 위한 공용 진입점.
+        /// 런타임에 외부에서 보드 OnSolved 를 컨트롤러로 전달할 때 호출.
+        /// </summary>
+        public void HandleHintPuzzleSolvedExternal()
+        {
+            HandleHintPuzzleSolved();
         }
     }
 }
