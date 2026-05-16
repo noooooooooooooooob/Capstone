@@ -54,41 +54,64 @@ namespace PipePuz.RoomCarpet
 
         GameObject CreateCarpetInstance()
         {
-            var go = new GameObject("Carpet");
+            return BuildCarpetGameObject(
+                name: "Carpet",
+                material: CarpetMaterial,
+                size: CarpetSize,
+                thickness: CarpetThickness,
+                lifetime: CarpetLifetime,
+                warningSeconds: CarpetWarningSeconds);
+        }
 
-            // 시각 — 얇은 큐브 (카펫이지만 단순화).
+        /// <summary>
+        /// 디스펜서·런처가 공통으로 사용하는 카펫 빌더.
+        /// 시각/콜라이더/Rigidbody/XRGrabInteractable/DisappearingCarpet 컴포넌트를 일관되게 부착.
+        /// 초기 상태는 kinematic + no gravity — 호출 측이 위치 배치 후 사용 (디스펜서는 그대로 두고
+        /// 런처는 곧바로 <see cref="DisappearingCarpet.Launch"/> 로 비활성/중력 활성).
+        /// </summary>
+        public static GameObject BuildCarpetGameObject(
+            string name,
+            Material material,
+            Vector2 size,
+            float thickness,
+            float lifetime,
+            float warningSeconds)
+        {
+            var go = new GameObject(name);
+
+            // 시각 — 얇은 큐브.
             var vis = GameObject.CreatePrimitive(PrimitiveType.Cube);
             vis.name = "Visual";
             var visCol = vis.GetComponent<Collider>();
             if (visCol != null) Destroy(visCol);
             vis.transform.SetParent(go.transform, false);
             vis.transform.localPosition = Vector3.zero;
-            vis.transform.localScale = new Vector3(CarpetSize.x, CarpetThickness, CarpetSize.y);
-            if (CarpetMaterial != null)
-                vis.GetComponent<Renderer>().sharedMaterial = CarpetMaterial;
+            vis.transform.localScale = new Vector3(size.x, thickness, size.y);
+            if (material != null)
+                vis.GetComponent<Renderer>().sharedMaterial = material;
 
             // 충돌/잡기 콜라이더 (시각 자식이 아니라 카펫 root 에).
             var col = go.AddComponent<BoxCollider>();
-            col.size = new Vector3(CarpetSize.x, CarpetThickness, CarpetSize.y);
+            col.size = new Vector3(size.x, thickness, size.y);
 
-            // Rigidbody — 디스펜서 위에 떠 있도록 kinematic + no gravity 로 시작.
+            // Rigidbody — 시작은 kinematic. 호출 측이 풀어줘야 비행 가능.
             var rb = go.AddComponent<Rigidbody>();
             rb.useGravity = false;
             rb.isKinematic = true;
             rb.interpolation = RigidbodyInterpolation.Interpolate;
             rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
 
-            // 잡기 — throwOnDetach 켬으로 던지는 손맛.
+            // 잡기 — throwOnDetach 켬으로 던지는 손맛 (런처 발사 후에도 공중 캐치 가능).
             var grab = go.AddComponent<XRGrabInteractable>();
             grab.throwOnDetach = true;
             grab.smoothPosition = false;
             grab.smoothRotation = false;
 
-            // 라이프사이클 컴포넌트. 카펫은 물리적 발판이므로 TeleportationArea 는 부착하지 않는다.
+            // 라이프사이클.
             var carpet = go.AddComponent<DisappearingCarpet>();
             carpet.VisualRenderer = vis.GetComponent<Renderer>();
-            carpet.Lifetime = CarpetLifetime;
-            carpet.WarningSeconds = CarpetWarningSeconds;
+            carpet.Lifetime = lifetime;
+            carpet.WarningSeconds = warningSeconds;
 
             return go;
         }

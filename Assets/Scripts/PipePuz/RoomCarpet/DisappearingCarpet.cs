@@ -36,6 +36,11 @@ namespace PipePuz.RoomCarpet
                  "사용자가 빈 곳에 던졌을 때 영구 떠도는 카펫 방지.")]
         public float FlyingTimeout = 8f;
 
+        [Header("Flight")]
+        [Tooltip("Flying 상태일 때 카펫에 적용할 상향 가속도(m/s^2). " +
+                 "9.81 보다 작은 양수면 실효 중력이 줄어 살짝 양력을 받음 — 던지기 사거리·체공시간이 늘어남.")]
+        public float LiftAcceleration = 5.5f;
+
         [Header("Read-only state")]
         [SerializeField] State _state = State.Spawned;
         public State CurrentState => _state;
@@ -92,6 +97,37 @@ namespace PipePuz.RoomCarpet
             {
                 _rb.isKinematic = false;
                 _rb.useGravity = true;
+            }
+        }
+
+        /// <summary>
+        /// 외부(런처)에서 카펫을 발사 모드로 진입시킬 때 사용.
+        /// Held 단계를 건너뛰고 곧바로 Flying 상태가 되며 지정된 속도/각속도가 부여된다.
+        /// 디스펜서가 아닌 런처가 만든 카펫이므로 Dispenser 통지는 일어나지 않는다.
+        /// </summary>
+        public void Launch(Vector3 worldVelocity, Vector3 worldAngularVelocity = default)
+        {
+            // 이미 비행/안착했다면 무시.
+            if (_state == State.Flying || _state == State.Anchored) return;
+            _state = State.Flying;
+            _flyingTime = 0f;
+            _notifiedDispenser = true; // 런처 발사는 디스펜서 연쇄 spawn 없음.
+            if (_rb != null)
+            {
+                _rb.isKinematic = false;
+                _rb.useGravity = true;
+                _rb.linearVelocity = worldVelocity;
+                _rb.angularVelocity = worldAngularVelocity;
+            }
+        }
+
+        void FixedUpdate()
+        {
+            // Flying 상태 동안 살짝 양력 — 효과적으로 중력을 줄여 사거리 확보.
+            if (_state != State.Flying || _rb == null) return;
+            if (LiftAcceleration > 0f)
+            {
+                _rb.AddForce(Vector3.up * LiftAcceleration, ForceMode.Acceleration);
             }
         }
 
