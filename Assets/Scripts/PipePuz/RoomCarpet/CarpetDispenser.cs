@@ -26,6 +26,11 @@ namespace PipePuz.RoomCarpet
         public float CarpetLifetime = 5f;
         public float CarpetWarningSeconds = 1.5f;
 
+        [Header("Floating mode (Cliff variant)")]
+        [Tooltip("켜면 이 디스펜서가 생성하는 모든 카펫이 floating mode 로 동작 — y=FloatingY 에 anchor.")]
+        public bool UseFloatingMode = false;
+        public float FloatingY = 0.8f;
+
         DisappearingCarpet _nextCarpet;
 
         void Start()
@@ -42,6 +47,9 @@ namespace PipePuz.RoomCarpet
             go.transform.SetPositionAndRotation(SpawnPoint.position, SpawnPoint.rotation);
             var carpet = go.GetComponent<DisappearingCarpet>();
             carpet.Dispenser = this;
+            // Floating mode 전파.
+            carpet.UseFloatingMode = UseFloatingMode;
+            carpet.FloatingY = FloatingY;
             _nextCarpet = carpet;
             return carpet;
         }
