@@ -69,6 +69,7 @@ namespace Capstone.Network
         public event Action<string> OnConnecting;
         public event Action<string> OnConnected;
         public event Action<string> OnFailed;
+        public event Action<int> OnPlayerCountChanged;
 
         public NetworkRunner Runner => runner;
         public bool IsBusy { get; private set; }
@@ -282,11 +283,19 @@ namespace Capstone.Network
         {
             if (runner.Topology == Topologies.ClientServer) OnPlayerJoinedHostMode(runner, player);
             else OnPlayerJoinedSharedMode(runner, player);
+            RaisePlayerCount(runner);
         }
 
         public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
         {
             if (runner.Topology == Topologies.ClientServer) OnPlayerLeftHostMode(runner, player);
+            RaisePlayerCount(runner);
+        }
+
+        void RaisePlayerCount(NetworkRunner runner)
+        {
+            if (runner == null || runner.SessionInfo == null) return;
+            OnPlayerCountChanged?.Invoke(runner.SessionInfo.PlayerCount);
         }
 
         public void OnConnectedToServer(NetworkRunner runner) => Debug.Log("[RoomLauncher] OnConnectedToServer");

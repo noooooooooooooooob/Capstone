@@ -11,9 +11,15 @@ namespace Capstone.UI
         [SerializeField] TMP_InputField roomCodeInput;
         [SerializeField] Button enterButton;
         [SerializeField] TMP_Text statusText;
+        [Tooltip("비워두면 이 컴포넌트의 GameObject를 숨김. 별도의 패널만 숨기려면 지정.")]
+        [SerializeField] GameObject uiRoot;
+        [Tooltip("이 수 이상이 모이면 UI를 숨김. 비활성화하려면 0 이하로 설정.")]
+        [SerializeField] int hideAtPlayerCount = 2;
 
         void Awake()
         {
+            if (uiRoot == null) uiRoot = gameObject;
+
             enterButton.onClick.AddListener(OnClickEnter);
 
             if (roomCodeInput != null)
@@ -25,6 +31,7 @@ namespace Capstone.UI
             launcher.OnConnecting += HandleConnecting;
             launcher.OnConnected += HandleConnected;
             launcher.OnFailed += HandleFailed;
+            launcher.OnPlayerCountChanged += HandlePlayerCountChanged;
         }
 
         void OnDestroy()
@@ -37,6 +44,7 @@ namespace Capstone.UI
                 launcher.OnConnecting -= HandleConnecting;
                 launcher.OnConnected -= HandleConnected;
                 launcher.OnFailed -= HandleFailed;
+                launcher.OnPlayerCountChanged -= HandlePlayerCountChanged;
             }
         }
 
@@ -68,6 +76,13 @@ namespace Capstone.UI
         void HandleConnecting(string code) => SetStatus($"Connecting... ({code})");
         void HandleConnected(string code) => SetStatus($"Joined: {code}");
         void HandleFailed(string reason) => SetStatus($"Failed: {reason}");
+
+        void HandlePlayerCountChanged(int count)
+        {
+            if (hideAtPlayerCount <= 0 || uiRoot == null) return;
+            bool shouldShow = count < hideAtPlayerCount;
+            if (uiRoot.activeSelf != shouldShow) uiRoot.SetActive(shouldShow);
+        }
 
         void SetStatus(string text)
         {
