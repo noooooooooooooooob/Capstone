@@ -306,6 +306,13 @@ namespace Capstone.Network
         public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
         {
             if (runner.Topology == Topologies.ClientServer) OnPlayerLeftHostMode(runner, player);
+            RaisePlayerCount(runner);
+        }
+
+        void RaisePlayerCount(NetworkRunner runner)
+        {
+            if (runner == null || runner.SessionInfo == null) return;
+            OnPlayerCountChanged?.Invoke(runner.SessionInfo.PlayerCount);
         }
 
         public void OnConnectedToServer(NetworkRunner runner) => Debug.Log("[RoomLauncher] OnConnectedToServer");
