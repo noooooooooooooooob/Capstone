@@ -34,6 +34,11 @@ namespace PipePuz.RoomCarpet
         public float CarpetLifetime = 5f;
         public float CarpetWarningSeconds = 1.5f;
 
+        [Header("Floating mode (Cliff variant)")]
+        [Tooltip("켜면 발사된 카펫이 y=FloatingY 에서 anchor — RoomCliff 같은 절벽 모드에서 공중 발판.")]
+        public bool UseFloatingMode = false;
+        public float FloatingY = 0.05f;
+
         [Header("Refs")]
         [Tooltip("발사된 카펫이 들어갈 부모. 비워두면 부모 없음(루트). " +
                  "Controller 가 ActiveCarpetsRoot 기반으로 안전 검사하므로 보통 채워야 함.")]
@@ -131,6 +136,9 @@ namespace PipePuz.RoomCarpet
 
             var carpet = go.GetComponent<DisappearingCarpet>();
             // 디스펜서 발사가 아니므로 Dispenser 참조는 null 로 둠 → 첫 grab 시 디스펜서 연쇄 spawn 발생 안 함.
+            // Floating mode 전파.
+            carpet.UseFloatingMode = UseFloatingMode;
+            carpet.FloatingY = FloatingY;
             Vector3 vel = origin.forward * MuzzleSpeed;
             Vector3 spin = MuzzleSpin != 0f ? origin.up * MuzzleSpin : Vector3.zero;
             carpet.Launch(vel, spin);
