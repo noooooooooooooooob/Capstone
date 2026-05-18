@@ -69,6 +69,7 @@ namespace Capstone.Network
         public event Action<string> OnConnecting;
         public event Action<string> OnConnected;
         public event Action<string> OnFailed;
+        public event Action<int> OnPlayerCountChanged;
         public event Action OnRoomFull;
 
         bool _roomFullFired;

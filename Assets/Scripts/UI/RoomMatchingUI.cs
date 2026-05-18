@@ -46,6 +46,8 @@ namespace Capstone.UI
                 launcher.OnConnecting -= HandleConnecting;
                 launcher.OnConnected -= HandleConnected;
                 launcher.OnFailed -= HandleFailed;
+                launcher.OnPlayerCountChanged -= HandlePlayerCountChanged;
+                launcher.OnRoomFull -= HandleRoomFull;
             }
         }
 
