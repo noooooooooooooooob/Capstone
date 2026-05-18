@@ -41,6 +41,14 @@ namespace PipePuz.RoomCarpet
                  "9.81 보다 작은 양수면 실효 중력이 줄어 살짝 양력을 받음 — 던지기 사거리·체공시간이 늘어남.")]
         public float LiftAcceleration = 5.5f;
 
+        [Header("Floating mode (Cliff variant)")]
+        [Tooltip("켜면 CarpetFloor 충돌 대신 카펫이 일정 Y 에 도달했을 때 그 자리에 anchor. " +
+                 "RoomCliff 같은 절벽 모드에서 카펫이 임시 발판으로 공중에 떠있게 하는 데 사용.")]
+        public bool UseFloatingMode = false;
+
+        [Tooltip("UseFloatingMode 가 true 일 때 카펫이 멈출 월드 Y 위치(m). 발판 윗면과 같거나 살짝 위.")]
+        public float FloatingY = 0.05f;
+
         [Header("Read-only state")]
         [SerializeField] State _state = State.Spawned;
         public State CurrentState => _state;
@@ -123,22 +131,50 @@ namespace PipePuz.RoomCarpet
 
         void FixedUpdate()
         {
-            // Flying 상태 동안 살짝 양력 — 효과적으로 중력을 줄여 사거리 확보.
             if (_state != State.Flying || _rb == null) return;
+            // Flying 상태 동안 살짝 양력.
             if (LiftAcceleration > 0f)
             {
                 _rb.AddForce(Vector3.up * LiftAcceleration, ForceMode.Acceleration);
+            }
+            // Floating mode: y 가 FloatingY 이하로 내려가면서 하강 중이면 그 자리에 anchor.
+            if (UseFloatingMode && transform.position.y <= FloatingY && _rb.linearVelocity.y < 0f)
+            {
+                AnchorFloating();
             }
         }
 
         void OnCollisionEnter(Collision collision)
         {
             if (_state != State.Flying) return;
+            if (UseFloatingMode) return; // Floating 모드에선 CarpetFloor 충돌 대신 Y 기반 anchor.
             var floor = collision.gameObject.GetComponent<CarpetFloor>()
                      ?? collision.gameObject.GetComponentInParent<CarpetFloor>();
             if (floor == null) return;
             var contact = collision.contacts[0];
             AnchorTo(contact.point, contact.normal);
+        }
+
+        /// <summary>Floating mode anchor — 카펫을 y=FloatingY 에 평탄 고정.</summary>
+        void AnchorFloating()
+        {
+            _state = State.Anchored;
+            _anchoredTime = 0f;
+            if (_rb != null)
+            {
+                _rb.linearVelocity = Vector3.zero;
+                _rb.angularVelocity = Vector3.zero;
+                _rb.isKinematic = true;
+                _rb.useGravity = false;
+            }
+            Vector3 pos = transform.position;
+            pos.y = FloatingY;
+            transform.position = pos;
+            // yaw 만 유지, pitch/roll 제거.
+            Vector3 fwd = transform.forward;
+            fwd.y = 0f;
+            if (fwd.sqrMagnitude < 1e-4f) fwd = Vector3.forward;
+            transform.rotation = Quaternion.LookRotation(fwd.normalized, Vector3.up);
         }
 
         void AnchorTo(Vector3 point, Vector3 normal)
