@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: ecc3bf8e18ca65540a3d19e66484a808
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 351814
+  packageName: "Fantasy Monster 10 (Rig + Animation) \u2013 PixeliusVita"
+  packageVersion: 1.0
+  assetPath: Assets/Stylized3DMonster/Monster10/Anim/InPlace_Anim/Monster10_Stunned.anim
+  uploadId: 898226

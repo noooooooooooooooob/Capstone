@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 384e049677c4e354cb99f638afb7e03b
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 9100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 351814
+  packageName: "Fantasy Monster 10 (Rig + Animation) \u2013 PixeliusVita"
+  packageVersion: 1.0
+  assetPath: Assets/Stylized3DMonster/Monster10/Anim/Monster10_AC.controller
+  uploadId: 898226
