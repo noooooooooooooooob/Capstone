@@ -36,7 +36,7 @@ namespace PipePuz.MiniGame2
             UpdateOutline();
         }
 
-        /// <summary>파이프를 이 slot 에 안착시킨다.</summary>
+        /// <summary>파이프를 이 slot 에 안착시킨다 (transform 포함).</summary>
         public void AcceptPipe(PipeMiniGame2Pipe pipe)
         {
             if (pipe == null) return;
@@ -64,6 +64,28 @@ namespace PipePuz.MiniGame2
                 rb.angularVelocity = Vector3.zero;
                 rb.isKinematic = true;
             }
+
+            UpdateOutline();
+        }
+
+        /// <summary>
+        /// Hover 중 (잡힌 채 SnapDistance 안) 사용 — reference 만 설정해 BFS 가 인식하게 함.
+        /// transform 은 옮기지 않음 — 손이 따라가는 동안 visual 은 free.
+        /// 진짜 release 시점에 AcceptPipe 가 transform 까지 lock.
+        /// </summary>
+        public void AcceptPipeLogical(PipeMiniGame2Pipe pipe)
+        {
+            if (pipe == null) return;
+            if (CurrentPipe == pipe) return;
+
+            if (CurrentPipe != null && CurrentPipe != pipe)
+            {
+                CurrentPipe.CurrentSlot = null;
+            }
+
+            CurrentPipe = pipe;
+            pipe.CurrentSlot = this;
+            if (Board != null) pipe.Board = Board;
 
             UpdateOutline();
         }
