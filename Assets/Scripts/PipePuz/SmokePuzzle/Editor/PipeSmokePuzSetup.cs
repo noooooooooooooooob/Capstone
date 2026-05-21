@@ -753,7 +753,46 @@ namespace PipePuz.SmokePuzzle.EditorTools
                 board.AllPipes.Add(pipe);
             }
 
+            // ====== 랜덤 경로 생성 + PathLine 시각화 ======
+            // Editor-time 한 번 박아 Scene 뷰 미리보기. Runtime(Play 모드) Start() 마다 새 path 로 덮어씀.
+            var rand = new System.Random();
+            var pathCells = PipeMiniGame2Board.GenerateRandomPath(W, H, midY, rand);
+            board.RequiredCells = new List<Vector2Int>(pathCells);
+
+            Debug.Log($"[PipeSmokePuz] (Editor) 초기 path 길이 {pathCells.Count}: " +
+                      string.Join(" ", pathCells.ConvertAll(c => $"({c.x},{c.y})")));
+
+            var pathLineMat = MakeUrpUnlitMaterial("PSP_PathLine", new Color(1f, 0.85f, 0.20f, 1f));
+            var lr = BuildPathLineRenderer(panel, pathLineMat);
+            board.PathLine = lr;
+            board.SourceSlot = sourceSlot;
+            board.SinkSlot = sinkSlot;
+            board.RegeneratePathOnStart = true; // Play 모드 진입 마다 새 path
+            board.RandomSeed = -1;              // 시간 기반 시드 — 재현 X
+            board.ApplyPathLine();              // Editor 박힌 path 좌표 적용
+
             return board;
+        }
+
+        /// <summary>
+        /// PathLine LineRenderer GO + 컴포넌트만 생성. 좌표는 board.ApplyPathLine() 이 채움.
+        /// </summary>
+        static LineRenderer BuildPathLineRenderer(GameObject panel, Material lineMat)
+        {
+            var lineGo = new GameObject("PathLine");
+            lineGo.transform.SetParent(panel.transform, false);
+            lineGo.transform.localPosition = Vector3.zero;
+            lineGo.transform.localRotation = Quaternion.identity;
+
+            var lr = lineGo.AddComponent<LineRenderer>();
+            lr.useWorldSpace = true;
+            lr.startWidth = MG_CellSize * 0.10f;
+            lr.endWidth   = MG_CellSize * 0.10f;
+            lr.sharedMaterial = lineMat;
+            lr.numCornerVertices = 3;
+            lr.numCapVertices    = 2;
+            lr.alignment = LineAlignment.View;
+            return lr;
         }
 
         static PipeMiniGame2Pipe CreatePipe(string name, PipeShape shape, int rotation, bool isFixed,
