@@ -3,7 +3,8 @@
     "allow": [
       "WebFetch(domain:github.com)",
       "WebFetch(domain:docs.readyplayer.me)",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "PowerShell(New-Item *)"
     ]
   }
 }
