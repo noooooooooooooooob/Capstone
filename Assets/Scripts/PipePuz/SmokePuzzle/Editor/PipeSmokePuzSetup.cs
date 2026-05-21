@@ -50,11 +50,15 @@ namespace PipePuz.SmokePuzzle.EditorTools
         const string EndcapPipePath   = "Assets/3D Models/Props/Industrial/Pipeline/Update_1.03/Prefabs/Small/S_Pipe_L100_White_01.prefab";      // Source/Sink — cell 폭과 동일 (Slot_0_2 / Slot_5_2 에서 인접 pipe 까지 닿게)
 
         // Radiator Valve 휠 — primitive(Hub/Disc/Spokes) 대신 이 prefab 사용.
-        // S_Valve_Handle_White_01: 자연 두께축 Y, disc 면 XZ. WheelGo (LocalAxis=Z) 와 맞추려면 X 기준 90° 회전.
-        const string ValveHandlePrefabPath = "Assets/3D Models/Props/Industrial/Pipeline/Update_1.03/Prefabs/Small/S_Valve_Handle_White_01.prefab";
-        // Small 변종 디스크 직경 ≈ 0.15. WheelRadius 0.25 와 어울리도록 스케일.
-        // (Medium 변종 디스크 0.3이면 1.0 도 OK. 일단 1.67 적용해서 디스크 ~0.25 fit.)
-        const float ValveHandlePrefabScale = 1.67f;
+        // M_Valve_Handle_White_01: 자연 두께축 Y(0.03), disc 면 XZ(0.3×0.3).
+        // WheelGo (LocalAxis=Z) 와 맞추려면 X 기준 90° 회전 (Y → Z).
+        const string ValveHandlePrefabPath = "Assets/3D Models/Props/Industrial/Pipeline/Update_1.03/Prefabs/Medium/M_Valve_Handle_White_01.prefab";
+        // 시각 핸들만 2배 — disc 직경 ~0.6. RimGrab 콜라이더는 wheelGo 의 별도 자식이라 영향 없음 (반경 0.25 유지).
+        const float ValveHandlePrefabScale = 2.0f;
+
+        // SuppressionWheel 의 grab 최소 반경 — 손이 휠 중심에서 이 거리 안이면 select 거부.
+        // 작은 값일수록 허브 가까이도 잡힘. (사용자 요청 0.07)
+        const float WheelMinGrabRadius = 0.07f;
 
         // ===== 컨테이너 내부 레이아웃 =====
         // Radiator(왼쪽) ↔ MiniGame2(오른쪽) 둘이 마주보지 않게 살짝 거리 둠.
@@ -185,13 +189,23 @@ namespace PipePuz.SmokePuzzle.EditorTools
             foreach (var c in handleInst.GetComponentsInChildren<Collider>(true))
                 Object.DestroyImmediate(c);
 
+            // SuppressionWheel 컴포넌트의 MinGrabRadius 갱신 (Valve GO 에 부착돼 있음).
+            var sw = valve.GetComponent<SuppressionWheel>();
+            if (sw != null)
+            {
+                Undo.RecordObject(sw, "Update MinGrabRadius");
+                sw.MinGrabRadius = WheelMinGrabRadius;
+                EditorUtility.SetDirty(sw);
+            }
+
             Undo.CollapseUndoOperations(undoGroup);
             EditorSceneManager.MarkSceneDirty(scene);
 
             EditorUtility.DisplayDialog("PipeSmokePuz",
                 "Valve Handle 교체 완료.\n\n" +
                 $"prefab: {System.IO.Path.GetFileNameWithoutExtension(ValveHandlePrefabPath)}\n" +
-                $"scale: {ValveHandlePrefabScale:0.00}\n\n" +
+                $"scale: {ValveHandlePrefabScale:0.00}\n" +
+                $"MinGrabRadius: {WheelMinGrabRadius:0.00}\n\n" +
                 "기존 Hub/Disc/Spoke 제거 + RimGrab 콜라이더 보존.\n" +
                 "회전축 / 크기 어긋나면 PipeSmokePuzSetup.cs 의 ValveHandlePrefabScale 또는 " +
                 "handleInst.localRotation 값 조정.",
@@ -617,7 +631,7 @@ namespace PipePuz.SmokePuzzle.EditorTools
             sw.LocalAxis = Vector3.forward;
             sw.InvertDirection = false;
             sw.Wheel = wheelGo.transform;
-            sw.MinGrabRadius = WheelRadius * 0.65f;
+            sw.MinGrabRadius = WheelMinGrabRadius;
             sw.MaxGrabRadius = WheelRadius * 1.6f;
 
             sw.colliders.Clear();
@@ -739,7 +753,46 @@ namespace PipePuz.SmokePuzzle.EditorTools
                 board.AllPipes.Add(pipe);
             }
 
+            // ====== 랜덤 경로 생성 + PathLine 시각화 ======
+            // Editor-time 한 번 박아 Scene 뷰 미리보기. Runtime(Play 모드) Start() 마다 새 path 로 덮어씀.
+            var rand = new System.Random();
+            var pathCells = PipeMiniGame2Board.GenerateRandomPath(W, H, midY, rand);
+            board.RequiredCells = new List<Vector2Int>(pathCells);
+
+            Debug.Log($"[PipeSmokePuz] (Editor) 초기 path 길이 {pathCells.Count}: " +
+                      string.Join(" ", pathCells.ConvertAll(c => $"({c.x},{c.y})")));
+
+            var pathLineMat = MakeUrpUnlitMaterial("PSP_PathLine", new Color(1f, 0.85f, 0.20f, 1f));
+            var lr = BuildPathLineRenderer(panel, pathLineMat);
+            board.PathLine = lr;
+            board.SourceSlot = sourceSlot;
+            board.SinkSlot = sinkSlot;
+            board.RegeneratePathOnStart = true; // Play 모드 진입 마다 새 path
+            board.RandomSeed = -1;              // 시간 기반 시드 — 재현 X
+            board.ApplyPathLine();              // Editor 박힌 path 좌표 적용
+
             return board;
+        }
+
+        /// <summary>
+        /// PathLine LineRenderer GO + 컴포넌트만 생성. 좌표는 board.ApplyPathLine() 이 채움.
+        /// </summary>
+        static LineRenderer BuildPathLineRenderer(GameObject panel, Material lineMat)
+        {
+            var lineGo = new GameObject("PathLine");
+            lineGo.transform.SetParent(panel.transform, false);
+            lineGo.transform.localPosition = Vector3.zero;
+            lineGo.transform.localRotation = Quaternion.identity;
+
+            var lr = lineGo.AddComponent<LineRenderer>();
+            lr.useWorldSpace = true;
+            lr.startWidth = MG_CellSize * 0.10f;
+            lr.endWidth   = MG_CellSize * 0.10f;
+            lr.sharedMaterial = lineMat;
+            lr.numCornerVertices = 3;
+            lr.numCapVertices    = 2;
+            lr.alignment = LineAlignment.View;
+            return lr;
         }
 
         static PipeMiniGame2Pipe CreatePipe(string name, PipeShape shape, int rotation, bool isFixed,
