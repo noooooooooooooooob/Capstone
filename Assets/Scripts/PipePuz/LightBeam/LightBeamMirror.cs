@@ -25,6 +25,13 @@ namespace PipePuz.LightBeam
             WristYawDelta,
         }
 
+        [Header("Identity (Color order puzzle)")]
+        [Tooltip("색상 ID — ColorOrderPanel 의 순서 검증에 사용. -1 이면 검증에서 무시됨(통과).")]
+        public int ColorId = -1;
+
+        [Tooltip("거울 표면 시각화에 쓰이는 베이스 색. Setup 이 채움.")]
+        public Color BaseColor = Color.white;
+
         [Header("Reflect surface")]
         [Tooltip("거울이 반사하는 face 의 normal axis (local). 기본 forward = +Z 면.")]
         public Vector3 ReflectAxisLocal = Vector3.forward;
