@@ -79,5 +79,38 @@ namespace PipePuz.MiniGame
                 default: return (0, 0);
             }
         }
+
+        /// <summary>
+        /// 2-방향 mask → (PipeShape, rotation) 매핑. 랜덤 경로 생성 시 각 cell 의 정답 shape 도출용.
+        ///   N|S → Straight, 0
+        ///   E|W → Straight, 1
+        ///   N|E → Elbow, 0
+        ///   E|S → Elbow, 1
+        ///   S|W → Elbow, 2
+        ///   N|W → Elbow, 3
+        /// 매칭 안 되면 false 반환 + (None, 0).
+        /// </summary>
+        public static bool MaskToShape(Direction mask, out PipeShape shape, out int rotation)
+        {
+            if (mask == (Direction.N | Direction.S)) { shape = PipeShape.Straight; rotation = 0; return true; }
+            if (mask == (Direction.E | Direction.W)) { shape = PipeShape.Straight; rotation = 1; return true; }
+            if (mask == (Direction.N | Direction.E)) { shape = PipeShape.Elbow;    rotation = 0; return true; }
+            if (mask == (Direction.E | Direction.S)) { shape = PipeShape.Elbow;    rotation = 1; return true; }
+            if (mask == (Direction.S | Direction.W)) { shape = PipeShape.Elbow;    rotation = 2; return true; }
+            if (mask == (Direction.N | Direction.W)) { shape = PipeShape.Elbow;    rotation = 3; return true; }
+            shape = PipeShape.None;
+            rotation = 0;
+            return false;
+        }
+
+        /// <summary>한 cell 의 grid 좌표 차분 → Direction (자신 → 인접 cell).</summary>
+        public static Direction StepToDir(int dx, int dy)
+        {
+            if (dx ==  1 && dy ==  0) return Direction.E;
+            if (dx == -1 && dy ==  0) return Direction.W;
+            if (dx ==  0 && dy ==  1) return Direction.N;
+            if (dx ==  0 && dy == -1) return Direction.S;
+            return Direction.None;
+        }
     }
 }

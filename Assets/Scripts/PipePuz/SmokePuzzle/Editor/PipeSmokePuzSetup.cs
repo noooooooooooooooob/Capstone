@@ -719,8 +719,27 @@ namespace PipePuz.SmokePuzzle.EditorTools
             sinkPipe.Board = board;
             board.AllPipes.Add(sinkPipe);
 
-            // 바닥 movable 파이프 — Straight 4 + Elbow 6 + Tee 2 + Cross 1 = 13 개.
-            // 6×4 보드(가운데 행 양끝 source/sink) — 다양한 경로 선택지.
+            // ====== 랜덤 경로 생성 + PathLine 시각화 ======
+            //   Editor-time 한 번 박아 Scene 뷰에서 미리보기 가능.
+            //   Runtime(Play 모드) 진입 시 board.Start() 가 RegenerateRandomPath() 호출 → 매번 새 path.
+            var rand = new System.Random();
+            var pathCells = PipeMiniGame2Board.GenerateRandomPath(W, H, midY, rand);
+            board.RequiredCells = new List<Vector2Int>(pathCells);
+
+            Debug.Log($"[PipeSmokePuz] (Editor) 초기 path 길이 {pathCells.Count}: " +
+                      string.Join(" ", pathCells.ConvertAll(c => $"({c.x},{c.y})")));
+
+            // Panel 위 PathLine LineRenderer GO 생성 + 좌표 적용. Source/Sink ref 도 board 에 wire-up.
+            var pathLineMat = MakeUrpUnlitMaterial("PSP_PathLine", new Color(1f, 0.85f, 0.20f, 1f));
+            var lr = BuildPathLineRenderer(panel, pathLineMat);
+            board.PathLine    = lr;
+            board.SourceSlot  = sourceSlot;
+            board.SinkSlot    = sinkSlot;
+            board.RegeneratePathOnStart = true; // Play 모드 진입 시 새 path
+            board.RandomSeed  = -1;             // 시간 기반 시드 (재현 X)
+            board.ApplyPathLine();              // Editor 박힌 path 로 좌표 채움
+
+            // ====== 바닥 movable 파이프 — Straight×4 + Elbow×6 + Tee×2 + Cross×1 = 13 개 (hard-coded) ======
             var pipeShapes = new[]
             {
                 PipeShape.Straight, PipeShape.Straight, PipeShape.Straight, PipeShape.Straight,
@@ -729,7 +748,6 @@ namespace PipePuz.SmokePuzzle.EditorTools
                 PipeShape.Cross,
             };
 
-            // 보드 앞쪽 바닥에 가로 5개 × 세로 3줄 그리드 배치. cellSize 0.5 에 맞춰 간격 0.55 / 0.55.
             const float floorRowZ0 = 0.70f;
             const float floorRowSpacing = 0.55f;
             const float floorColSpacing = 0.55f;
@@ -754,6 +772,115 @@ namespace PipePuz.SmokePuzzle.EditorTools
             }
 
             return board;
+        }
+
+        /// <summary>
+        /// PathLine LineRenderer GO + 컴포넌트만 생성. 좌표는 board.ApplyPathLine() 가 채움.
+        /// (Runtime 에서 RegenerateRandomPath 가 새 좌표를 덮어쓰므로.)
+        /// </summary>
+        static LineRenderer BuildPathLineRenderer(GameObject panel, Material lineMat)
+        {
+            var lineGo = new GameObject("PathLine");
+            lineGo.transform.SetParent(panel.transform, false);
+            lineGo.transform.localPosition = Vector3.zero;
+            lineGo.transform.localRotation = Quaternion.identity;
+
+            var lr = lineGo.AddComponent<LineRenderer>();
+            lr.useWorldSpace = true;
+            lr.startWidth = MG_CellSize * 0.10f;
+            lr.endWidth   = MG_CellSize * 0.10f;
+            lr.sharedMaterial = lineMat;
+            lr.numCornerVertices = 3;
+            lr.numCapVertices    = 2;
+            lr.alignment = LineAlignment.View;
+            return lr;
+        }
+
+        // --------------------------------------------------------------------
+        // (Editor 도구용) 랜덤 경로 생성 — DFS with depth cap. board.GenerateRandomPath 와 동일 로직 보존.
+        // 실제로는 PipeMiniGame2Board.GenerateRandomPath 를 호출하지만, 만약 board 클래스 외부에서
+        // 직접 호출 필요한 케이스가 있으면 여기 유지.
+        // --------------------------------------------------------------------
+        static List<Vector2Int> GenerateRandomPath(int W, int H, int midY, System.Random rand)
+        {
+            var start = new Vector2Int(1, midY);
+            var end   = new Vector2Int(W - 2, midY);
+
+            // 짧은 보드 케이스: W = 3 이면 start == end. 단일 cell 경로.
+            if (W <= 3)
+            {
+                return new List<Vector2Int> { start };
+            }
+
+            // 길이 캡 — 너무 긴 경로 방지. 직선 거리(W-3) + 랜덤 detour.
+            int minLen = (W - 3) + 1; // 최소 (1,midY)~(W-2,midY) 포함 = W-2 cell
+            int maxLen = Mathf.Min(W * H, minLen + rand.Next(2, 6)); // +2~+6 detour 까지 허용
+
+            // Source / Sink slot 은 경로에 포함 안 됨.
+            var blocked = new HashSet<Vector2Int>
+            {
+                new Vector2Int(0, midY),
+                new Vector2Int(W - 1, midY),
+            };
+
+            // 최대 20 회 시도 — DFS 가 깊이 cap 으로 실패하면 다른 시작 시드로 재시도.
+            for (int attempt = 0; attempt < 20; attempt++)
+            {
+                var visited = new HashSet<Vector2Int>(blocked);
+                var path    = new List<Vector2Int>();
+                if (DfsPath(start, end, W, H, maxLen, visited, path, rand))
+                {
+                    return path;
+                }
+            }
+
+            // 모든 시도 실패 → 직선 fallback.
+            Debug.LogWarning("[PipeSmokePuz] 랜덤 경로 생성 실패, 직선 fallback");
+            var fallback = new List<Vector2Int>();
+            for (int x = 1; x <= W - 2; x++) fallback.Add(new Vector2Int(x, midY));
+            return fallback;
+        }
+
+        static bool DfsPath(Vector2Int current, Vector2Int end, int W, int H, int maxLen,
+                            HashSet<Vector2Int> visited, List<Vector2Int> path, System.Random rand)
+        {
+            path.Add(current);
+            visited.Add(current);
+
+            if (current == end) return true;
+            if (path.Count >= maxLen)
+            {
+                path.RemoveAt(path.Count - 1);
+                visited.Remove(current);
+                return false;
+            }
+
+            // 4 방향 random 순서.
+            var dirs = new[]
+            {
+                new Vector2Int(0,  1),
+                new Vector2Int(1,  0),
+                new Vector2Int(0, -1),
+                new Vector2Int(-1, 0),
+            };
+            for (int i = dirs.Length - 1; i > 0; i--)
+            {
+                int j = rand.Next(i + 1);
+                (dirs[i], dirs[j]) = (dirs[j], dirs[i]);
+            }
+
+            foreach (var d in dirs)
+            {
+                var next = current + d;
+                if (next.x < 0 || next.x >= W) continue;
+                if (next.y < 0 || next.y >= H) continue;
+                if (visited.Contains(next)) continue;
+                if (DfsPath(next, end, W, H, maxLen, visited, path, rand)) return true;
+            }
+
+            path.RemoveAt(path.Count - 1);
+            visited.Remove(current);
+            return false;
         }
 
         static PipeMiniGame2Pipe CreatePipe(string name, PipeShape shape, int rotation, bool isFixed,
