@@ -25,8 +25,9 @@ namespace PipePuz.MiniGame2
         public List<PipeMiniGame2Pipe> AllPipes = new List<PipeMiniGame2Pipe>();
 
         [Header("Snap")]
-        [Tooltip("파이프 release 시 가까운 빈 slot 을 찾는 최대 거리(m).")]
-        public float SnapDistance = 0.20f;
+        [Tooltip("Slot 의 박스 영역 half-size (m). 파이프 위치가 slot 의 ±SnapDistance 박스 안에 들어오면 부착. " +
+                 "cellSize/2 권장 (= 0.25 for cellSize 0.5). 충돌 기반 부착.")]
+        public float SnapDistance = 0.25f;
 
         [Header("Materials")]
         public Material ConnectedMaterial;
@@ -67,7 +68,7 @@ namespace PipePuz.MiniGame2
             return Slots[idx];
         }
 
-        /// <summary>주어진 world 위치에서 SnapDistance 안에 있는 가장 가까운 빈 slot 반환. 없으면 null.</summary>
+        /// <summary>주어진 world 위치에서 SnapDistance 안에 있는 가장 가까운 빈 slot 반환. 없으면 null. (거리 기반 — 레거시)</summary>
         public PipeMiniGame2Slot FindNearestEmptySlot(Vector3 worldPos)
         {
             if (Slots == null) return null;
@@ -86,6 +87,34 @@ namespace PipePuz.MiniGame2
             }
             if (best != null && bestDist <= SnapDistance) return best;
             return null;
+        }
+
+        /// <summary>
+        /// 충돌 기반 — worldPos 가 slot 의 ±SnapDistance 박스 안에 들어오면 그 slot 반환.
+        /// 빈 slot 만 검사. 동시에 여러 박스 안에 있으면 가장 가까운 slot 반환.
+        /// </summary>
+        public PipeMiniGame2Slot FindContainingSlot(Vector3 worldPos)
+        {
+            if (Slots == null) return null;
+            float half = SnapDistance;
+            PipeMiniGame2Slot best = null;
+            float bestDistSq = float.MaxValue;
+            for (int i = 0; i < Slots.Length; i++)
+            {
+                var slot = Slots[i];
+                if (slot == null || !slot.IsEmpty) continue;
+                Vector3 local = slot.transform.InverseTransformPoint(worldPos);
+                if (Mathf.Abs(local.x) > half) continue;
+                if (Mathf.Abs(local.y) > half) continue;
+                if (Mathf.Abs(local.z) > half) continue;
+                float dsq = local.sqrMagnitude;
+                if (dsq < bestDistSq)
+                {
+                    bestDistSq = dsq;
+                    best = slot;
+                }
+            }
+            return best;
         }
 
         /// <summary>외부 (Pipe / Slot) 에서 호출 — 흐름 재계산.</summary>

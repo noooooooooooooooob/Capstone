@@ -14,6 +14,7 @@
   <Project Path="Unity.XR.Interaction.Toolkit.Samples.Hands.csproj" />
   <Project Path="PhotonUnityNetworking.Utilities.csproj" />
   <Project Path="Fusion.Unity.csproj" />
+  <Project Path="PipelineShowRoom_AD.csproj" />
   <Project Path="ParrelSync.csproj" />
   <Project Path="PhotonChat.csproj" />
   <Project Path="Unity.XR.Interaction.Toolkit.Samples.SpatialKeyboard.Editor.csproj" />

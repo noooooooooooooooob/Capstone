@@ -39,6 +39,23 @@ namespace PipePuz.SmokePuzzle.EditorTools
     {
         const string ContainerName = "PipeSmokePuz";
 
+        // ===== Industrial Pipeline 에셋 — per-shape 단일 프리팹 매핑 =====
+        // 각 PipeShape 에 해당하는 완성된 모양의 프리팹을 그대로 instantiate.
+        // 머티리얼/색은 프리팹 자체 것을 사용 (White 통일, override 없음).
+        // 두께축 = X (직경 0.19). 길이축 / 다리 축 = Y, Z (panel 평면).
+        const string StraightPipePath = "Assets/3D Models/Props/Industrial/Pipeline/Update_1.03/Prefabs/Small/S_Pipe_L100_White_01.prefab";   // Z축 0.5m
+        const string ElbowPipePath    = "Assets/3D Models/Props/Industrial/Pipeline/Update_1.03/Prefabs/Small/S_Pipe_Corner90_White_13.prefab"; // +Y, +Z 양 다리
+        const string TeePipePath      = "Assets/3D Models/Props/Industrial/Pipeline/Update_1.03/Prefabs/Small/S_Pipe_White_07.prefab";          // Z 주빔 + Y 스텁
+        const string CrossPipePath    = "Assets/3D Models/Props/Industrial/Pipeline/Update_1.03/Prefabs/Small/S_Pipe_White_05.prefab";          // 4-way 십자 (YZ 평면)
+        const string EndcapPipePath   = "Assets/3D Models/Props/Industrial/Pipeline/Update_1.03/Prefabs/Small/S_Pipe_L100_White_01.prefab";      // Source/Sink — cell 폭과 동일 (Slot_0_2 / Slot_5_2 에서 인접 pipe 까지 닿게)
+
+        // Radiator Valve 휠 — primitive(Hub/Disc/Spokes) 대신 이 prefab 사용.
+        // S_Valve_Handle_White_01: 자연 두께축 Y, disc 면 XZ. WheelGo (LocalAxis=Z) 와 맞추려면 X 기준 90° 회전.
+        const string ValveHandlePrefabPath = "Assets/3D Models/Props/Industrial/Pipeline/Update_1.03/Prefabs/Small/S_Valve_Handle_White_01.prefab";
+        // Small 변종 디스크 직경 ≈ 0.15. WheelRadius 0.25 와 어울리도록 스케일.
+        // (Medium 변종 디스크 0.3이면 1.0 도 OK. 일단 1.67 적용해서 디스크 ~0.25 fit.)
+        const float ValveHandlePrefabScale = 1.67f;
+
         // ===== 컨테이너 내부 레이아웃 =====
         // Radiator(왼쪽) ↔ MiniGame2(오른쪽) 둘이 마주보지 않게 살짝 거리 둠.
         static readonly Vector3 RadiatorLocalPos = new Vector3(-1.5f, 0f, 0f);
@@ -72,15 +89,22 @@ namespace PipePuz.SmokePuzzle.EditorTools
         const int RimGrabCount = 8;
 
         // ===== MiniGame2 =====
-        const float MG_CellSize = 0.18f;
-        const float MG_ArmThickness = 0.025f;
-        const float MG_HubSize = 0.05f;
-        const float MG_Margin = 0.04f;
+        // cellSize = 0.5 (S_Pipe_L100 길이와 일치 — Straight 가 cell 폭에 딱 맞음).
+        // 보드 6×4 (= 3.0×2.0m) — 기존 5×3 대비 더 크고 Tee/Cross 까지 포함해서 더 복잡.
+        const int   MG_GridWidth     = 6;     // 5 → 6
+        const int   MG_GridHeight    = 4;     // 3 → 4
+        const float MG_CellSize      = 0.50f; // 0.18 → 0.50 (Straight L100 = 0.5m 정확히 fit)
+        const float MG_Margin        = 0.08f; // 0.04 → 0.08
         const float MG_PanelThickness = 0.02f;
-        const float MG_MarkerSize = 0.07f;
-        const float MG_WallY = 1.40f;
-        const float MG_PanelZ = -0.025f;
-        const float MG_FloorY = 0.06f;
+        const float MG_MarkerSize    = 0.15f; // 0.07 → 0.15 (source/sink 시각 구분용)
+        const float MG_WallY         = 1.40f;
+        const float MG_PanelZ        = -0.025f;
+        const float MG_FloorY        = 0.06f;
+        const float MG_SnapDistance  = 0.25f; // = cellSize / 2 — slot 박스 영역 half-size (충돌 기반 부착)
+
+        // fallback Cube arm용 (프리팹 못 찾을 때만 동작). 평소엔 안 씀.
+        const float MG_ArmThickness  = 0.05f;
+        const float MG_HubSize       = 0.10f;
 
         // ===== SmokeGauge =====
         static readonly Vector3 GaugeLocalOffset = new Vector3(0.8f, 1.4f, 0f); // Radiator 기준 +X/+Y
@@ -88,6 +112,94 @@ namespace PipePuz.SmokePuzzle.EditorTools
         const int GaugeSegments = 48;
         const float PointerThickness = 0.008f;
         const float PointerHeadSize = 0.025f;
+
+        // --------------------------------------------------------------------
+        // 보조 메뉴 — Radiator 의 Valve Handle 만 새 prefab 으로 교체.
+        // Radiator/Wall/Pipe_*/Valve transform 다 보존, RimGrab 콜라이더도 그대로 유지.
+        // --------------------------------------------------------------------
+        [MenuItem("Tools/PipePuz/Replace Radiator Valve Handle (Only)")]
+        public static void ReplaceValveHandleOnly()
+        {
+            var scene = EditorSceneManager.GetActiveScene();
+            if (!scene.IsValid())
+            {
+                EditorUtility.DisplayDialog("PipeSmokePuz", "활성 씬이 없습니다.", "OK");
+                return;
+            }
+
+            var container = FindExistingContainer(scene);
+            if (container == null)
+            {
+                EditorUtility.DisplayDialog("PipeSmokePuz",
+                    "씬에 PipeSmokePuz 가 없습니다.\n먼저 Build 메뉴로 만들어주세요.", "OK");
+                return;
+            }
+
+            // PipeSmokePuz/Radiator/Valve/Wheel 트리 추적.
+            var radiator = container.transform.Find("Radiator");
+            var valve    = radiator != null ? radiator.Find("Valve") : null;
+            var wheel    = valve != null ? valve.Find("Wheel") : null;
+            if (wheel == null)
+            {
+                EditorUtility.DisplayDialog("PipeSmokePuz",
+                    "Radiator/Valve/Wheel 구조를 찾지 못했습니다.", "OK");
+                return;
+            }
+
+            var handlePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(ValveHandlePrefabPath);
+            if (handlePrefab == null)
+            {
+                EditorUtility.DisplayDialog("PipeSmokePuz",
+                    $"Prefab not found:\n{ValveHandlePrefabPath}", "OK");
+                return;
+            }
+
+            Undo.IncrementCurrentGroup();
+            int undoGroup = Undo.GetCurrentGroup();
+            Undo.SetCurrentGroupName("Replace Valve Handle");
+
+            // Wheel 자식 중 옛 primitive 시각 부품 + 옛 Handle 인스턴스 제거.
+            // RimGrab_* 콜라이더는 grab 동작 핵심이라 보존.
+            var toDestroy = new List<GameObject>();
+            foreach (Transform ch in wheel)
+            {
+                if (ch == null) continue;
+                string n = ch.name;
+                if (n == "Handle" || n == "Hub" || n == "Disc"
+                    || n.StartsWith("Spoke_") || n.StartsWith("RimNub_"))
+                {
+                    toDestroy.Add(ch.gameObject);
+                }
+            }
+            foreach (var go in toDestroy) Undo.DestroyObjectImmediate(go);
+
+            // 새 Handle prefab 인스턴스.
+            var handleInst = (GameObject)PrefabUtility.InstantiatePrefab(handlePrefab, wheel);
+            Undo.RegisterCreatedObjectUndo(handleInst, "Create Handle");
+            handleInst.name = "Handle";
+            handleInst.transform.localPosition = Vector3.zero;
+            handleInst.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+            handleInst.transform.localScale    = Vector3.one * ValveHandlePrefabScale;
+
+            // 콜라이더 strip — RimGrab 만 grab 트리거.
+            foreach (var c in handleInst.GetComponentsInChildren<Collider>(true))
+                Object.DestroyImmediate(c);
+
+            Undo.CollapseUndoOperations(undoGroup);
+            EditorSceneManager.MarkSceneDirty(scene);
+
+            EditorUtility.DisplayDialog("PipeSmokePuz",
+                "Valve Handle 교체 완료.\n\n" +
+                $"prefab: {System.IO.Path.GetFileNameWithoutExtension(ValveHandlePrefabPath)}\n" +
+                $"scale: {ValveHandlePrefabScale:0.00}\n\n" +
+                "기존 Hub/Disc/Spoke 제거 + RimGrab 콜라이더 보존.\n" +
+                "회전축 / 크기 어긋나면 PipeSmokePuzSetup.cs 의 ValveHandlePrefabScale 또는 " +
+                "handleInst.localRotation 값 조정.",
+                "OK");
+
+            Selection.activeGameObject = handleInst;
+            EditorGUIUtility.PingObject(handleInst);
+        }
 
         // --------------------------------------------------------------------
         // Menu entry — 어디서든 실행 가능 (Active Scene 에 빌드).
@@ -107,16 +219,42 @@ namespace PipePuz.SmokePuzzle.EditorTools
             int undoGroup = Undo.GetCurrentGroup();
             Undo.SetCurrentGroupName("Build PipeSmokePuz");
 
-            // 1) 기존 PipeSmokePuz 컨테이너 (있다면) 제거. — 이름이 같은 다른 씬 오브젝트도 모두 지움.
-            CleanupExistingContainer(scene);
+            // ===== 분기 =====
+            // 기존 PipeSmokePuz 가 씬에 있으면 → 'MiniGame2 자식만 재생성' 모드 (Radiator/Smoke/SmokeGauge 보존).
+            // 없으면                       → 'Full Build' 모드 (예전처럼 전부 새로 만듦).
+            var existingContainer = FindExistingContainer(scene);
+            if (existingContainer != null)
+            {
+                RebuildMiniGame2Only(scene, existingContainer);
+                Undo.CollapseUndoOperations(undoGroup);
+                EditorGUIUtility.PingObject(existingContainer);
+                Selection.activeGameObject = existingContainer;
+                EditorUtility.DisplayDialog("PipeSmokePuz",
+                    "MiniGame2 자식만 재생성 완료.\n\n" +
+                    $"씬 '{scene.name}' 의 PipeSmokePuz worldPos: {existingContainer.transform.position}\n" +
+                    "Radiator / SmokeGauge: 손대지 않음.\n" +
+                    "MiniGame2 transform: 기존 그대로 유지.\n" +
+                    "Smoke: 재생성 + controller 와이어업.\n\n" +
+                    "에셋(White) 머티리얼 그대로 사용 — 색 swap 없음.\n" +
+                    "Snap 거리: cellSize 의 40% (인접 slot 간섭 방지).",
+                    "OK");
+                return;
+            }
+
+            // ===== Full Build (PipeSmokePuz 가 씬에 처음 생길 때만) =====
+            // 0) 기존 컨테이너의 transform 캡처는 의미 없음 (위에서 existingContainer == null 확인됨).
+            Vector3    savedWorldPos   = Vector3.zero;
+            Quaternion savedWorldRot   = Quaternion.identity;
+            Vector3    savedLocalScale = Vector3.one;
+            bool       hadExisting     = false;
 
             // 2) 컨테이너 GO. — 부모 없음 (씬 root). 다른 오브젝트와의 관계 0.
             var container = new GameObject(ContainerName);
             Undo.RegisterCreatedObjectUndo(container, "Create PipeSmokePuz");
             UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(container, scene);
-            container.transform.position = Vector3.zero;
-            container.transform.rotation = Quaternion.identity;
-            container.transform.localScale = Vector3.one;
+            container.transform.position   = savedWorldPos;
+            container.transform.rotation   = savedWorldRot;
+            container.transform.localScale = savedLocalScale;
 
             // ===== 머티리얼 (이 빌드만의 신규 인스턴스) =====
             // PipeAll 의 머티리얼과 공유하지 않도록 모두 새로 생성. URP/Lit 셰이더 기반.
@@ -196,9 +334,13 @@ namespace PipePuz.SmokePuzzle.EditorTools
             EditorGUIUtility.PingObject(container);
             Selection.activeGameObject = container;
 
+            string posMsg = hadExisting
+                ? $"기존 위치 보존: {savedWorldPos}"
+                : "새 위치 (0,0,0)";
             EditorUtility.DisplayDialog("PipeSmokePuz",
                 "Build 완료.\n\n" +
                 $"씬 '{scene.name}' 의 root 에 'PipeSmokePuz' 가 생성됐습니다.\n" +
+                $"{posMsg}\n" +
                 "외부 오브젝트 의존성 없음 — 다른 씬에서도 동일 메뉴로 빌드 가능.\n\n" +
                 "튜닝: PipeSmokePuz > PipeAllPuzzleController 인스펙터의 " +
                 "RecoveryRate / SuppressionPerDegPerSec / MaxSmoke",
@@ -208,6 +350,100 @@ namespace PipePuz.SmokePuzzle.EditorTools
         // --------------------------------------------------------------------
         // 기존 컨테이너 정리
         // --------------------------------------------------------------------
+
+        // --------------------------------------------------------------------
+        // MiniGame2-only 재생성: 기존 PipeSmokePuz 의 MiniGame2 자식만 교체.
+        // Radiator / Smoke / SmokeGauge / PipeAllPuzzleController 는 손대지 않음.
+        // MiniGame2 자체의 transform(localPos/Rotation/Scale) 도 기존 값 보존.
+        // --------------------------------------------------------------------
+        static void RebuildMiniGame2Only(UnityEngine.SceneManagement.Scene scene, GameObject container)
+        {
+            // 1) 기존 MiniGame2 자식 찾기.
+            Transform existingMG = null;
+            foreach (Transform child in container.transform)
+            {
+                if (child != null && child.name == "MiniGame2")
+                {
+                    existingMG = child;
+                    break;
+                }
+            }
+
+            // 2) 기존 transform 캡처 (있으면).
+            Vector3    savedLocalPos   = MiniGameLocalPos;
+            Quaternion savedLocalRot   = Quaternion.identity;
+            Vector3    savedLocalScale = Vector3.one;
+            bool       hadMiniGame     = false;
+            if (existingMG != null)
+            {
+                savedLocalPos   = existingMG.localPosition;
+                savedLocalRot   = existingMG.localRotation;
+                savedLocalScale = existingMG.localScale;
+                hadMiniGame     = true;
+                Undo.DestroyObjectImmediate(existingMG.gameObject);
+            }
+
+            // 3) MiniGame2 전용 머티리얼 (Panel / FixedFrame / SlotOutline / Source / Sink 마커용).
+            //    파이프 자체는 프리팹 머티리얼을 그대로 쓰므로 disconnected/connected 머티리얼은 만들지 않음.
+            var panelMat       = MakeUrpMaterial("PSP_Panel",       new Color(0.32f, 0.62f, 0.78f), false);
+            var sourceMat      = MakeUrpMaterial("PSP_Source",      new Color(0.20f, 0.90f, 0.40f), false);
+            var sinkMat        = MakeUrpMaterial("PSP_Sink",        new Color(0.90f, 0.60f, 0.20f), false);
+            var fixedFrameMat  = MakeUrpMaterial("PSP_FixedFrame",  new Color(0.85f, 0.85f, 0.85f), false);
+            var slotOutlineMat = MakeUrpMaterial("PSP_SlotOutline", new Color(0.80f, 0.95f, 1f, 0.30f), true);
+            // disconnected/connected 는 board 의 머티리얼 swap 용 — 이제 swap 안 하지만 컴포넌트가 require 함.
+            // 동일한 White 톤으로 채워 시각 변화 없음.
+            var pipeNeutralMat = MakeUrpMaterial("PSP_PipeNeutral", new Color(0.85f, 0.85f, 0.85f), false);
+
+            // 4) 새 MiniGame2 GO + 기존 transform 적용.
+            var miniGameGo = new GameObject("MiniGame2");
+            Undo.RegisterCreatedObjectUndo(miniGameGo, "Create MiniGame2");
+            miniGameGo.transform.SetParent(container.transform, false);
+            miniGameGo.transform.localPosition = savedLocalPos;
+            miniGameGo.transform.localRotation = savedLocalRot;
+            miniGameGo.transform.localScale    = savedLocalScale;
+
+            var board = BuildMiniGame2(miniGameGo,
+                panelMat, pipeNeutralMat, pipeNeutralMat, sourceMat, sinkMat,
+                fixedFrameMat, slotOutlineMat);
+
+            // 5) Smoke 재생성 — 이전 MiniGame2 통째 삭제로 같이 날아갔으므로 다시 만들어 controller.Smoke 와이어업.
+            //    Smoke 는 새 MiniGame2 의 Panel 위치에서 분출.
+            var panelT = miniGameGo.transform.Find("Panel");
+            var smokeGo = new GameObject("Smoke");
+            Undo.RegisterCreatedObjectUndo(smokeGo, "Create Smoke");
+            smokeGo.transform.SetParent(miniGameGo.transform, false);
+            if (panelT != null)
+            {
+                smokeGo.transform.position = panelT.position;
+                smokeGo.transform.rotation = panelT.rotation;
+            }
+            smokeGo.transform.localScale = Vector3.one;
+
+            var ps = smokeGo.AddComponent<ParticleSystem>();
+            ConfigureSmokeParticleSystem(ps);
+            var smokeCtrl = smokeGo.AddComponent<SmokeController>();
+            {
+                var so = new SerializedObject(smokeCtrl);
+                var prop = so.FindProperty("Intensity");
+                if (prop != null) { prop.floatValue = InitialSmokeForController; so.ApplyModifiedPropertiesWithoutUndo(); }
+            }
+
+            // 6) PipeAllPuzzleController 참조 갱신 — MiniGameBoard 와 Smoke 둘 다.
+            var ctrl = container.GetComponent<PipeAllPuzzleController>();
+            if (ctrl != null)
+            {
+                Undo.RecordObject(ctrl, "Update controller refs");
+                ctrl.MiniGameBoard = board;
+                ctrl.Smoke = smokeCtrl;
+                EditorUtility.SetDirty(ctrl);
+            }
+
+            EditorUtility.SetDirty(miniGameGo);
+            EditorSceneManager.MarkSceneDirty(scene);
+
+            Debug.Log($"[PipeSmokePuz] MiniGame2 재생성 완료. " +
+                      $"transform 보존: {(hadMiniGame ? savedLocalPos.ToString() : "(기본값)") }, Smoke 도 갱신.");
+        }
 
         static void CleanupExistingContainer(UnityEngine.SceneManagement.Scene scene)
         {
@@ -220,6 +456,20 @@ namespace PipePuz.SmokePuzzle.EditorTools
                     Undo.DestroyObjectImmediate(go);
                 }
             }
+        }
+
+        /// <summary>
+        /// 씬에서 ContainerName 과 같은 이름의 root GO 중 첫 번째를 반환. 없으면 null.
+        /// </summary>
+        static GameObject FindExistingContainer(UnityEngine.SceneManagement.Scene scene)
+        {
+            var roots = scene.GetRootGameObjects();
+            foreach (var go in roots)
+            {
+                if (go != null && go.name == ContainerName)
+                    return go;
+            }
+            return null;
         }
 
         // --------------------------------------------------------------------
@@ -281,53 +531,78 @@ namespace PipePuz.SmokePuzzle.EditorTools
             var wheelGo = new GameObject("Wheel");
             wheelGo.transform.SetParent(valveGo.transform, false);
 
-            // Hub
-            var hub = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            hub.name = "Hub";
-            Object.DestroyImmediate(hub.GetComponent<Collider>());
-            hub.transform.SetParent(wheelGo.transform, false);
-            hub.transform.localPosition = Vector3.zero;
-            hub.transform.localScale = Vector3.one * HubSize;
-            AssignMat(hub, valveMat);
-
-            // Disc
-            var disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            disc.name = "Disc";
-            Object.DestroyImmediate(disc.GetComponent<Collider>());
-            disc.transform.SetParent(wheelGo.transform, false);
-            disc.transform.localPosition = Vector3.zero;
-            disc.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-            disc.transform.localScale = new Vector3(2f * WheelRadius * 0.95f, DiscThickness, 2f * WheelRadius * 0.95f);
-            AssignMat(disc, valveMat);
-
-            // Spokes
-            for (int i = 0; i < 4; i++)
+            // === Valve Handle 시각 부품 ===
+            // S_Valve_Handle_White_01 prefab 으로 교체. prefab 자연 두께축 Y, disc 면 XZ.
+            // wheelGo.LocalAxis = Z 와 정렬하려면 X 기준 90° 회전 (Y → Z).
+            // 못 찾으면 옛 primitive(Hub + Disc + Spokes) 로 fallback.
+            var handlePrefab = LoadPrefab(ValveHandlePrefabPath);
+            bool usedPrefabHandle = false;
+            if (handlePrefab != null)
             {
-                float a = (i / 4f) * Mathf.PI * 2f;
-                var spoke = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                spoke.name = $"Spoke_{i}";
-                Object.DestroyImmediate(spoke.GetComponent<Collider>());
-                spoke.transform.SetParent(wheelGo.transform, false);
-                spoke.transform.localPosition = new Vector3(Mathf.Cos(a) * WheelRadius * 0.5f, Mathf.Sin(a) * WheelRadius * 0.5f, 0f);
-                spoke.transform.localRotation = Quaternion.Euler(0f, 0f, a * Mathf.Rad2Deg);
-                spoke.transform.localScale = new Vector3(WheelRadius, SpokeThickness, SpokeThickness);
-                AssignMat(spoke, valveMat);
+                var handleInst = (GameObject)PrefabUtility.InstantiatePrefab(handlePrefab, wheelGo.transform);
+                handleInst.name = "Handle";
+                handleInst.transform.localPosition = Vector3.zero;
+                handleInst.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                handleInst.transform.localScale    = Vector3.one * ValveHandlePrefabScale;
+
+                // 콜라이더 strip — RimGrab 만 grab 트리거로 사용.
+                foreach (var c in handleInst.GetComponentsInChildren<Collider>(true))
+                    Object.DestroyImmediate(c);
+
+                usedPrefabHandle = true;
+            }
+            else
+            {
+                // === Fallback: 옛 primitive 휠 ===
+                var hub = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                hub.name = "Hub";
+                Object.DestroyImmediate(hub.GetComponent<Collider>());
+                hub.transform.SetParent(wheelGo.transform, false);
+                hub.transform.localPosition = Vector3.zero;
+                hub.transform.localScale = Vector3.one * HubSize;
+                AssignMat(hub, valveMat);
+
+                var disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                disc.name = "Disc";
+                Object.DestroyImmediate(disc.GetComponent<Collider>());
+                disc.transform.SetParent(wheelGo.transform, false);
+                disc.transform.localPosition = Vector3.zero;
+                disc.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                disc.transform.localScale = new Vector3(2f * WheelRadius * 0.95f, DiscThickness, 2f * WheelRadius * 0.95f);
+                AssignMat(disc, valveMat);
+
+                for (int i = 0; i < 4; i++)
+                {
+                    float a = (i / 4f) * Mathf.PI * 2f;
+                    var spoke = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    spoke.name = $"Spoke_{i}";
+                    Object.DestroyImmediate(spoke.GetComponent<Collider>());
+                    spoke.transform.SetParent(wheelGo.transform, false);
+                    spoke.transform.localPosition = new Vector3(Mathf.Cos(a) * WheelRadius * 0.5f, Mathf.Sin(a) * WheelRadius * 0.5f, 0f);
+                    spoke.transform.localRotation = Quaternion.Euler(0f, 0f, a * Mathf.Rad2Deg);
+                    spoke.transform.localScale = new Vector3(WheelRadius, SpokeThickness, SpokeThickness);
+                    AssignMat(spoke, valveMat);
+                }
             }
 
-            // Rim grab colliders + 시각 nub
+            // === Rim grab colliders — 항상 생성 (grab interaction 핵심) ===
+            // 시각 nub 은 prefab handle 시 생략, fallback 일 때만 추가.
             var rimColliders = new List<Collider>();
             for (int i = 0; i < RimGrabCount; i++)
             {
                 float a = (i / (float)RimGrabCount) * Mathf.PI * 2f;
                 Vector3 pos = new Vector3(Mathf.Cos(a) * WheelRadius, Mathf.Sin(a) * WheelRadius, 0f);
 
-                var nub = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                nub.name = $"RimNub_{i}";
-                Object.DestroyImmediate(nub.GetComponent<Collider>());
-                nub.transform.SetParent(wheelGo.transform, false);
-                nub.transform.localPosition = pos;
-                nub.transform.localScale = Vector3.one * (RimGrabRadius * 0.9f);
-                AssignMat(nub, valveMat);
+                if (!usedPrefabHandle)
+                {
+                    var nub = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                    nub.name = $"RimNub_{i}";
+                    Object.DestroyImmediate(nub.GetComponent<Collider>());
+                    nub.transform.SetParent(wheelGo.transform, false);
+                    nub.transform.localPosition = pos;
+                    nub.transform.localScale = Vector3.one * (RimGrabRadius * 0.9f);
+                    AssignMat(nub, valveMat);
+                }
 
                 var rimGrab = new GameObject($"RimGrab_{i}");
                 rimGrab.transform.SetParent(wheelGo.transform, false);
@@ -360,14 +635,14 @@ namespace PipePuz.SmokePuzzle.EditorTools
             Material sourceMat, Material sinkMat,
             Material fixedFrameMat, Material slotOutlineMat)
         {
-            int W = 5, H = 3;
+            int W = MG_GridWidth, H = MG_GridHeight;
 
             var board = root.AddComponent<PipeMiniGame2Board>();
             board.Width = W;
             board.Height = H;
             board.DisconnectedMaterial = disconnectedMat;
             board.ConnectedMaterial = connectedMat;
-            board.SnapDistance = 0.20f;
+            board.SnapDistance = MG_SnapDistance;
             board.Slots = new PipeMiniGame2Slot[W * H];
             board.AllPipes = new List<PipeMiniGame2Pipe>();
 
@@ -412,8 +687,9 @@ namespace PipePuz.SmokePuzzle.EditorTools
                 }
             }
 
-            // Source/Sink (고정)
-            var sourceSlot = board.Slots[0 + 1 * W];
+            // Source/Sink (고정) — 가운데 행(y = H/2) 양 끝.
+            int midY = H / 2;
+            var sourceSlot = board.Slots[0 + midY * W];
             var sourcePipe = CreatePipe("Source", PipeShape.Source, 0, true,
                 disconnectedMat, sourceMat, sinkMat, fixedFrameMat);
             sourcePipe.transform.SetParent(root.transform, false);
@@ -421,7 +697,7 @@ namespace PipePuz.SmokePuzzle.EditorTools
             sourcePipe.Board = board;
             board.AllPipes.Add(sourcePipe);
 
-            var sinkSlot = board.Slots[4 + 1 * W];
+            var sinkSlot = board.Slots[(W - 1) + midY * W];
             var sinkPipe = CreatePipe("Sink", PipeShape.Sink, 0, true,
                 disconnectedMat, sourceMat, sinkMat, fixedFrameMat);
             sinkPipe.transform.SetParent(root.transform, false);
@@ -429,29 +705,35 @@ namespace PipePuz.SmokePuzzle.EditorTools
             sinkPipe.Board = board;
             board.AllPipes.Add(sinkPipe);
 
-            // 바닥 7 개 (Straight ×3 + Elbow ×4)
+            // 바닥 movable 파이프 — Straight 4 + Elbow 6 + Tee 2 + Cross 1 = 13 개.
+            // 6×4 보드(가운데 행 양끝 source/sink) — 다양한 경로 선택지.
             var pipeShapes = new[]
             {
-                PipeShape.Straight, PipeShape.Straight, PipeShape.Straight,
-                PipeShape.Elbow,    PipeShape.Elbow,    PipeShape.Elbow,    PipeShape.Elbow,
+                PipeShape.Straight, PipeShape.Straight, PipeShape.Straight, PipeShape.Straight,
+                PipeShape.Elbow,    PipeShape.Elbow,    PipeShape.Elbow,    PipeShape.Elbow,    PipeShape.Elbow,    PipeShape.Elbow,
+                PipeShape.Tee,      PipeShape.Tee,
+                PipeShape.Cross,
             };
-            var floorPositions = new[]
-            {
-                new Vector3(-0.45f, MG_FloorY, 0.40f),
-                new Vector3(-0.15f, MG_FloorY, 0.40f),
-                new Vector3(+0.15f, MG_FloorY, 0.40f),
-                new Vector3(+0.45f, MG_FloorY, 0.40f),
-                new Vector3(-0.30f, MG_FloorY, 0.60f),
-                new Vector3( 0.00f, MG_FloorY, 0.60f),
-                new Vector3(+0.30f, MG_FloorY, 0.60f),
-            };
+
+            // 보드 앞쪽 바닥에 가로 5개 × 세로 3줄 그리드 배치. cellSize 0.5 에 맞춰 간격 0.55 / 0.55.
+            const float floorRowZ0 = 0.70f;
+            const float floorRowSpacing = 0.55f;
+            const float floorColSpacing = 0.55f;
+            int cols = 5;
 
             for (int i = 0; i < pipeShapes.Length; i++)
             {
+                int row = i / cols;
+                int col = i % cols;
+                Vector3 pos = new Vector3(
+                    (col - (cols - 1) * 0.5f) * floorColSpacing,
+                    MG_FloorY,
+                    floorRowZ0 + row * floorRowSpacing);
+
                 var pipe = CreatePipe($"Pipe_{pipeShapes[i]}_{i}", pipeShapes[i], 0, false,
                     disconnectedMat, sourceMat, sinkMat, fixedFrameMat);
                 pipe.transform.SetParent(root.transform, false);
-                pipe.transform.localPosition = floorPositions[i];
+                pipe.transform.localPosition = pos;
                 pipe.transform.localRotation = Quaternion.Euler(-90f, 0f, 0f);
                 pipe.Board = board;
                 board.AllPipes.Add(pipe);
@@ -470,42 +752,53 @@ namespace PipePuz.SmokePuzzle.EditorTools
             pipeRoot.transform.localPosition = Vector3.zero;
             pipeRoot.transform.localRotation = Quaternion.Euler(0f, 0f, -90f * rotation);
 
+            // PipeRenderers 는 비워둠 — board 의 connected/disconnected 머티리얼 swap 을 의도적으로 비활성.
+            // 프리팹의 White 머티리얼 그대로 시각화.
             var pipeRenderers = new List<Renderer>();
             var baseMask = PipeShapeDef.BaseMask(shape);
 
-            // Hub
-            var hub = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            hub.name = "Hub";
-            Object.DestroyImmediate(hub.GetComponent<Collider>());
-            hub.transform.SetParent(pipeRoot.transform, false);
-            hub.transform.localPosition = Vector3.zero;
-            hub.transform.localScale = new Vector3(MG_HubSize, MG_HubSize, MG_ArmThickness);
-            AssignMat(hub, pipeMat);
-            pipeRenderers.Add(hub.GetComponent<Renderer>());
+            // === per-shape 단일 프리팹 instantiate ===
+            // 프리팹 좌표계: X = 두께축(0.19), Y/Z = 다리 축.
+            // 보드 좌표계(pipeRoot 내부): X=E/W, Y=N/S, Z=두께(패널 normal).
+            // 회전: 프리팹의 Z → 보드 Y(N), 프리팹의 Y → 보드 X(E). LookRotation(forward=worldY, up=worldX).
+            string prefabPath = ShapePrefabPath(shape);
+            Quaternion shapeRot = ShapeRotation(shape);
+            Vector3    shapeScale = ShapeScale(shape);
 
-            // Arms
-            foreach (var dir in new[] { Direction.N, Direction.E, Direction.S, Direction.W })
+            GameObject pipePrefab = LoadPrefab(prefabPath);
+            if (pipePrefab != null)
             {
-                if ((baseMask & dir) == 0) continue;
-                var arm = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                arm.name = $"Arm_{dir}";
-                Object.DestroyImmediate(arm.GetComponent<Collider>());
-                arm.transform.SetParent(pipeRoot.transform, false);
-                var (offset, scale) = ArmTransform(dir);
-                arm.transform.localPosition = offset;
-                arm.transform.localScale = scale;
-                AssignMat(arm, pipeMat);
-                pipeRenderers.Add(arm.GetComponent<Renderer>());
+                var inst = (GameObject)PrefabUtility.InstantiatePrefab(pipePrefab, pipeRoot.transform);
+                inst.name = "Pipe";
+                inst.transform.localPosition = Vector3.zero;
+                inst.transform.localRotation = shapeRot;
+                inst.transform.localScale    = shapeScale;
+
+                // 콜라이더 strip — XRGrabInteractable / raycast 간섭 회피.
+                foreach (var c in inst.GetComponentsInChildren<Collider>(true))
+                    Object.DestroyImmediate(c);
+
+                // 자동 visual center 보정 안 함 — 사용자가 PipeMiniGame2Pipe.VisualOffset 으로
+                // 인스펙터에서 명시적으로 조정. prefab 메시는 원점 그대로 둠.
+
+                // 머티리얼은 절대 override 하지 않음 — 에셋의 White 머티리얼 그대로.
+                // pipeRenderers 에도 등록 X (board 가 swap 하지 못하게).
+            }
+            else
+            {
+                // Fallback: 프리팹 못 찾으면 옛 방식대로 Hub + Cube Arm 으로 fallback.
+                Debug.LogWarning($"[PipeSmokePuz] '{prefabPath}' 못 찾음 — Cube fallback. shape={shape}");
+                BuildFallbackHubArms(pipeRoot.transform, baseMask, pipeMat, pipeRenderers);
             }
 
-            // Source/Sink 마커
+            // Source/Sink 마커 — 패널보다 살짝 앞으로(0.04 Z+).
             if (shape == PipeShape.Source || shape == PipeShape.Sink)
             {
                 var marker = GameObject.CreatePrimitive(PrimitiveType.Sphere);
                 marker.name = "Marker";
                 Object.DestroyImmediate(marker.GetComponent<Collider>());
                 marker.transform.SetParent(pipeRoot.transform, false);
-                marker.transform.localPosition = new Vector3(0f, 0f, MG_ArmThickness * 0.6f);
+                marker.transform.localPosition = new Vector3(0f, 0f, 0.04f);
                 marker.transform.localScale = Vector3.one * MG_MarkerSize;
                 AssignMat(marker, shape == PipeShape.Source ? sourceMat : sinkMat);
             }
@@ -528,6 +821,9 @@ namespace PipePuz.SmokePuzzle.EditorTools
             pipe.IsFixed = isFixed;
             pipe.PipeRoot = pipeRoot.transform;
             pipe.PipeRenderers = pipeRenderers.ToArray();
+
+            // shape별 디폴트 VisualOffset — 사용자가 인스펙터에서 다듬은 값을 빌더에 hard-code.
+            pipe.VisualOffset = ShapeDefaultVisualOffset(shape);
 
             if (!isFixed)
             {
@@ -558,6 +854,135 @@ namespace PipePuz.SmokePuzzle.EditorTools
                 case Direction.E: return (new Vector3(+halfArm, 0f, 0f), new Vector3(armLen, MG_ArmThickness, MG_ArmThickness));
                 case Direction.W: return (new Vector3(-halfArm, 0f, 0f), new Vector3(armLen, MG_ArmThickness, MG_ArmThickness));
                 default: return (Vector3.zero, Vector3.one * 0.001f);
+            }
+        }
+
+        /// <summary>
+        /// pipeRoot 로컬에서 S_Pipe_L25 프리팹(자연 길이축 = Z)을 dir 방향으로 정렬하는 회전.
+        /// (fallback Cube arm 로직 호환용 — 현재는 ShapeRotation 이 메인.)
+        /// </summary>
+        static Quaternion ArmRotationForDir(Direction dir)
+        {
+            switch (dir)
+            {
+                case Direction.N: return Quaternion.Euler(-90f, 0f, 0f); // Z → +Y
+                case Direction.S: return Quaternion.Euler( 90f, 0f, 0f); // Z → -Y
+                case Direction.E: return Quaternion.Euler(  0f, 90f, 0f); // Z → +X
+                case Direction.W: return Quaternion.Euler(  0f, -90f, 0f); // Z → -X
+                default: return Quaternion.identity;
+            }
+        }
+
+        // --------------------------------------------------------------------
+        // per-shape 프리팹 매핑 + 회전.
+        // --------------------------------------------------------------------
+
+        static string ShapePrefabPath(PipeShape shape)
+        {
+            switch (shape)
+            {
+                case PipeShape.Straight: return StraightPipePath;
+                case PipeShape.Elbow:    return ElbowPipePath;
+                case PipeShape.Tee:      return TeePipePath;
+                case PipeShape.Cross:    return CrossPipePath;
+                case PipeShape.Source:
+                case PipeShape.Sink:     return EndcapPipePath;
+                default:                 return null;
+            }
+        }
+
+        /// <summary>
+        /// pipeRoot 로컬에서 프리팹을 보드 평면(XY)으로 정렬하는 회전.
+        /// 프리팹 좌표계: X=두께, Y/Z=다리 축. 목표: 두께를 보드 Z(panel normal) 로, 다리를 보드 X/Y 로.
+        ///
+        /// - Straight   (Z 길이축)         : Z → 보드 +Y (N|S 정렬). 회전은 LookRotation(up, right) 동등.
+        /// - Elbow      (+Y, +Z 두 다리)   : Y → 보드 +Y(N), Z → 보드 +X(E). N|E 형태.
+        /// - Tee        (Z 주빔 + +Y 스텁) : Z → 보드 +Y(N|S 주빔), +Y(스텁) → 보드 +X(E). N|E|S.
+        /// - Cross      (4-way YZ 평면)    : Tee 와 동일 회전 (4-way 대칭).
+        /// - Source/Sink (Z 짧은 직선)    : Z → 보드 +X (E 방향 short stub).
+        /// </summary>
+        static Quaternion ShapeRotation(PipeShape shape)
+        {
+            switch (shape)
+            {
+                case PipeShape.Straight:
+                case PipeShape.Tee:
+                case PipeShape.Cross:
+                    // Z(prefab) → +Y(board), Y(prefab) → +X(board).
+                    return Quaternion.LookRotation(Vector3.up, Vector3.right);
+
+                case PipeShape.Elbow:
+                    // Z(prefab) → -X(board), Y(prefab) → -Y(board).
+                    // 메시 자연 다리가 (-Y, -Z) 사분면이라 visual N|E 만들려면 두 축 모두 뒤집어야 함.
+                    // (이전엔 LookRotation(right, up) 이었는데 사용자가 "완전히 반대일 때 작동" 보고 → 180° 뒤집음.)
+                    return Quaternion.LookRotation(Vector3.left, Vector3.down);
+
+                case PipeShape.Source:
+                case PipeShape.Sink:
+                    // 짧은 stub — Z → +X(board). 마커가 source/sink 구분.
+                    return Quaternion.LookRotation(Vector3.right, Vector3.up);
+
+                default:
+                    return Quaternion.identity;
+            }
+        }
+
+        /// <summary>
+        /// 프리팹 자연 사이즈 보정 스케일. 모두 1.0 — 프리팹 메시 원본 크기 그대로 사용.
+        /// (사용자가 Elbow scale 1.43x 적용했더니 너무 커진다 → 롤백)
+        /// 정렬 어긋남은 PipeMiniGame2Pipe.VisualOffset 으로 사용자가 직접 조정.
+        /// </summary>
+        static Vector3 ShapeScale(PipeShape shape)
+        {
+            return Vector3.one;
+        }
+
+        /// <summary>
+        /// PipeMiniGame2Pipe.VisualOffset 의 shape별 디폴트값.
+        /// 사용자가 인스펙터에서 시각적으로 맞춘 값을 빌더에 박아 영구화.
+        /// 빌드 시 자동으로 적용 — 사용자가 매번 인스펙터에서 조정할 필요 없음.
+        /// </summary>
+        static Vector3 ShapeDefaultVisualOffset(PipeShape shape)
+        {
+            switch (shape)
+            {
+                case PipeShape.Elbow:
+                    // 사용자가 시각 조정한 값: 메시 visual center 보정. Corner90_13 메시가 (-X,-Y) 사분면이라
+                    // (+0.08, +0.08, 0) 으로 끌어 corner inside 가 slot center 부근에 오게.
+                    return new Vector3(0.08f, 0.08f, 0f);
+                default:
+                    return Vector3.zero;
+            }
+        }
+
+        /// <summary>
+        /// 프리팹 못 찾을 때 폴백: 옛 방식대로 Hub Cube + 방향별 Arm Cube 생성.
+        /// </summary>
+        static void BuildFallbackHubArms(Transform pipeRoot, Direction baseMask, Material pipeMat, List<Renderer> pipeRenderers)
+        {
+            // Hub
+            var hub = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            hub.name = "Hub";
+            Object.DestroyImmediate(hub.GetComponent<Collider>());
+            hub.transform.SetParent(pipeRoot, false);
+            hub.transform.localPosition = Vector3.zero;
+            hub.transform.localScale = new Vector3(MG_HubSize, MG_HubSize, MG_ArmThickness);
+            AssignMat(hub, pipeMat);
+            pipeRenderers.Add(hub.GetComponent<Renderer>());
+
+            // Arms
+            foreach (var dir in new[] { Direction.N, Direction.E, Direction.S, Direction.W })
+            {
+                if ((baseMask & dir) == 0) continue;
+                var (offset, scale) = ArmTransform(dir);
+                var arm = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                arm.name = $"Arm_{dir}";
+                Object.DestroyImmediate(arm.GetComponent<Collider>());
+                arm.transform.SetParent(pipeRoot, false);
+                arm.transform.localPosition = offset;
+                arm.transform.localScale = scale;
+                AssignMat(arm, pipeMat);
+                pipeRenderers.Add(arm.GetComponent<Renderer>());
             }
         }
 
@@ -760,6 +1185,44 @@ namespace PipePuz.SmokePuzzle.EditorTools
             }
 
             ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        }
+
+        // --------------------------------------------------------------------
+        // Prefab helpers — Industrial Pipeline 에셋 instantiate.
+        // 못 찾으면 null 반환 → 호출부에서 primitive fallback.
+        // --------------------------------------------------------------------
+
+        static GameObject LoadPrefab(string assetPath)
+        {
+            if (string.IsNullOrEmpty(assetPath)) return null;
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+            if (prefab == null)
+            {
+                Debug.LogWarning($"[PipeSmokePuz] Prefab not found: {assetPath} — falling back to primitive.");
+            }
+            return prefab;
+        }
+
+        /// <summary>
+        /// 프리팹을 인스턴스화해서 parent 하위에 붙임. 콜라이더는 모두 제거 (radiator 의 시각 부품은 콜라이더 불필요).
+        /// </summary>
+        static GameObject InstantiatePipelinePrefab(GameObject prefab, Transform parent,
+            Vector3 localPos, Quaternion localRot, float scale, string name)
+        {
+            if (prefab == null) return null;
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+            if (go == null) return null;
+            go.name = name;
+            go.transform.localPosition = localPos;
+            go.transform.localRotation = localRot;
+            go.transform.localScale = Vector3.one * scale;
+
+            // 콜라이더는 grab/raycast 간섭 회피용으로 모두 제거.
+            foreach (var c in go.GetComponentsInChildren<Collider>(true))
+            {
+                Object.DestroyImmediate(c);
+            }
+            return go;
         }
 
         // --------------------------------------------------------------------

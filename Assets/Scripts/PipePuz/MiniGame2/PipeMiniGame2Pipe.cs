@@ -24,6 +24,12 @@ namespace PipePuz.MiniGame2
         public Transform PipeRoot;
         public Renderer[] PipeRenderers;
 
+        [Header("Visual Adjustment")]
+        [Tooltip("Pipe mesh visual offset (pipeRoot 자식 prefab inst 의 localPosition). " +
+                 "회전 중심에 메시 visual center 가 안 맞을 때 인스펙터에서 직접 조정. " +
+                 "값 바꾸면 OnValidate 로 라이브 반영.")]
+        public Vector3 VisualOffset = Vector3.zero;
+
         [Header("Runtime")]
         public PipeMiniGame2Slot CurrentSlot;
         public PipeMiniGame2Board Board;
@@ -69,6 +75,33 @@ namespace PipePuz.MiniGame2
             }
         }
 
+        /// <summary>
+        /// 잡힌 동안 매 프레임 — 충돌 기반: 파이프 transform 위치가 slot 의 박스 영역 안에 들어오면
+        /// 그 slot 에 logical attach (transform 은 손 따라 free, CurrentPipe 만 설정).
+        /// 박스 영역 밖이면 logical detach. BFS 가 즉시 동작 → "기능 실행".
+        /// 실제 transform lock 은 OnReleased 에서.
+        /// </summary>
+        void Update()
+        {
+            if (_grab == null || !_grab.isSelected) return;
+            if (Board == null) return;
+            if (IsFixed) return;
+
+            var slot = Board.FindContainingSlot(transform.position);
+            if (slot != CurrentSlot)
+            {
+                if (CurrentSlot != null)
+                {
+                    CurrentSlot.ReleasePipe();
+                }
+                if (slot != null)
+                {
+                    slot.AcceptPipeLogical(this);
+                }
+                Board.OnFlowChanged();
+            }
+        }
+
         void OnReleased(SelectExitEventArgs args)
         {
             if (Board == null)
@@ -77,18 +110,21 @@ namespace PipePuz.MiniGame2
                 return;
             }
 
-            // 가장 가까운 빈 slot 찾기.
-            var slot = Board.FindNearestEmptySlot(transform.position);
-            if (slot != null)
+            // Hover 중 logical attach 된 slot 이 있으면 → transform 까지 lock.
+            // 없으면 → 그 자리에 detached 로 떨어짐 (slot 박스 영역 밖).
+            if (CurrentSlot != null)
             {
-                slot.AcceptPipe(this);
+                CurrentSlot.AcceptPipe(this);
             }
-            else if (_previousSlot != null && _previousSlot.IsEmpty)
+            else
             {
-                // fallback: 직전에 있던 slot 으로 (트리거로 회전만 하려고 잡았다 놓은 케이스).
-                _previousSlot.AcceptPipe(this);
+                // 안전장치: hover 추적이 안 됐을 경우 OnReleased 시점에 한 번 더 충돌 검사.
+                var slot = Board.FindContainingSlot(transform.position);
+                if (slot != null)
+                {
+                    slot.AcceptPipe(this);
+                }
             }
-            // else: 어디에도 안 들어감 — 그 자리에 정지 (kinematic 유지)
 
             Board.OnFlowChanged();
             _previousSlot = null;
@@ -108,7 +144,21 @@ namespace PipePuz.MiniGame2
             if (PipeRoot != null)
             {
                 PipeRoot.localRotation = Quaternion.Euler(0f, 0f, -90f * Rotation);
+
+                // VisualOffset 적용 — PipeRoot 첫 자식(prefab inst)의 localPosition 갱신.
+                // 사용자가 인스펙터에서 메시 위치 조정해서 회전 중심에 visual center 를 맞춤.
+                if (PipeRoot.childCount > 0)
+                {
+                    var inst = PipeRoot.GetChild(0);
+                    if (inst != null) inst.localPosition = VisualOffset;
+                }
             }
+        }
+
+        // 인스펙터 라이브 반영.
+        void OnValidate()
+        {
+            ApplyVisual();
         }
 
         /// <summary>BFS 결과에 따라 호출. 연결됨 = 빨강 / 끊김 = 노랑.</summary>
