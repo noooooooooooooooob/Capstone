@@ -15,16 +15,20 @@ public class ScorpionCreature : MonoBehaviour
 
     void Update()
     {
-        // 목적지 거의 도착하면 바로 다음 목적지
+        if (transform.position.y < -5f)
+{
+    transform.position = new Vector3(transform.position.x, 0f, transform.position.z);
+}
+        if (!agent.enabled) return;
         if (!agent.pathPending && agent.remainingDistance < 0.5f)
             SetNewDestination();
     }
 
     void SetNewDestination()
     {
+        if (!agent.enabled) return;
         Vector3 randomDirection = Random.insideUnitSphere * wanderRadius;
         randomDirection += transform.position;
-        
         NavMeshHit hit;
         if (NavMesh.SamplePosition(randomDirection, out hit, wanderRadius, 1))
             agent.SetDestination(hit.position);

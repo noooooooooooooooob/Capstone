@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 public class FlyingCreature : MonoBehaviour
 {
@@ -6,10 +7,24 @@ public class FlyingCreature : MonoBehaviour
     public float speed = 2f;
     
     private int currentTarget = 0;
-    private int direction = 1; // 1: 정방향, -1: 역방향
+    private int direction = 1;
+    [HideInInspector] public bool isStunned = false;
+    private XRGrabInteractable grab;
+
+    void Start()
+    {
+        grab = GetComponent<XRGrabInteractable>();
+    }
 
     void Update()
     {
+        if (transform.position.y < -5f)
+{
+    transform.position = new Vector3(transform.position.x, 0f, transform.position.z);
+}
+        if (isStunned) return;
+        if (grab != null && grab.isSelected) return; // 잡혀있으면 멈춤
+
         Transform target = waypoints[currentTarget];
         
         float hover = Mathf.Sin(Time.time * 2f) * 0.3f;
@@ -17,17 +32,14 @@ public class FlyingCreature : MonoBehaviour
         
         transform.position = Vector3.MoveTowards(transform.position, targetPos, speed * Time.deltaTime);
         
-        // 이동 방향으로 회전 (목표와 거리 충분할 때만)
         Vector3 dir = targetPos - transform.position;
         if (dir.magnitude > 0.2f)
             transform.rotation = Quaternion.LookRotation(dir);
         
-        // 도착하면 다음 웨이포인트
         if (Vector3.Distance(transform.position, target.position) < 0.1f)
         {
             currentTarget += direction;
             
-            // 끝에 도달하면 방향 반전
             if (currentTarget >= waypoints.Length)
             {
                 currentTarget = waypoints.Length - 2;
@@ -39,5 +51,15 @@ public class FlyingCreature : MonoBehaviour
                 direction = 1;
             }
         }
+    }
+
+    public void SetCaged()
+    {
+        isStunned = true;
+    }
+
+    public void SetFree()
+    {
+        isStunned = false;
     }
 }

@@ -3,8 +3,8 @@ using UnityEngine.AI;
 
 public class SlimeCreature : MonoBehaviour
 {
-    public float followDistance = 3f; // 이 거리 안으로 안 들어감
-    public float speed = 2f; // 전갈보다 느리게
+    public float followDistance = 3f;
+    public float speed = 2f;
     
     private NavMeshAgent agent;
     private Transform target;
@@ -18,14 +18,17 @@ public class SlimeCreature : MonoBehaviour
 
     void Update()
     {
+        if (transform.position.y < -5f)
+{
+    transform.position = new Vector3(transform.position.x, 0f, transform.position.z);
+}
+        if (!agent.enabled) return;
         if (target == null) return;
         
         float dist = Vector3.Distance(transform.position, target.position);
-        
-        // 일정 거리 이상이면 따라감
         if (dist > followDistance)
             agent.SetDestination(target.position);
         else
-            agent.ResetPath(); // 너무 가까우면 멈춤
+            agent.ResetPath();
     }
 }
