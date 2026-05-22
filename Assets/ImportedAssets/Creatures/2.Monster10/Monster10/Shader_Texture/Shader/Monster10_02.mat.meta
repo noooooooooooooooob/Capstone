@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a2c7475d03c77164a80f8d9f23adc190
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 351814
+  packageName: "Fantasy Monster 10 (Rig + Animation) \u2013 PixeliusVita"
+  packageVersion: 1.0
+  assetPath: Assets/Stylized3DMonster/Monster10/Shader_Texture/Shader/Monster10_02.mat
+  uploadId: 898226

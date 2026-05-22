@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 86617d2551e86004f93d7e21dc2baac1
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 351814
+  packageName: "Fantasy Monster 10 (Rig + Animation) \u2013 PixeliusVita"
+  packageVersion: 1.0
+  assetPath: Assets/Stylized3DMonster/Monster10/Anim/InPlace_Anim/Monster10_Idle.anim
+  uploadId: 898226
