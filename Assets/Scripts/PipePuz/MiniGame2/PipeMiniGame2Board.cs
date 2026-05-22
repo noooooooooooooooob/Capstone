@@ -45,9 +45,9 @@ namespace PipePuz.MiniGame2
         public PipeMiniGame2Slot SinkSlot;
 
         [Header("Snap")]
-        [Tooltip("Slot 의 박스 영역 half-size (m). 파이프 위치가 slot 의 ±SnapDistance 박스 안에 들어오면 부착. " +
-                 "cellSize/2 권장 (= 0.25 for cellSize 0.5). 충돌 기반 부착.")]
-        public float SnapDistance = 0.25f;
+        [Tooltip("Slot 중심에서의 부착 반경(m). Slot 의 trigger SphereCollider radius 와 동일 의미. " +
+                 "값이 작을수록 pipe 가 slot 중심에 가까이 와야 부착. (legacy FindContainingSlot 도 동일 값 사용)")]
+        public float SnapDistance = 0.115f;
 
         [Header("Materials")]
         public Material ConnectedMaterial;
@@ -232,24 +232,21 @@ namespace PipePuz.MiniGame2
         }
 
         /// <summary>
-        /// 충돌 기반 — worldPos 가 slot 의 ±SnapDistance 박스 안에 들어오면 그 slot 반환.
-        /// 빈 slot 만 검사. 동시에 여러 박스 안에 있으면 가장 가까운 slot 반환.
+        /// 충돌 기반 — worldPos 가 slot 중심에서 SnapDistance 반경의 구 안에 있으면 그 slot 반환.
+        /// 빈 slot 만 검사. 여러 구 안에 있으면 가장 가까운 slot 반환.
         /// </summary>
         public PipeMiniGame2Slot FindContainingSlot(Vector3 worldPos)
         {
             if (Slots == null) return null;
-            float half = SnapDistance;
+            float radiusSq = SnapDistance * SnapDistance;
             PipeMiniGame2Slot best = null;
             float bestDistSq = float.MaxValue;
             for (int i = 0; i < Slots.Length; i++)
             {
                 var slot = Slots[i];
                 if (slot == null || !slot.IsEmpty) continue;
-                Vector3 local = slot.transform.InverseTransformPoint(worldPos);
-                if (Mathf.Abs(local.x) > half) continue;
-                if (Mathf.Abs(local.y) > half) continue;
-                if (Mathf.Abs(local.z) > half) continue;
-                float dsq = local.sqrMagnitude;
+                float dsq = (slot.transform.position - worldPos).sqrMagnitude;
+                if (dsq > radiusSq) continue;
                 if (dsq < bestDistSq)
                 {
                     bestDistSq = dsq;

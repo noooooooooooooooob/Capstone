@@ -22,6 +22,12 @@ namespace PipePuz.LightBeam
         [Tooltip("이 길이로 가득 채워져야 IsComplete = true. 보통 거울 수 = 4.")]
         public int MaxSequenceLength = 4;
 
+        [Header("Activation")]
+        [Tooltip("false 면 디스플레이가 모두 EmptySlotColor 로 보임. " +
+                 "LightOrbSocket 에 orb 가 삽입돼야 true 로 전환되며 색상 시퀀스가 표시됨. " +
+                 "기본값 false — Activator 가 Start 에서 socket 상태에 맞춰 동기화함.")]
+        public bool IsActive = false;
+
         [Header("Visual feedback")]
         [Tooltip("순서를 표시할 슬롯 렌더러들. 좌→우 = 첫번째→마지막.")]
         public List<Renderer> DisplaySlots = new List<Renderer>();
@@ -68,6 +74,20 @@ namespace PipePuz.LightBeam
 
         public void RefreshDisplay() => UpdateDisplay();
 
+        public void Activate()
+        {
+            if (IsActive) return;
+            IsActive = true;
+            UpdateDisplay();
+        }
+
+        public void Deactivate()
+        {
+            if (!IsActive) return;
+            IsActive = false;
+            UpdateDisplay();
+        }
+
         void UpdateDisplay()
         {
             EnsureMaterialInstances();
@@ -77,7 +97,8 @@ namespace PipePuz.LightBeam
                 var mat = _slotMatInstances[i];
                 if (mat == null) continue;
                 Color c = EmptySlotColor;
-                if (i < RequiredSequence.Count)
+                // 비활성 상태이면 모든 슬롯이 빈 색 — orb 가 socket 에 들어가야 색상 시퀀스가 보임.
+                if (IsActive && i < RequiredSequence.Count)
                 {
                     int id = RequiredSequence[i];
                     if (id >= 0 && id < ColorPalette.Count) c = ColorPalette[id];

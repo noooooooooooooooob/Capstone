@@ -104,7 +104,7 @@ namespace PipePuz.SmokePuzzle.EditorTools
         const float MG_WallY         = 1.40f;
         const float MG_PanelZ        = -0.025f;
         const float MG_FloorY        = 0.06f;
-        const float MG_SnapDistance  = 0.25f; // = cellSize / 2 — slot 박스 영역 half-size (충돌 기반 부착)
+        const float MG_SnapDistance  = 0.115f; // 0.23 의 절반 — slot 영역 반으로 축소 (더 엄격한 부착)
 
         // fallback Cube arm용 (프리팹 못 찾을 때만 동작). 평소엔 안 씀.
         const float MG_ArmThickness  = 0.05f;
@@ -696,6 +696,13 @@ namespace PipePuz.SmokePuzzle.EditorTools
                     slot.Y = y;
                     slot.Board = board;
                     slot.EmptyOutline = outline;
+
+                    // LightOrbSocket 패턴 — slot 영역의 trigger SphereCollider.
+                    // 잡혀있지 않은 Pipe 가 이 sphere 안에 들어오면 자동 흡수.
+                    var trigger = slotGo.AddComponent<SphereCollider>();
+                    trigger.isTrigger = true;
+                    trigger.center = Vector3.zero;
+                    trigger.radius = MG_SnapDistance; // 0.115 — slot 영역 (slot 가로 0.46 의 ¼)
 
                     board.Slots[x + y * W] = slot;
                 }

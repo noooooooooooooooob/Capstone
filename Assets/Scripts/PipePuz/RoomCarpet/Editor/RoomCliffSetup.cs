@@ -149,15 +149,24 @@ namespace PipePuz.RoomCarpet.EditorTools
         const float ColorPanelSlotSpacing = 0.12f;
         const float ColorPanelSlotSize = 0.06f;
 
+        // ===== Light Orb + Socket (2층) — orb 를 socket 에 삽입해야 emitter/panel 활성화 =====
+        // 초기 orb 는 2층 서쪽에 떠있는 듯한 작은 받침대 위. socket 은 동쪽에 위치.
+        static readonly Vector3 LightOrbInitialLocal  = new Vector3(3.0f, Floor2Y + 0.20f, 12f);
+        static readonly Vector3 LightOrbRestLocal     = new Vector3(3.0f, Floor2Y, 12f);
+        const float LightOrbRadius = 0.08f;
+        static readonly Vector3 LightOrbSocketLocal   = new Vector3(5.0f, Floor2Y, 12f);
+        const float LightOrbSocketHeight = 0.20f;
+        const float LightOrbSocketTriggerRadius = 0.22f;
+
         // ===== Beam Aim Slider (2층) — knob X → emitter Z =====
-        // Knob 중심(X=0) 일 때 emitter z=10 이 되도록 범위 대칭.
-        // 거울 z 값: M1=9, M2=16, M3=12, M4=6 — [3, 17] 범위면 모두 닿음, 중심 = (3+17)/2 = 10 ✓
+        // Knob 중심(X=0) 일 때 emitter z=10.5 가 되도록 범위 대칭.
+        // 거울 z 값: M1=9, M2=16, M3=12, M4=6 — [4, 17] 범위, 중심 = (4+17)/2 = 10.5 ✓
         static readonly Vector3 AimControlBaseLocal = new Vector3(3.5f, Floor2Y, 13f);
         const float AimControlStandHeight = 0.9f;
         const float AimKnobTrackMin = -0.30f;
         const float AimKnobTrackMax = +0.30f;
-        const float EmitterInitialZ = 10f;      // 시작 z = 슬라이더 중심
-        const float EmitterSlideMinZ = 3f;      // 양 끝 ±7 → 중심 10 대칭
+        const float EmitterInitialZ = 10.5f;    // 시작 z = 슬라이더 중심
+        const float EmitterSlideMinZ = 4f;      // 양 끝 ±6.5 → 중심 10.5 대칭
         const float EmitterSlideMaxZ = 17f;
         // 슬라이더 방향 반전 — P1 이 knob 을 미는 방향과 빔이 챔버에서 움직이는 방향이 일치하도록.
         const bool InvertEmitterMapping = true;
@@ -222,6 +231,7 @@ namespace PipePuz.RoomCarpet.EditorTools
                 "Dispenser", "ActiveCarpets", "LauncherHolster", "CarpetLauncher",
                 "LightBeamPuzzle",
                 "ColorOrderPanel", "BeamAimController",
+                "LightOrbRest", "LightOrbSocket", "LightOrb", "LightOrbActivator",
             };
             foreach (var n in knownChildren) DestroyChildIfExists(root.transform, n);
             var oldCliff = root.GetComponent<CliffController>();
@@ -379,6 +389,12 @@ namespace PipePuz.RoomCarpet.EditorTools
             // 2층 BeamAimController — Knob 슬라이더로 emitter Z 위치를 P1 이 조정.
             var aimCtrl = BuildBeamAimController(root.transform, emitter, standMat, pedestalMat);
 
+            // 2층 LightOrb / Socket / Activator — orb 삽입 시 emitter + panel 활성화.
+            var orbRest = BuildLightOrbRest(root.transform, pedestalMat);
+            var orb = BuildLightOrb(root.transform);
+            var orbSocket = BuildLightOrbSocket(root.transform, pedestalMat);
+            BuildLightOrbActivator(root.transform, orbSocket, emitter, colorPanel);
+
             // Controller + LineRenderer
             var ctrlGo = new GameObject("LightBeamController");
             ctrlGo.transform.SetParent(puzzleGroup.transform, false);
@@ -415,11 +431,12 @@ namespace PipePuz.RoomCarpet.EditorTools
             EditorUtility.SetDirty(root);
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(root.scene);
             Undo.CollapseUndoOperations(undoGroup);
-            Debug.Log("[Cliff] Build 완료. 4 거울(R/G/B/Y) + 사전 정의 순서 패널 + 2층 빔 조준 슬라이더. " +
+            Debug.Log("[Cliff] Build 완료. 4 거울(R/G/B/Y) + 사전 정의 순서 패널 + 2층 빔 조준 슬라이더 + LightOrb/Socket. " +
                       $"낙하 임계 y={ctrl.FallThresholdY} (world). 사전 정의 순서: {orderStr}. " +
                       $"emitter Z 슬라이더 범위 [{EmitterSlideMinZ}, {EmitterSlideMaxZ}] (중심={EmitterInitialZ}, knob 중앙일 때). " +
-                      "P1: 카펫 발사 + 빔 조준 슬라이더. P2 가 거울 yaw 를 맞춰 빔이 위 순서대로(모든 거울 거쳐서) receiver 에 도달해야 솔브 — " +
-                      "순서 틀리거나 거울 빠뜨리면 receiver 시각도 안 켜짐.");
+                      "초기: LightOrb 가 socket 밖에 있어 emitter OFF, panel 비활성. " +
+                      "P1 이 orb 를 잡아 socket 에 삽입하면 emitter 발광 + panel 에 색상 순서 표시. " +
+                      "P2 가 거울 yaw 를 맞춰 빔이 위 순서대로(모든 거울 거쳐서) receiver 에 도달해야 솔브.");
         }
 
         // ===== Platform spec generation =====
@@ -706,6 +723,115 @@ namespace PipePuz.RoomCarpet.EditorTools
             aimCtrl.InvertMapping = InvertEmitterMapping;
 
             return aimCtrl;
+        }
+
+        // ===== LightOrb / Socket / Activator =====
+
+        /// <summary>orb 가 시작 시 떠있는 자리 — 단순한 받침(작은 디스크). 콜라이더 없음.</summary>
+        static GameObject BuildLightOrbRest(Transform parent, Material restMat)
+        {
+            var rest = new GameObject("LightOrbRest");
+            rest.transform.SetParent(parent, false);
+            rest.transform.localPosition = LightOrbRestLocal;
+
+            var disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            disc.name = "Visual"; DisableColliderIfAny(disc);
+            disc.transform.SetParent(rest.transform, false);
+            disc.transform.localPosition = new Vector3(0f, 0.02f, 0f);
+            disc.transform.localScale = new Vector3(0.20f, 0.02f, 0.20f);
+            AssignMat(disc, restMat);
+            return rest;
+        }
+
+        /// <summary>플레이어가 잡아 옮길 수 있는 빛 구체.</summary>
+        static LightOrb BuildLightOrb(Transform parent)
+        {
+            var orbGo = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            orbGo.name = "LightOrb";
+            orbGo.transform.SetParent(parent, false);
+            orbGo.transform.localPosition = LightOrbInitialLocal;
+            orbGo.transform.localScale = Vector3.one * (LightOrbRadius * 2f);
+
+            // 강한 emission 으로 빛나는 구체 — 멀리서도 잘 보이게.
+            var orbMat = MakeEmissiveMaterial("Cliff_LightOrbMat",
+                new Color(1.0f, 0.95f, 0.75f), new Color(2.4f, 2.0f, 1.0f));
+            orbGo.GetComponent<Renderer>().sharedMaterial = orbMat;
+
+            // CreatePrimitive(Sphere) 가 SphereCollider 자동 부착 — 그대로 잡기/트리거 감지에 사용.
+
+            var rb = orbGo.AddComponent<Rigidbody>();
+            rb.useGravity = true;
+            rb.isKinematic = false;
+            rb.linearDamping = 1.5f;
+            rb.angularDamping = 2.0f;
+            rb.interpolation = RigidbodyInterpolation.Interpolate;
+            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+
+            var grab = orbGo.AddComponent<XRGrabInteractable>();
+            grab.throwOnDetach = false;
+            grab.smoothPosition = true;
+            grab.smoothRotation = true;
+
+            var orb = orbGo.AddComponent<LightOrb>();
+            orb.GlowRenderer = orbGo.GetComponent<Renderer>();
+            orb.RespawnPosition = orbGo.transform.position; // 월드 좌표 — 자기 초기 위치로 리스폰
+            orb.HasExplicitRespawn = true;
+            orb.FallThresholdY = -3f;
+            return orb;
+        }
+
+        /// <summary>orb 를 받는 socket — 받침대 + 위에 떠있는 트리거 zone.</summary>
+        static LightOrbSocket BuildLightOrbSocket(Transform parent, Material standMat)
+        {
+            var socketGo = new GameObject("LightOrbSocket");
+            socketGo.transform.SetParent(parent, false);
+            socketGo.transform.localPosition = LightOrbSocketLocal;
+
+            // 받침대 (cylinder) — 시각만, 콜라이더 제거.
+            var stand = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            stand.name = "Stand"; DisableColliderIfAny(stand);
+            stand.transform.SetParent(socketGo.transform, false);
+            stand.transform.localPosition = new Vector3(0f, 0.07f, 0f);
+            stand.transform.localScale = new Vector3(0.22f, 0.07f, 0.22f);
+            AssignMat(stand, standMat);
+
+            // 그릇(상단) — 시각만.
+            var bowl = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            bowl.name = "Bowl"; DisableColliderIfAny(bowl);
+            bowl.transform.SetParent(socketGo.transform, false);
+            bowl.transform.localPosition = new Vector3(0f, LightOrbSocketHeight, 0f);
+            bowl.transform.localScale = new Vector3(0.18f, 0.02f, 0.18f);
+            var bowlMat = MakeEmissiveMaterial("Cliff_OrbSocketBowlMat",
+                new Color(0.30f, 0.35f, 0.45f), new Color(0.6f, 0.7f, 1.0f) * 0.6f);
+            bowl.GetComponent<Renderer>().sharedMaterial = bowlMat;
+
+            // DockPoint — orb 가 스냅될 정확한 위치/회전.
+            var dock = new GameObject("DockPoint");
+            dock.transform.SetParent(socketGo.transform, false);
+            dock.transform.localPosition = new Vector3(0f, LightOrbSocketHeight + LightOrbRadius, 0f);
+
+            // 트리거 — orb 가 가까이 떨어지면 자동 스냅.
+            var trigger = socketGo.AddComponent<SphereCollider>();
+            trigger.isTrigger = true;
+            trigger.center = new Vector3(0f, LightOrbSocketHeight + LightOrbRadius, 0f);
+            trigger.radius = LightOrbSocketTriggerRadius;
+
+            var socket = socketGo.AddComponent<LightOrbSocket>();
+            socket.DockPoint = dock.transform;
+            return socket;
+        }
+
+        /// <summary>socket ↔ emitter/panel 브리지.</summary>
+        static LightOrbActivator BuildLightOrbActivator(Transform parent,
+            LightOrbSocket socket, LightBeamEmitter emitter, ColorOrderPanel panel)
+        {
+            var go = new GameObject("LightOrbActivator");
+            go.transform.SetParent(parent, false);
+            var act = go.AddComponent<LightOrbActivator>();
+            act.Socket = socket;
+            act.Emitter = emitter;
+            act.Panel = panel;
+            return act;
         }
 
         static LightBeamReceiver BuildReceiver(Transform parent, Vector3 localPos, Quaternion localRot,

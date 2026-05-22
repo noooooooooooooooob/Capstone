@@ -36,8 +36,10 @@ namespace PipePuz.MiniGame2
 
         public Direction CurrentMask => PipeShapeDef.GetMask(Shape, Rotation);
 
+        /// <summary>손에 잡혀 있는지 — LightOrb.IsHeld 와 동일 의미. Slot 의 trigger 가 검사.</summary>
+        public bool IsHeld => _grab != null && _grab.isSelected;
+
         XRGrabInteractable _grab;
-        PipeMiniGame2Slot _previousSlot;
 
         void Awake()
         {
@@ -64,9 +66,10 @@ namespace PipePuz.MiniGame2
             }
         }
 
+        // LightOrb 패턴 — 잡으면 slot 에서 즉시 detach.
+        // 자동 attach 는 PipeMiniGame2Slot 의 OnTriggerStay 가 처리 (잡혀있지 않은 pipe 가 sphere 영역 진입 시).
         void OnGrabbed(SelectEnterEventArgs args)
         {
-            _previousSlot = CurrentSlot;
             if (CurrentSlot != null)
             {
                 CurrentSlot.ReleasePipe();
@@ -75,59 +78,11 @@ namespace PipePuz.MiniGame2
             }
         }
 
-        /// <summary>
-        /// 잡힌 동안 매 프레임 — 충돌 기반: 파이프 transform 위치가 slot 의 박스 영역 안에 들어오면
-        /// 그 slot 에 logical attach (transform 은 손 따라 free, CurrentPipe 만 설정).
-        /// 박스 영역 밖이면 logical detach. BFS 가 즉시 동작 → "기능 실행".
-        /// 실제 transform lock 은 OnReleased 에서.
-        /// </summary>
-        void Update()
-        {
-            if (_grab == null || !_grab.isSelected) return;
-            if (Board == null) return;
-            if (IsFixed) return;
-
-            var slot = Board.FindContainingSlot(transform.position);
-            if (slot != CurrentSlot)
-            {
-                if (CurrentSlot != null)
-                {
-                    CurrentSlot.ReleasePipe();
-                }
-                if (slot != null)
-                {
-                    slot.AcceptPipeLogical(this);
-                }
-                Board.OnFlowChanged();
-            }
-        }
-
+        // 손 놓는 순간엔 별도 처리 없음 — Slot 의 OnTriggerStay 가 다음 tick 에 IsHeld=false 를 감지하고 자동 흡수.
+        // BFS 만 갱신.
         void OnReleased(SelectExitEventArgs args)
         {
-            if (Board == null)
-            {
-                _previousSlot = null;
-                return;
-            }
-
-            // Hover 중 logical attach 된 slot 이 있으면 → transform 까지 lock.
-            // 없으면 → 그 자리에 detached 로 떨어짐 (slot 박스 영역 밖).
-            if (CurrentSlot != null)
-            {
-                CurrentSlot.AcceptPipe(this);
-            }
-            else
-            {
-                // 안전장치: hover 추적이 안 됐을 경우 OnReleased 시점에 한 번 더 충돌 검사.
-                var slot = Board.FindContainingSlot(transform.position);
-                if (slot != null)
-                {
-                    slot.AcceptPipe(this);
-                }
-            }
-
-            Board.OnFlowChanged();
-            _previousSlot = null;
+            if (Board != null) Board.OnFlowChanged();
         }
 
         void OnActivated(ActivateEventArgs args)

@@ -36,6 +36,29 @@ namespace PipePuz.MiniGame2
             UpdateOutline();
         }
 
+        // ===== LightOrbSocket 패턴 — Trigger 영역 기반 자동 흡수 =====
+        // Slot 자체에 SphereCollider(isTrigger=true) 가 부착되어 있고, 잡혀있지 않은 pipe 가
+        // 그 영역에 진입하면 자동으로 AcceptPipe (위치/회전/물리 lock).
+        // Pipe 가 잡히면 Pipe.OnGrabbed 가 ReleasePipe 를 호출 — slot 비움.
+
+        void OnTriggerEnter(Collider other) { TryAcceptFromTrigger(other); }
+        void OnTriggerStay(Collider other)  { TryAcceptFromTrigger(other); }
+
+        void TryAcceptFromTrigger(Collider other)
+        {
+            if (!IsEmpty) return; // 이미 다른 pipe 들어 있음
+
+            var pipe = other.GetComponent<PipeMiniGame2Pipe>()
+                       ?? other.GetComponentInParent<PipeMiniGame2Pipe>();
+            if (pipe == null) return;
+            if (pipe.IsFixed) return;                 // Source/Sink 등 고정 pipe 무시
+            if (pipe.IsHeld) return;                  // 손에 잡혀 있으면 받지 않음
+            if (pipe.CurrentSlot != null) return;     // 이미 다른 slot 에 있음
+
+            AcceptPipe(pipe);
+            if (Board != null) Board.OnFlowChanged();
+        }
+
         /// <summary>파이프를 이 slot 에 안착시킨다 (transform 포함).</summary>
         public void AcceptPipe(PipeMiniGame2Pipe pipe)
         {
