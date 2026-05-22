@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 7d8faf1c60201554199417eeed273c0d
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 351814
+  packageName: "Fantasy Monster 10 (Rig + Animation) \u2013 PixeliusVita"
+  packageVersion: 1.0
+  assetPath: Assets/Stylized3DMonster/Monster10/Anim/InPlace_Anim/Monster10_Walk_InPlace.anim
+  uploadId: 898226

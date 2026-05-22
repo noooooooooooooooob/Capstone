@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: cca54101b69f3f24d941610aefa7cf76
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 7400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 351814
+  packageName: "Fantasy Monster 10 (Rig + Animation) \u2013 PixeliusVita"
+  packageVersion: 1.0
+  assetPath: Assets/Stylized3DMonster/Monster10/Anim/Monster10_Walk.anim
+  uploadId: 898226
