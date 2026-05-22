@@ -39181,6 +39181,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ddb4662f119469c43b6b01f221374b33, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Stage1.LightBallPickupGate
+  debugForceUnlockPickup: 0
   fireHazardController: {fileID: 0}
   grabInteractable: {fileID: 0}
 --- !u!1 &1254125853
