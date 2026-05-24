@@ -79,10 +79,12 @@ namespace PipePuz.RoomCarpet.EditorTools
 
         // ===== Grid =====
         const float Tile = 3f;
-        // 벽 높이 — 사용자 요청: 이전 대비 2배.
-        //   Wall_Simple_01 본래 3m → 1F 벽 = 6m, 챔버 벽 = 10m.
-        const float Wall1FScale    = 2f;        // 6m (이전 3m × 2)
-        const float WallTallScale  = 10f / 3f;  // ≈3.333 → 10m (이전 5m × 2)
+        // 벽 높이 — 사용자 요청: Entrance/Corridor 천장을 SecondFloor 높이(Y=3.5) 와 맞춤.
+        //   그러면 코리도어 천장 위 = 2층 슬래브와 같은 레벨 → 자연스럽게 연결.
+        //   Wall_Simple_01 본래 3m → 1F 벽 스케일 = 3.5/3 ≈ 1.167 (벽 높이 3.5m).
+        //   챔버 벽은 그대로 10m 유지.
+        const float Wall1FScale    = SecondFloorY / 3f;  // 3.5/3 ≈ 1.167 → 1F 벽 = 3.5m (이전 6m)
+        const float WallTallScale  = 10f / 3f;            // ≈3.333 → 챔버 벽 = 10m (변경 없음)
 
         // ===== Room rects (Xmin, Xmax, Zmin, Zmax) =====
         static readonly Vector4 Entrance     = new Vector4(-3, +3, -3, 0);
@@ -100,12 +102,539 @@ namespace PipePuz.RoomCarpet.EditorTools
 
         // ===== Roof Y offset =====
         // Stage1 검증 결과: 'Roof' 부모 Y=0, Roof_02 인스턴스 Y=3.75 (3m 벽 룸).
-        //   → Roof_02 의 anchor 가 곧 visual Y 위치. (Stage1 의 3.75 는 벽 위 0.75m 펜트하우스 offset 추정.)
-        // 따라서 Roof Y = 벽 top. 벽 높이가 2배(6m, 10m) 로 바뀌었으므로:
-        //   1F 천장 Y=6 (이전 0 또는 3 → 6)
-        //   챔버 천장 Y=10 (이전 2 또는 7 → 10)
-        const float RoofDefault3mTopOffset = 6f;   // 1F 벽 top (6m) 에 천장 배치
-        const float RoofChamberTopOffset   = 10f;  // 챔버 벽 top (10m) 에 천장 배치
+        //   → Roof_02 의 anchor 가 곧 visual Y 위치.
+        // Entrance/Corridor 천장을 SecondFloor 슬래브 높이(Y=3.5) 와 같게 — 코리도어 위에서 바로 2층 슬래브로 이어짐.
+        // 챔버 천장은 그대로 Y=10 (벽 10m 유지, SecondFloor Y=3.5 위로도 6.5m 여유).
+        const float RoofDefault3mTopOffset = SecondFloorY;  // Y=3.5 — Entrance/Corridor 천장 = 2층 슬래브 높이
+        const float RoofChamberTopOffset   = 10f;            // Y=10 — 챔버 천장 (변경 없음)
+
+        // =========================================================================================
+        // Adjust 메뉴 — 씬의 현재 Floor_SecondFloor Y 값을 읽어와 Roof_Entrance/Roof_Corridor 와
+        // Wall_Entrance/Wall_Corridor 의 높이를 그에 맞춰 조정. 스크립트 상수 무시 — 씬 현재 상태 기준.
+        // 재빌드 없이 부분 조정만 함 (사용자가 손으로 수정한 다른 부분 보존).
+        // =========================================================================================
+
+        // =========================================================================================
+        // Set Heights — Floor_SecondFloor + Roof_Entrance/Corridor 의 자식 Y 를 일괄 지정값으로,
+        // Wall_Entrance/Corridor 의 yScale 도 그에 맞춰 (yScale = target/3).
+        // 사용자가 특정 Y 값을 직접 정하고 모든 관련 요소를 한 번에 적용할 때 사용.
+        // =========================================================================================
+
+        // =========================================================================================
+        // Setup Door1* — 이름이 "Door1" 로 시작하는 모든 GameObject 에 AutoSlidingDoor 컴포넌트
+        // 자동 부착. Door_Left_01 (오른쪽), Door_Left_01 (1) (왼쪽) 두 패널이 양쪽으로 슬라이드
+        // 해서 문이 열림. DetectionVolume (트리거 박스) 자동 생성 — 카메라(머리) 가 안에 있으면 Open.
+        // =========================================================================================
+
+        const float Door1SlideDistance = 1.5f;     // 각 패널이 양쪽으로 슬라이드할 거리(m)
+        const float Door1TriggerDepth  = 4f;       // 감지 트리거 박스 Z 크기 (양쪽 접근 감지)
+        const float Door1TriggerHeight = 3f;       // 감지 트리거 박스 Y 크기
+        const float Door1TriggerExtraWidth = 1.5f; // 패널 간 거리에 추가로 확장할 X 폭
+
+        [MenuItem("Tools/PipePuz/Stage3/Setup Door1* AutoSlidingDoor")]
+        public static void SetupDoor1AutoSliding()
+        {
+            var scene = SceneManager.GetActiveScene();
+            if (!ValidateStage3(scene)) return;
+
+            // 1. 씬 안의 모든 GameObject 중 이름이 "Door1" 로 시작하는 것 찾기 (Door1, Door1 (1), Door1 (2) 등).
+            var allTransforms = new System.Collections.Generic.List<Transform>();
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                CollectAllDescendants(root.transform, allTransforms);
+            }
+
+            var door1Groups = new System.Collections.Generic.List<Transform>();
+            foreach (var t in allTransforms)
+            {
+                if (t == null) continue;
+                if (t.name.StartsWith("Door1"))
+                {
+                    door1Groups.Add(t);
+                }
+            }
+
+            if (door1Groups.Count == 0)
+            {
+                Debug.LogError("[Door1Setup] 'Door1' 로 시작하는 GameObject 를 못 찾았다.");
+                return;
+            }
+
+            Undo.SetCurrentGroupName("Setup Door1* AutoSlidingDoor");
+            int undoGroup = Undo.GetCurrentGroup();
+
+            try
+            {
+                int setupCount = 0;
+                int skipCount = 0;
+
+                foreach (var doorGroup in door1Groups)
+                {
+                    // 2. 자식 중 Door_Left_01 / Door_Left_01 (1) 찾기.
+                    Transform leftPanelA = null;   // Door_Left_01
+                    Transform leftPanelB = null;   // Door_Left_01 (1)
+                    for (int i = 0; i < doorGroup.childCount; i++)
+                    {
+                        var c = doorGroup.GetChild(i);
+                        if (c.name == "Door_Left_01") leftPanelA = c;
+                        else if (c.name == "Door_Left_01 (1)") leftPanelB = c;
+                    }
+                    if (leftPanelA == null || leftPanelB == null)
+                    {
+                        Debug.LogWarning($"[Door1Setup] '{doorGroup.name}' 에 Door_Left_01 / Door_Left_01 (1) 자식 둘 다 못 찾음. 스킵.");
+                        skipCount++;
+                        continue;
+                    }
+
+                    // 3. 두 패널 사이 X 거리, 중심 계산 → 어느 쪽이 LeftPanel (smaller X) 인지 결정.
+                    Transform leftPanelFinal, rightPanelFinal;
+                    if (leftPanelA.localPosition.x < leftPanelB.localPosition.x)
+                    {
+                        leftPanelFinal = leftPanelA;
+                        rightPanelFinal = leftPanelB;
+                    }
+                    else
+                    {
+                        leftPanelFinal = leftPanelB;
+                        rightPanelFinal = leftPanelA;
+                    }
+
+                    // 4. AutoSlidingDoor 컴포넌트 — 이미 있으면 재사용, 없으면 추가.
+                    var asd = doorGroup.GetComponent<PipePuz.RoomCarpet.AutoSlidingDoor>();
+                    if (asd == null)
+                    {
+                        asd = Undo.AddComponent<PipePuz.RoomCarpet.AutoSlidingDoor>(doorGroup.gameObject);
+                    }
+                    Undo.RecordObject(asd, "Configure AutoSlidingDoor");
+                    asd.LeftPanel  = leftPanelFinal;
+                    asd.RightPanel = rightPanelFinal;
+                    asd.SlideDistance = Door1SlideDistance;
+                    asd.SlideAxisLocal = Vector3.right;
+                    asd.OpenSpeed = 2.5f;
+                    asd.CloseSpeed = 1.8f;
+                    asd.CloseDelay = 0.4f;
+
+                    // 5. DetectionVolume — 이미 자식에 있으면 재사용, 없으면 생성.
+                    Transform existingDV = null;
+                    for (int i = 0; i < doorGroup.childCount; i++)
+                    {
+                        if (doorGroup.GetChild(i).name == "DetectionVolume")
+                        {
+                            existingDV = doorGroup.GetChild(i);
+                            break;
+                        }
+                    }
+
+                    GameObject dvGo;
+                    if (existingDV != null)
+                    {
+                        dvGo = existingDV.gameObject;
+                    }
+                    else
+                    {
+                        dvGo = new GameObject("DetectionVolume");
+                        Undo.RegisterCreatedObjectUndo(dvGo, "Create DetectionVolume");
+                        Undo.SetTransformParent(dvGo.transform, doorGroup, worldPositionStays: false, "Parent DV");
+                    }
+
+                    // DetectionVolume Transform — 두 패널 중심에 배치.
+                    Vector3 panelMid = (leftPanelFinal.localPosition + rightPanelFinal.localPosition) * 0.5f;
+                    panelMid.y += Door1TriggerHeight * 0.5f; // 박스 중심을 바닥 위 절반 높이로
+                    Undo.RecordObject(dvGo.transform, "DV transform");
+                    dvGo.transform.localPosition = panelMid;
+                    dvGo.transform.localRotation = Quaternion.identity;
+                    dvGo.transform.localScale    = Vector3.one;
+
+                    // BoxCollider (isTrigger).
+                    var box = dvGo.GetComponent<BoxCollider>();
+                    if (box == null) box = Undo.AddComponent<BoxCollider>(dvGo);
+                    Undo.RecordObject(box, "DV box");
+                    box.isTrigger = true;
+                    float gapX = Mathf.Abs(rightPanelFinal.localPosition.x - leftPanelFinal.localPosition.x);
+                    box.size = new Vector3(gapX + Door1TriggerExtraWidth, Door1TriggerHeight, Door1TriggerDepth);
+                    box.center = Vector3.zero;
+
+                    asd.DetectionVolume = box;
+
+                    Debug.Log($"[Door1Setup] '{doorGroup.name}' setup OK. " +
+                              $"LeftPanel='{leftPanelFinal.name}' RightPanel='{rightPanelFinal.name}' " +
+                              $"gapX={gapX:F2}m SlideDistance={Door1SlideDistance:F2}m " +
+                              $"TriggerBox=({box.size.x:F2}, {box.size.y:F2}, {box.size.z:F2})");
+                    setupCount++;
+                }
+
+                EditorSceneManager_MarkActiveSceneDirty();
+                Debug.Log($"[Door1Setup] 완료 — {setupCount}개 setup, {skipCount}개 skip. " +
+                          "Play mode 진입 후 두 패널 사이로 다가가면 문이 열림. Ctrl+S 저장.");
+            }
+            finally
+            {
+                Undo.CollapseUndoOperations(undoGroup);
+            }
+        }
+
+        static void CollectAllDescendants(Transform root, System.Collections.Generic.List<Transform> list)
+        {
+            list.Add(root);
+            for (int i = 0; i < root.childCount; i++)
+                CollectAllDescendants(root.GetChild(i), list);
+        }
+
+        // =========================================================================================
+        // Lift Inner Mesh — 각 프리팹 인스턴스 안의 자식 mesh (Floor_01 또는 RoofMesh) 의
+        // localPosition.y 를 지정 값으로 변경. 기본값(1.136496e-06 ≈ 0) → 0.25 로 살짝 들어올림.
+        // 동시에 Wall 들의 yScale 을 새 effective 천장 높이에 맞춰 자동 조정.
+        //
+        // 사용처: Floor_SecondFloor 의 2층 슬래브를 0.25m 두께만큼 올리고, Roof_Entrance/Corridor
+        //         의 천장 mesh 도 같은 양 올려서 정렬 맞춤 — 벽도 그 위까지 자동으로 길어짐.
+        // =========================================================================================
+
+        const float LiftInnerMeshTargetY = 0.25f; // 새 자식 localPosition.y 값
+
+        [MenuItem("Tools/PipePuz/Stage3/Lift Inner Floor_01 Y to 0.25 (+walls)")]
+        public static void LiftInnerMeshY()
+        {
+            var scene = SceneManager.GetActiveScene();
+            if (!ValidateStage3(scene)) return;
+
+            float lift = LiftInnerMeshTargetY;
+            // 자식 mesh 의 가능한 이름들 (Floor_01 = prefab 기본, RoofMesh = Rename 메뉴 실행 후).
+            string[] meshChildNames = { "Floor_01", "RoofMesh" };
+
+            Undo.SetCurrentGroupName($"Lift inner mesh to Y={lift:F3}");
+            int undoGroup = Undo.GetCurrentGroup();
+
+            try
+            {
+                int lifted = 0;
+
+                // 1. Floor_SecondFloor 의 각 자식(Floor_01 인스턴스) → 그 내부 자식 mesh → localPos.y = lift
+                lifted += LiftMeshChildrenIn(scene, "Floor_SecondFloor", meshChildNames, lift);
+
+                // 2. Roof_Entrance, Roof_Corridor — 동일.
+                lifted += LiftMeshChildrenIn(scene, "Roof_Entrance",  meshChildNames, lift);
+                lifted += LiftMeshChildrenIn(scene, "Roof_Corridor",  meshChildNames, lift);
+
+                // 3. Wall_Entrance/Corridor 의 yScale 재계산.
+                //    effective 천장 visual top = Roof_Entrance 자식 parent Y + lift.
+                //    벽 yScale = effective top / 3 (Wall_Simple_01 본래 3m).
+                int wallScaled = 0;
+                var roofEntrance = FindByNameAnywhere(scene, "Roof_Entrance");
+                if (roofEntrance != null && roofEntrance.transform.childCount > 0)
+                {
+                    float roofParentY = roofEntrance.transform.GetChild(0).localPosition.y;
+                    float effectiveTop = roofParentY + lift;
+                    float newWallScaleY = effectiveTop / 3f;
+
+                    foreach (var groupName in new[] { "Wall_Entrance", "Wall_Corridor" })
+                    {
+                        var grp = FindByNameAnywhere(scene, groupName);
+                        if (grp == null) continue;
+                        for (int i = 0; i < grp.transform.childCount; i++)
+                        {
+                            var c = grp.transform.GetChild(i);
+                            Undo.RecordObject(c, "Adjust wall yScale");
+                            var ls = c.localScale;
+                            ls.y = newWallScaleY;
+                            c.localScale = ls;
+                            wallScaled++;
+                        }
+                    }
+                    Debug.Log($"[LiftInner] Roof parent Y={roofParentY:F3} + lift {lift:F3} = effective top {effectiveTop:F3}m. 벽 yScale={newWallScaleY:F3}.");
+                }
+                else
+                {
+                    Debug.LogWarning("[LiftInner] Roof_Entrance 못 찾음 — 벽 yScale 조정 스킵.");
+                }
+
+                EditorSceneManager_MarkActiveSceneDirty();
+                Debug.Log($"[LiftInner] 완료. mesh 자식 {lifted}개의 localPosition.y={lift:F3}, 벽 자식 {wallScaled}개 yScale 조정.\n" +
+                          "Ctrl+S 저장. 문제 시 Ctrl+Z.");
+            }
+            finally
+            {
+                Undo.CollapseUndoOperations(undoGroup);
+            }
+        }
+
+        /// <summary>
+        /// 주어진 그룹 (예: "Floor_SecondFloor") 의 모든 자식 (prefab instances) 를 순회하며,
+        /// 그 안의 가능한 이름의 자식 mesh (meshNames 후보 중 매칭되는 첫 자식) 의 localPosition.y 를
+        /// targetY 로 설정. prefab override 로 기록됨.
+        /// </summary>
+        static int LiftMeshChildrenIn(Scene scene, string groupName, string[] meshNames, float targetY)
+        {
+            var grp = FindByNameAnywhere(scene, groupName);
+            if (grp == null)
+            {
+                Debug.LogWarning($"[LiftInner] '{groupName}' 못 찾음.");
+                return 0;
+            }
+            int count = 0;
+            for (int i = 0; i < grp.transform.childCount; i++)
+            {
+                var instance = grp.transform.GetChild(i);
+                Transform meshChild = null;
+                foreach (var n in meshNames)
+                {
+                    var c = instance.Find(n);
+                    if (c != null) { meshChild = c; break; }
+                }
+                if (meshChild == null)
+                {
+                    Debug.LogWarning($"[LiftInner] '{groupName}' 안 [{i}] '{instance.name}' 에서 자식 mesh ({string.Join("/", meshNames)}) 못 찾음.");
+                    continue;
+                }
+                Undo.RecordObject(meshChild, "Lift inner mesh Y");
+                var lp = meshChild.localPosition;
+                lp.y = targetY;
+                meshChild.localPosition = lp;
+                count++;
+            }
+            return count;
+        }
+
+        // 구버전 SetHeights 메뉴 (절대값 일괄 설정) 는 그대로 둠 — 다른 목적용.
+        const float SetHeightsTargetY = 0.25f;  // ← 여기 값만 바꿔 다음 클릭부터 다른 높이로 적용 가능.
+
+        [MenuItem("Tools/PipePuz/Stage3/Set 1F + SecondFloor Heights to Y=0.25")]
+        public static void SetHeightsToTarget()
+        {
+            var scene = SceneManager.GetActiveScene();
+            if (!ValidateStage3(scene)) return;
+
+            float target = SetHeightsTargetY;
+            if (target < 1.5f)
+            {
+                if (!EditorUtility.DisplayDialog(
+                        "낮은 천장 경고",
+                        $"Y={target:F3} 은 매우 낮은 천장이라 캐릭터가 못 들어갈 수 있다.\n그래도 계속할까?",
+                        "계속", "취소"))
+                    return;
+            }
+
+            float wallScaleY = target / 3f; // Wall_Simple_01 본래 3m → 새 높이/3
+
+            Undo.SetCurrentGroupName($"Set Heights to Y={target:F3}");
+            int undoGroup = Undo.GetCurrentGroup();
+
+            try
+            {
+                int floorMoved = 0, roofMoved = 0, wallScaled = 0;
+
+                // 1. Floor_SecondFloor — 각 자식의 localPosition.y → target.
+                var floor2F = FindByNameAnywhere(scene, "Floor_SecondFloor");
+                if (floor2F != null)
+                {
+                    for (int i = 0; i < floor2F.transform.childCount; i++)
+                    {
+                        var c = floor2F.transform.GetChild(i);
+                        Undo.RecordObject(c, "Adjust SecondFloor Y");
+                        var lp = c.localPosition;
+                        lp.y = target;
+                        c.localPosition = lp;
+                        floorMoved++;
+                    }
+                }
+                else Debug.LogWarning("[SetHeights] 'Floor_SecondFloor' 못 찾음.");
+
+                // 2. Roof_Entrance, Roof_Corridor — 각 자식의 localPosition.y → target.
+                foreach (var groupName in new[] { "Roof_Entrance", "Roof_Corridor" })
+                {
+                    var grp = FindByNameAnywhere(scene, groupName);
+                    if (grp == null) { Debug.LogWarning($"[SetHeights] '{groupName}' 못 찾음."); continue; }
+                    for (int i = 0; i < grp.transform.childCount; i++)
+                    {
+                        var c = grp.transform.GetChild(i);
+                        Undo.RecordObject(c, "Adjust roof Y");
+                        var lp = c.localPosition;
+                        lp.y = target;
+                        c.localPosition = lp;
+                        roofMoved++;
+                    }
+                }
+
+                // 3. Wall_Entrance, Wall_Corridor — 각 자식의 localScale.y → wallScaleY.
+                foreach (var groupName in new[] { "Wall_Entrance", "Wall_Corridor" })
+                {
+                    var grp = FindByNameAnywhere(scene, groupName);
+                    if (grp == null) { Debug.LogWarning($"[SetHeights] '{groupName}' 못 찾음."); continue; }
+                    for (int i = 0; i < grp.transform.childCount; i++)
+                    {
+                        var c = grp.transform.GetChild(i);
+                        Undo.RecordObject(c, "Adjust wall yScale");
+                        var ls = c.localScale;
+                        ls.y = wallScaleY;
+                        c.localScale = ls;
+                        wallScaled++;
+                    }
+                }
+
+                EditorSceneManager_MarkActiveSceneDirty();
+                Debug.Log($"[SetHeights] 완료. Target Y={target:F3}\n" +
+                          $"  Floor_SecondFloor 자식 {floorMoved}개 Y={target:F3}\n" +
+                          $"  Roof_Entrance/Corridor 자식 {roofMoved}개 Y={target:F3}\n" +
+                          $"  Wall_Entrance/Corridor 자식 {wallScaled}개 yScale={wallScaleY:F3} (벽 높이 {target:F3}m)\n" +
+                          "Ctrl+S 저장. 문제 시 Ctrl+Z.");
+            }
+            finally
+            {
+                Undo.CollapseUndoOperations(undoGroup);
+            }
+        }
+
+        [MenuItem("Tools/PipePuz/Stage3/Rename Floor_01 inside Roof_* to RoofMesh")]
+        public static void RenameFloorInsideRoof()
+        {
+            var scene = SceneManager.GetActiveScene();
+            if (!ValidateStage3(scene)) return;
+
+            // Roof_02 프리팹은 부모 "Roof_02" + 자식 "Floor_01" 구조 — 자식이 실제 mesh 보유.
+            // 모든 Roof_* 그룹 안의 Roof_02 인스턴스를 순회하며, 그 자식 중 "Floor_01" 이름을 가진 것을
+            // "RoofMesh" 로 rename. Hierarchy 만 정돈 — 시각/기능 영향 X.
+            string[] roofGroups = { "Roof_Entrance", "Roof_Corridor", "Roof_LeftChamber", "Roof_RightChamber" };
+
+            Undo.SetCurrentGroupName("Rename Floor_01 inside Roof_*");
+            int undoGroup = Undo.GetCurrentGroup();
+            int renamed = 0;
+
+            try
+            {
+                foreach (var groupName in roofGroups)
+                {
+                    var grp = FindByNameAnywhere(scene, groupName);
+                    if (grp == null) continue;
+                    // 각 자식(Roof_02 인스턴스) 의 자식(Floor_01) rename.
+                    for (int i = 0; i < grp.transform.childCount; i++)
+                    {
+                        var roofInstance = grp.transform.GetChild(i);
+                        for (int j = 0; j < roofInstance.childCount; j++)
+                        {
+                            var child = roofInstance.GetChild(j);
+                            if (child.name == "Floor_01")
+                            {
+                                Undo.RecordObject(child.gameObject, "Rename Floor_01 → RoofMesh");
+                                child.gameObject.name = "RoofMesh";
+                                renamed++;
+                            }
+                        }
+                    }
+                }
+
+                EditorSceneManager_MarkActiveSceneDirty();
+                Debug.Log($"[Rename] Roof_* 안의 Floor_01 자식 {renamed}개를 'RoofMesh' 로 rename. " +
+                          "시각/기능 영향 없음 — Hierarchy 정리 목적. Ctrl+S 저장.");
+            }
+            finally
+            {
+                Undo.CollapseUndoOperations(undoGroup);
+            }
+        }
+
+        [MenuItem("Tools/PipePuz/Stage3/Adjust 1F Roof+Walls to SecondFloor Height")]
+        public static void AdjustRoofWallsToSecondFloor()
+        {
+            var scene = SceneManager.GetActiveScene();
+            if (!ValidateStage3(scene)) return;
+
+            // 1. Floor_SecondFloor 찾기 → 첫 자식의 Y 값을 SecondFloor 높이로 채택.
+            GameObject floor2F = FindByNameAnywhere(scene, "Floor_SecondFloor");
+            if (floor2F == null)
+            {
+                Debug.LogError("[Adjust] 'Floor_SecondFloor' 를 씬에서 찾을 수 없다.");
+                return;
+            }
+            if (floor2F.transform.childCount == 0)
+            {
+                Debug.LogError("[Adjust] 'Floor_SecondFloor' 에 자식이 없다 — 빌드되지 않은 상태.");
+                return;
+            }
+            float secondFloorY = floor2F.transform.GetChild(0).localPosition.y;
+            float newWallScaleY = secondFloorY / 3f; // Wall_Simple_01 본래 3m → 새 높이/3
+
+            Debug.Log($"[Adjust] Floor_SecondFloor 현재 Y = {secondFloorY:F3}. " +
+                      $"Roof_Entrance/Corridor 를 Y={secondFloorY:F3}, " +
+                      $"Wall_Entrance/Corridor 의 yScale 을 {newWallScaleY:F3} 로 조정한다.");
+
+            Undo.SetCurrentGroupName("Adjust 1F Roof+Walls to SecondFloor Height");
+            int undoGroup = Undo.GetCurrentGroup();
+
+            try
+            {
+                int roofMoved = 0;
+                int wallScaled = 0;
+
+                // 2. Roof_Entrance, Roof_Corridor — 각 자식의 localPosition.y 를 secondFloorY 로.
+                foreach (var groupName in new[] { "Roof_Entrance", "Roof_Corridor" })
+                {
+                    var grp = FindByNameAnywhere(scene, groupName);
+                    if (grp == null)
+                    {
+                        Debug.LogWarning($"[Adjust] '{groupName}' 못 찾음. 스킵.");
+                        continue;
+                    }
+                    for (int i = 0; i < grp.transform.childCount; i++)
+                    {
+                        var c = grp.transform.GetChild(i);
+                        Undo.RecordObject(c, "Adjust roof Y");
+                        var lp = c.localPosition;
+                        lp.y = secondFloorY;
+                        c.localPosition = lp;
+                        roofMoved++;
+                    }
+                }
+
+                // 3. Wall_Entrance, Wall_Corridor — 각 자식의 localScale.y 를 newWallScaleY 로.
+                foreach (var groupName in new[] { "Wall_Entrance", "Wall_Corridor" })
+                {
+                    var grp = FindByNameAnywhere(scene, groupName);
+                    if (grp == null)
+                    {
+                        Debug.LogWarning($"[Adjust] '{groupName}' 못 찾음. 스킵.");
+                        continue;
+                    }
+                    for (int i = 0; i < grp.transform.childCount; i++)
+                    {
+                        var c = grp.transform.GetChild(i);
+                        Undo.RecordObject(c, "Adjust wall yScale");
+                        var ls = c.localScale;
+                        ls.y = newWallScaleY;
+                        c.localScale = ls;
+                        wallScaled++;
+                    }
+                }
+
+                EditorSceneManager_MarkActiveSceneDirty();
+                Debug.Log($"[Adjust] 완료. Roof 자식 {roofMoved}개 Y 조정, Wall 자식 {wallScaled}개 yScale 조정.\n" +
+                          $"확인 후 Ctrl+S 저장. 문제 시 Ctrl+Z.");
+            }
+            finally
+            {
+                Undo.CollapseUndoOperations(undoGroup);
+            }
+        }
+
+        /// <summary>씬 안 어디든 (루트 또는 자식 트리) 에서 이름으로 검색.</summary>
+        static GameObject FindByNameAnywhere(Scene scene, string name)
+        {
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                var found = SearchByName(root.transform, name);
+                if (found != null) return found.gameObject;
+            }
+            return null;
+        }
+
+        static Transform SearchByName(Transform t, string name)
+        {
+            if (t.name == name) return t;
+            for (int i = 0; i < t.childCount; i++)
+            {
+                var r = SearchByName(t.GetChild(i), name);
+                if (r != null) return r;
+            }
+            return null;
+        }
 
         [MenuItem("Tools/PipePuz/Stage3/Rebuild Modular Room as RoomCliff Shape")]
         public static void Rebuild()
