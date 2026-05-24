@@ -41,7 +41,8 @@ namespace PipePuz.RoomCarpet.EditorTools
         const float EntranceZmax = 0f;
         const float EntranceHeight = 3f;
 
-        const float CorridorXmin = -12f;
+        // NOTE: 챔버 X 확장과 함께 복도도 서쪽으로 연장.
+        const float CorridorXmin = -22f;
         const float CorridorXmax = +7f;
         const float CorridorZmin = 0f;
         const float CorridorZmax = 3f;
@@ -53,10 +54,12 @@ namespace PipePuz.RoomCarpet.EditorTools
         const float DoorHeight = 2.2f;
         const float DoorPanelThickness = 0.08f;
 
-        const float LeftChamberXmin = -12f;
+        // 챔버 확장: 폭 13.5m → 23.5m, 깊이 11m → 15m.
+        // 점프(VR 일반 사거리 ~3m) 으로는 발판 사이를 절대 못 건너가도록 면적 확보.
+        const float LeftChamberXmin = -22f;
         const float LeftChamberXmax = +1.5f;
         const float LeftChamberZmin = +3f;
-        const float LeftChamberZmax = +14f;
+        const float LeftChamberZmax = +18f;
         const float LeftChamberWallY = 5f;
 
         const float RightChamberXmin = +1.5f;
@@ -83,7 +86,8 @@ namespace PipePuz.RoomCarpet.EditorTools
         const float FallThresholdY_RelativeToRoot = -3f;
 
         const int PlatformSeed = 1234;
-        const float PlatformMinSpacing = 2.5f;
+        // 점프 차단: 모든 발판이 다른 발판과 최소 5m 떨어져야 P2 가 카펫 없이는 못 건너감.
+        const float PlatformMinSpacing = 5.0f;
         const float PlatformMinSize = 1.0f;
         const float PlatformMaxSize = 1.4f;
 
@@ -101,22 +105,71 @@ namespace PipePuz.RoomCarpet.EditorTools
         // Mirror visual center Y (mirror pivot 기준) = BeamY - MirrorPedestalTopY = 0.5
         static readonly float MirrorVisualCenterLocalY = BeamY - MirrorPedestalTopY;
 
-        // Mirror platform 위치 — beam zigzag 경로 형성:
-        //   Emitter (1.4, y=1.3, 8.5) → M1 → M2 → M3 → Receiver
-        // 정답 yaw: M1=45° (-X→+Z), M2=225° (+Z→-X), M3=135° (-X→-Z)
-        static readonly Vector2 Mirror1Pos = new Vector2(-3f, 8.5f);
-        static readonly Vector2 Mirror2Pos = new Vector2(-3f, 12f);
-        static readonly Vector2 Mirror3Pos = new Vector2(-9f, 12f);
+        // ===== 거울 (4개, 모두 x/z 좌표 unique, 인접 거리 ≥ 5m) =====
+        //   M1 Red    (-2,  9)  ColorId=0
+        //   M2 Green  (-7,  16) ColorId=1
+        //   M3 Blue   (-15, 12) ColorId=2
+        //   M4 Yellow (-19, 6)  ColorId=3
+        //   Entry     (-4,  4)
+        // x 집합 {-4, -2, -7, -15, -19}, z 집합 {4, 9, 16, 12, 6} — 모두 고유.
+        const int MirrorCount = 4;
+        static readonly Vector2 Mirror1Pos = new Vector2(-2f, 9f);
+        static readonly Vector2 Mirror2Pos = new Vector2(-7f, 16f);
+        static readonly Vector2 Mirror3Pos = new Vector2(-15f, 12f);
+        static readonly Vector2 Mirror4Pos = new Vector2(-19f, 6f);
         static readonly Vector2 MirrorPlatformSize = new Vector2(1.5f, 1.5f);
 
-        // Emitter / Receiver
-        static readonly Vector3 EmitterLocal = new Vector3(LeftChamberXmax - 0.1f, BeamY, 8.5f);
+        // 거울 색상 팔레트 (ColorOrderPanel 의 ColorPalette 와 일치)
+        static readonly Color[] MirrorColors =
+        {
+            new Color(0.95f, 0.20f, 0.20f), // 0 Red
+            new Color(0.25f, 0.85f, 0.35f), // 1 Green
+            new Color(0.25f, 0.55f, 0.95f), // 2 Blue
+            new Color(0.95f, 0.85f, 0.25f), // 3 Yellow
+        };
+        static readonly string[] MirrorColorNames = { "Red", "Green", "Blue", "Yellow" };
+
+        // ===== 사전 정의된 거울 통과 순서 =====
+        // 디자이너가 이 배열만 바꾸면 순서 변경 가능. ColorOrderPanel 은 이를 디스플레이에만 표시(읽기 전용).
+        // 기본: Red → Green → Blue → Yellow
+        static readonly int[] PreSetMirrorOrder = { 0, 1, 2, 3 };
+
+        // Emitter / Receiver — emitter Z 초기값. BeamAimController 가 런타임에 갱신.
+        static readonly Vector3 EmitterLocal = new Vector3(LeftChamberXmax - 0.1f, BeamY, EmitterInitialZ);
         static readonly Quaternion EmitterRot = Quaternion.Euler(0f, -90f, 0f); // forward = -X
-        static readonly Vector3 ReceiverLocal = new Vector3(-9f, BeamY, LeftChamberZmin + 0.3f);
+        static readonly Vector3 ReceiverLocal = new Vector3(-10f, BeamY, LeftChamberZmin + 0.3f);
         static readonly Quaternion ReceiverRot = Quaternion.Euler(0f, 0f, 0f); // forward = +Z
 
-        // 초기 거울 yaw — 정답에서 떨어진 0° → player 가 PointTowardHand 로 손 움직여 맞춤.
+        // 초기 거울 yaw — P2 가 PointTowardHand 로 손 움직여 맞춤. 정답 yaw 는 동적(순서·위치 따라 변함).
         const float InitialMirrorYaw = 0f;
+
+        // ===== Color Order Panel (2층 표시 전용) =====
+        static readonly Vector3 ColorPanelBaseLocal = new Vector3(5.5f, Floor2Y, 13f);
+        const float ColorPanelStandHeight = 0.9f;
+        const float ColorPanelSlotSpacing = 0.12f;
+        const float ColorPanelSlotSize = 0.06f;
+
+        // ===== Light Orb + Socket (2층) — orb 를 socket 에 삽입해야 emitter/panel 활성화 =====
+        // 초기 orb 는 2층 서쪽에 떠있는 듯한 작은 받침대 위. socket 은 동쪽에 위치.
+        static readonly Vector3 LightOrbInitialLocal  = new Vector3(3.0f, Floor2Y + 0.20f, 12f);
+        static readonly Vector3 LightOrbRestLocal     = new Vector3(3.0f, Floor2Y, 12f);
+        const float LightOrbRadius = 0.08f;
+        static readonly Vector3 LightOrbSocketLocal   = new Vector3(5.0f, Floor2Y, 12f);
+        const float LightOrbSocketHeight = 0.20f;
+        const float LightOrbSocketTriggerRadius = 0.22f;
+
+        // ===== Beam Aim Slider (2층) — knob X → emitter Z =====
+        // Knob 중심(X=0) 일 때 emitter z=10.5 가 되도록 범위 대칭.
+        // 거울 z 값: M1=9, M2=16, M3=12, M4=6 — [4, 17] 범위, 중심 = (4+17)/2 = 10.5 ✓
+        static readonly Vector3 AimControlBaseLocal = new Vector3(3.5f, Floor2Y, 13f);
+        const float AimControlStandHeight = 0.9f;
+        const float AimKnobTrackMin = -0.30f;
+        const float AimKnobTrackMax = +0.30f;
+        const float EmitterInitialZ = 10.5f;    // 시작 z = 슬라이더 중심
+        const float EmitterSlideMinZ = 4f;      // 양 끝 ±6.5 → 중심 10.5 대칭
+        const float EmitterSlideMaxZ = 17f;
+        // 슬라이더 방향 반전 — P1 이 knob 을 미는 방향과 빔이 챔버에서 움직이는 방향이 일치하도록.
+        const bool InvertEmitterMapping = true;
 
         // ===== Game logic positions =====
         const float ZoneWidth = 1.4f;
@@ -133,7 +186,8 @@ namespace PipePuz.RoomCarpet.EditorTools
         static readonly Vector3 HolsterLocal  = new Vector3(RightChamberXmin + 0.7f, HolsterTopY - 0.025f, Floor2Zmin + 1.5f);
         static readonly Vector3 LauncherLocal = new Vector3(RightChamberXmin + 0.7f, HolsterTopY + 0.15f, Floor2Zmin + 1.5f);
         static readonly Quaternion LauncherRot = Quaternion.Euler(0f, -90f, 0f); // forward = -X
-        const float LauncherMuzzleSpeed = 7.5f;
+        // 챔버 폭 23.5m 으로 확장 — 30° 아크 발사 시 약 26m 사거리 필요. 7.5 → 10 m/s.
+        const float LauncherMuzzleSpeed = 10f;
         const float LauncherMuzzleSpin = 2.5f;
         const float LauncherCooldown = 0.5f;
 
@@ -176,6 +230,8 @@ namespace PipePuz.RoomCarpet.EditorTools
                 "Platforms", "StartZone",
                 "Dispenser", "ActiveCarpets", "LauncherHolster", "CarpetLauncher",
                 "LightBeamPuzzle",
+                "ColorOrderPanel", "BeamAimController",
+                "LightOrbRest", "LightOrbSocket", "LightOrb", "LightOrbActivator",
             };
             foreach (var n in knownChildren) DestroyChildIfExists(root.transform, n);
             var oldCliff = root.GetComponent<CliffController>();
@@ -204,8 +260,7 @@ namespace PipePuz.RoomCarpet.EditorTools
                 new Color(0.15f, 0.15f, 0.18f), false);
             var emitterLensMat  = MakeEmissiveMaterial("Cliff_EmitterLensMat",
                 new Color(1f, 0.85f, 0.3f), new Color(2.5f, 2f, 0.7f));
-            var mirrorFaceMat   = MakeEmissiveMaterial("Cliff_MirrorFaceMat",
-                new Color(0.85f, 0.90f, 0.95f), new Color(1.4f, 1.5f, 1.7f) * 0.3f);
+            // 거울 face 머티리얼은 ColorPalette 와 1:1 매핑 — 빌드 루프 안에서 색깔별로 instance 화.
             var mirrorBackMat   = MakeUrpMaterial("Cliff_MirrorBackMat",
                 new Color(0.18f, 0.18f, 0.22f), false);
             var indicatorMat    = MakeEmissiveMaterial("Cliff_IndicatorMat",
@@ -304,17 +359,41 @@ namespace PipePuz.RoomCarpet.EditorTools
             var emitter = BuildEmitter(puzzleGroup.transform, EmitterLocal, EmitterRot,
                 emitterFrameMat, emitterLensMat);
 
-            // 거울 — 각 mirror platform 위에 pedestal + mirror
+            // 거울별 색상 face 머티리얼 (4종) — 각 거울이 자기 색깔로 발광.
+            var mirrorColorMats = new Material[MirrorCount];
+            for (int i = 0; i < MirrorCount; i++)
+            {
+                Color c = MirrorColors[i];
+                mirrorColorMats[i] = MakeEmissiveMaterial(
+                    $"Cliff_MirrorFaceMat_{MirrorColorNames[i]}",
+                    c, c * 0.6f);
+            }
+
+            // 거울 4개 — 각 mirror platform 위에 pedestal + mirror, ColorId 부여.
             var mirrors = new List<LightBeamMirror>();
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < MirrorCount; i++)
             {
                 if (!mirrorPlatforms.TryGetValue(i, out var platform)) continue;
-                var mirror = BuildMirrorOnPlatform(puzzleGroup.transform, $"Mirror{i + 1}",
-                    platform, pedestalMat, mirrorFaceMat, mirrorBackMat, indicatorMat);
+                var mirror = BuildMirrorOnPlatform(puzzleGroup.transform,
+                    $"Mirror{i + 1}_{MirrorColorNames[i]}",
+                    platform, pedestalMat, mirrorColorMats[i], mirrorBackMat, indicatorMat,
+                    colorId: i, baseColor: MirrorColors[i]);
                 mirrors.Add(mirror);
             }
 
             var receiver = BuildReceiver(puzzleGroup.transform, ReceiverLocal, ReceiverRot, receiverPlateMat);
+
+            // 2층 ColorOrderPanel — 사전 정의 순서를 색상으로 표시 (입력 받지 않음).
+            var colorPanel = BuildColorOrderPanel(root.transform, standMat, pedestalMat);
+
+            // 2층 BeamAimController — Knob 슬라이더로 emitter Z 위치를 P1 이 조정.
+            var aimCtrl = BuildBeamAimController(root.transform, emitter, standMat, pedestalMat);
+
+            // 2층 LightOrb / Socket / Activator — orb 삽입 시 emitter + panel 활성화.
+            var orbRest = BuildLightOrbRest(root.transform, pedestalMat);
+            var orb = BuildLightOrb(root.transform);
+            var orbSocket = BuildLightOrbSocket(root.transform, pedestalMat);
+            BuildLightOrbActivator(root.transform, orbSocket, emitter, colorPanel);
 
             // Controller + LineRenderer
             var ctrlGo = new GameObject("LightBeamController");
@@ -339,6 +418,7 @@ namespace PipePuz.RoomCarpet.EditorTools
             beamCtrl.MaxBounces = 12;
             beamCtrl.ReflectOffset = 0.001f;
             beamCtrl.BeamMask = ~0;
+            beamCtrl.RequiredOrderPanel = colorPanel; // 사전 정의 순서로 빔 검증.
 
             // ===== CliffController wire-up =====
             ctrl.DefaultSpawnPoint = cliffPlatforms.Count > 0 ? cliffPlatforms[0].GetDock() : null;
@@ -347,64 +427,34 @@ namespace PipePuz.RoomCarpet.EditorTools
             ctrl.PlatformDetectMask = ~0;
             ctrl.RespawnCooldown = 1f;
 
+            var orderStr = string.Join("→", System.Array.ConvertAll(PreSetMirrorOrder, id => MirrorColorNames[id]));
             EditorUtility.SetDirty(root);
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(root.scene);
             Undo.CollapseUndoOperations(undoGroup);
-            Debug.Log("[Cliff] Build 완료. Cliff + LightBeam 통합. " +
-                      "낙하 임계 y=" + ctrl.FallThresholdY + " (world). " +
-                      "거울 정답 yaw: M1=45°, M2=225°, M3=135°. 초기 모두 0°.");
+            Debug.Log("[Cliff] Build 완료. 4 거울(R/G/B/Y) + 사전 정의 순서 패널 + 2층 빔 조준 슬라이더 + LightOrb/Socket. " +
+                      $"낙하 임계 y={ctrl.FallThresholdY} (world). 사전 정의 순서: {orderStr}. " +
+                      $"emitter Z 슬라이더 범위 [{EmitterSlideMinZ}, {EmitterSlideMaxZ}] (중심={EmitterInitialZ}, knob 중앙일 때). " +
+                      "초기: LightOrb 가 socket 밖에 있어 emitter OFF, panel 비활성. " +
+                      "P1 이 orb 를 잡아 socket 에 삽입하면 emitter 발광 + panel 에 색상 순서 표시. " +
+                      "P2 가 거울 yaw 를 맞춰 빔이 위 순서대로(모든 거울 거쳐서) receiver 에 도달해야 솔브.");
         }
 
         // ===== Platform spec generation =====
 
+        /// <summary>
+        /// 발판 spec — 1 entry + 4 mirror = 5개 (랜덤 nav 폐기, 모든 발판 좌표 결정적).
+        /// 모든 발판의 x, z 좌표 unique. 인접 거리 ≥ 5m (점프 차단).
+        /// </summary>
         static List<PlatformSpec> GeneratePlatformSpecs()
         {
-            var list = new List<PlatformSpec>();
-            // 0. Entry
-            list.Add(new PlatformSpec
+            return new List<PlatformSpec>
             {
-                PosXZ = EntryPlatformPos,
-                Size = EntryPlatformSize,
-                IsEntry = true,
-                HasMirror = false,
-            });
-            // 1~3. Mirror platforms (fixed positions)
-            list.Add(new PlatformSpec { PosXZ = Mirror1Pos, Size = MirrorPlatformSize, HasMirror = true, MirrorIndex = 0 });
-            list.Add(new PlatformSpec { PosXZ = Mirror2Pos, Size = MirrorPlatformSize, HasMirror = true, MirrorIndex = 1 });
-            list.Add(new PlatformSpec { PosXZ = Mirror3Pos, Size = MirrorPlatformSize, HasMirror = true, MirrorIndex = 2 });
-
-            // 4~5. Navigation platforms (random with fixed seed)
-            var rng = new System.Random(PlatformSeed);
-            float xMin = LeftChamberXmin + 1f;
-            float xMax = LeftChamberXmax - 1f;
-            float zMin = LeftChamberZmin + 1f;
-            float zMax = LeftChamberZmax - 1f;
-
-            int safety = 200;
-            int navCount = 0;
-            while (navCount < 2 && safety-- > 0)
-            {
-                float x = (float)(rng.NextDouble() * (xMax - xMin) + xMin);
-                float z = (float)(rng.NextDouble() * (zMax - zMin) + zMin);
-                var pos = new Vector2(x, z);
-
-                bool tooClose = false;
-                foreach (var prev in list)
-                {
-                    if ((prev.PosXZ - pos).sqrMagnitude < PlatformMinSpacing * PlatformMinSpacing)
-                    {
-                        tooClose = true; break;
-                    }
-                }
-                if (tooClose) continue;
-
-                float sx = Mathf.Lerp(PlatformMinSize, PlatformMaxSize, (float)rng.NextDouble());
-                float sz = Mathf.Lerp(PlatformMinSize, PlatformMaxSize, (float)rng.NextDouble());
-
-                list.Add(new PlatformSpec { PosXZ = pos, Size = new Vector2(sx, sz), HasMirror = false });
-                navCount++;
-            }
-            return list;
+                new PlatformSpec { PosXZ = EntryPlatformPos, Size = EntryPlatformSize, IsEntry = true,  HasMirror = false },
+                new PlatformSpec { PosXZ = Mirror1Pos,       Size = MirrorPlatformSize, HasMirror = true, MirrorIndex = 0 },
+                new PlatformSpec { PosXZ = Mirror2Pos,       Size = MirrorPlatformSize, HasMirror = true, MirrorIndex = 1 },
+                new PlatformSpec { PosXZ = Mirror3Pos,       Size = MirrorPlatformSize, HasMirror = true, MirrorIndex = 2 },
+                new PlatformSpec { PosXZ = Mirror4Pos,       Size = MirrorPlatformSize, HasMirror = true, MirrorIndex = 3 },
+            };
         }
 
         static CliffPlatform BuildPlatform(Transform parent, string name, PlatformSpec spec, Material mat)
@@ -464,9 +514,11 @@ namespace PipePuz.RoomCarpet.EditorTools
             return emitterComp;
         }
 
-        /// <summary>Mirror 받침대 (pedestal) + 거울을 cliff platform 위에 부착.</summary>
+        /// <summary>Mirror 받침대 (pedestal) + 거울을 cliff platform 위에 부착.
+        /// colorId / baseColor 는 빔 순서 검증과 시각 구분에 사용.</summary>
         static LightBeamMirror BuildMirrorOnPlatform(Transform parent, string name, CliffPlatform platform,
-            Material pedestalMat, Material faceMat, Material backMat, Material indicatorMat)
+            Material pedestalMat, Material faceMat, Material backMat, Material indicatorMat,
+            int colorId, Color baseColor)
         {
             // Mirror stand root — platform 의 child 로 부착해서 platform 위치 따라감.
             var stand = new GameObject(name + "Stand");
@@ -520,6 +572,8 @@ namespace PipePuz.RoomCarpet.EditorTools
             mirror.AddComponent<XRSimpleInteractable>();
 
             var mirrorComp = mirror.AddComponent<LightBeamMirror>();
+            mirrorComp.ColorId = colorId;
+            mirrorComp.BaseColor = baseColor;
             mirrorComp.ReflectAxisLocal = Vector3.forward;
             mirrorComp.ReflectDotThreshold = 0.7f;
             mirrorComp.LockPosition = true;
@@ -529,6 +583,255 @@ namespace PipePuz.RoomCarpet.EditorTools
             mirrorComp.RotationSensitivity = 1.0f;
 
             return mirrorComp;
+        }
+
+        /// <summary>
+        /// 2층의 색상 순서 패널 — 사전 정의 순서를 4개 슬롯에 색상으로 표시. 입력 없음(read-only).
+        /// </summary>
+        static ColorOrderPanel BuildColorOrderPanel(Transform parent, Material standMat, Material boardMat)
+        {
+            var root = new GameObject("ColorOrderPanel");
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = ColorPanelBaseLocal;
+
+            var stand = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            stand.name = "Stand"; DisableColliderIfAny(stand);
+            stand.transform.SetParent(root.transform, false);
+            stand.transform.localPosition = new Vector3(0f, ColorPanelStandHeight * 0.5f, 0f);
+            stand.transform.localScale = new Vector3(0.15f, ColorPanelStandHeight * 0.5f, 0.15f);
+            AssignMat(stand, standMat);
+
+            var board = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            board.name = "Board"; DisableColliderIfAny(board);
+            board.transform.SetParent(root.transform, false);
+            board.transform.localPosition = new Vector3(0f, ColorPanelStandHeight + 0.02f, 0f);
+            board.transform.localScale = new Vector3(0.55f, 0.04f, 0.20f);
+            AssignMat(board, boardMat);
+
+            var panel = root.AddComponent<ColorOrderPanel>();
+            panel.MaxSequenceLength = MirrorCount;
+            panel.ColorPalette = new List<Color>(MirrorColors);
+            panel.RequiredSequence = new List<int>(PreSetMirrorOrder);
+            panel.EmptySlotColor = new Color(0.08f, 0.08f, 0.10f);
+            panel.EmissionIntensity = 1.6f;
+
+            // 4 디스플레이 슬롯 — 좌→우 = 첫→마지막. Start() 의 UpdateDisplay 가 자동으로 색칠.
+            var displays = new List<Renderer>();
+            for (int i = 0; i < MirrorCount; i++)
+            {
+                float xOffset = (i - (MirrorCount - 1) * 0.5f) * ColorPanelSlotSpacing;
+                var slot = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                slot.name = $"DisplaySlot_{i + 1}_{MirrorColorNames[PreSetMirrorOrder[i]]}";
+                DisableColliderIfAny(slot);
+                slot.transform.SetParent(root.transform, false);
+                slot.transform.localPosition = new Vector3(xOffset, ColorPanelStandHeight + 0.05f, 0f);
+                slot.transform.localScale = new Vector3(ColorPanelSlotSize, 0.03f, ColorPanelSlotSize);
+                var slotMat = MakeEmissiveMaterial($"Cliff_SlotMat_{i}",
+                    panel.EmptySlotColor, Color.black);
+                slot.GetComponent<Renderer>().sharedMaterial = slotMat;
+                displays.Add(slot.GetComponent<Renderer>());
+            }
+            panel.DisplaySlots = displays;
+
+            // 위치 가이드 표지 — 슬롯 옆 작은 막대, 1/2/3/4 순으로 길이 늘어남.
+            for (int i = 0; i < MirrorCount; i++)
+            {
+                float xOffset = (i - (MirrorCount - 1) * 0.5f) * ColorPanelSlotSpacing;
+                var tick = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                tick.name = $"Tick_{i + 1}";
+                DisableColliderIfAny(tick);
+                tick.transform.SetParent(root.transform, false);
+                tick.transform.localPosition = new Vector3(xOffset, ColorPanelStandHeight + 0.045f, -0.07f);
+                tick.transform.localScale = new Vector3(0.008f * (i + 1), 0.015f, 0.012f);
+                AssignMat(tick, boardMat);
+            }
+
+            return panel;
+        }
+
+        /// <summary>
+        /// P1 의 2층 빔 조준 슬라이더 — Knob 의 X 위치가 emitter 의 world Z 에 매핑됨.
+        /// 로컬 X 가 world Z 가 되도록 90° 회전 → P1 이 트랙을 따라 앞뒤로 knob 을 밀면
+        /// emitter 도 챔버 z 축으로 평행 이동, 빔이 다른 거울에 닿게 됨.
+        ///
+        /// Knob 은 XRSimpleInteractable — XRGrabInteractable 의 attach-pose snap 부작용을 회피하기 위함.
+        /// 위치는 BeamAimController 가 100% 제어 (손-knob 투영 + clamp).
+        /// </summary>
+        static BeamAimController BuildBeamAimController(Transform parent, LightBeamEmitter emitter,
+            Material standMat, Material plateMat)
+        {
+            var root = new GameObject("BeamAimController");
+            root.transform.SetParent(parent, false);
+            root.transform.localPosition = AimControlBaseLocal;
+            root.transform.localRotation = Quaternion.Euler(0f, 90f, 0f); // local +X == world +Z
+
+            // 스탠드 (cylinder)
+            var stand = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            stand.name = "Stand"; DisableColliderIfAny(stand);
+            stand.transform.SetParent(root.transform, false);
+            stand.transform.localPosition = new Vector3(0f, AimControlStandHeight * 0.5f, 0f);
+            stand.transform.localScale = new Vector3(0.12f, AimControlStandHeight * 0.5f, 0.12f);
+            AssignMat(stand, standMat);
+
+            // 트랙 plate (knob 가 슬라이드할 레일)
+            var track = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            track.name = "Track"; DisableColliderIfAny(track);
+            track.transform.SetParent(root.transform, false);
+            track.transform.localPosition = new Vector3(0f, AimControlStandHeight + 0.015f, 0f);
+            track.transform.localScale = new Vector3(0.70f, 0.03f, 0.10f);
+            AssignMat(track, plateMat);
+
+            // 트랙 양 끝 표지 (어느 방향이 어느 끝인지 시각 단서)
+            var markerMin = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            markerMin.name = "MarkerMin"; DisableColliderIfAny(markerMin);
+            markerMin.transform.SetParent(root.transform, false);
+            markerMin.transform.localPosition = new Vector3(AimKnobTrackMin - 0.02f, AimControlStandHeight + 0.025f, 0f);
+            markerMin.transform.localScale = new Vector3(0.02f, 0.04f, 0.08f);
+            AssignMat(markerMin, plateMat);
+
+            var markerMax = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            markerMax.name = "MarkerMax"; DisableColliderIfAny(markerMax);
+            markerMax.transform.SetParent(root.transform, false);
+            markerMax.transform.localPosition = new Vector3(AimKnobTrackMax + 0.02f, AimControlStandHeight + 0.025f, 0f);
+            markerMax.transform.localScale = new Vector3(0.02f, 0.04f, 0.08f);
+            AssignMat(markerMax, plateMat);
+
+            // Knob — XRSimpleInteractable. CreatePrimitive(Cube) 가 BoxCollider 자동 부착해 select 검출 가능.
+            var knob = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            knob.name = "Knob";
+            knob.transform.SetParent(root.transform, false);
+            float initT = Mathf.InverseLerp(EmitterSlideMinZ, EmitterSlideMaxZ, EmitterInitialZ);
+            if (InvertEmitterMapping) initT = 1f - initT;
+            float initX = Mathf.Lerp(AimKnobTrackMin, AimKnobTrackMax, initT);
+            knob.transform.localPosition = new Vector3(initX, AimControlStandHeight + 0.055f, 0f);
+            knob.transform.localScale = new Vector3(0.07f, 0.06f, 0.10f);
+            var knobMat = MakeEmissiveMaterial("Cliff_KnobMat",
+                new Color(0.95f, 0.65f, 0.20f), new Color(1.6f, 1.1f, 0.4f));
+            knob.GetComponent<Renderer>().sharedMaterial = knobMat;
+
+            // XRSimpleInteractable — select 이벤트만 발생시키고 transform 은 절대 안 건드림.
+            // (XRGrabInteractable 은 잡는 순간 attach-pose snap 으로 knob 가 손 위치로 텔레포트되는 부작용 있음.)
+            knob.AddComponent<XRSimpleInteractable>();
+
+            var aimCtrl = root.AddComponent<BeamAimController>();
+            aimCtrl.TargetEmitter = emitter;
+            aimCtrl.Knob = knob.transform;
+            aimCtrl.MinKnobLocalX = AimKnobTrackMin;
+            aimCtrl.MaxKnobLocalX = AimKnobTrackMax;
+            aimCtrl.MinEmitterZ = EmitterSlideMinZ;
+            aimCtrl.MaxEmitterZ = EmitterSlideMaxZ;
+            aimCtrl.InvertMapping = InvertEmitterMapping;
+
+            return aimCtrl;
+        }
+
+        // ===== LightOrb / Socket / Activator =====
+
+        /// <summary>orb 가 시작 시 떠있는 자리 — 단순한 받침(작은 디스크). 콜라이더 없음.</summary>
+        static GameObject BuildLightOrbRest(Transform parent, Material restMat)
+        {
+            var rest = new GameObject("LightOrbRest");
+            rest.transform.SetParent(parent, false);
+            rest.transform.localPosition = LightOrbRestLocal;
+
+            var disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            disc.name = "Visual"; DisableColliderIfAny(disc);
+            disc.transform.SetParent(rest.transform, false);
+            disc.transform.localPosition = new Vector3(0f, 0.02f, 0f);
+            disc.transform.localScale = new Vector3(0.20f, 0.02f, 0.20f);
+            AssignMat(disc, restMat);
+            return rest;
+        }
+
+        /// <summary>플레이어가 잡아 옮길 수 있는 빛 구체.</summary>
+        static LightOrb BuildLightOrb(Transform parent)
+        {
+            var orbGo = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            orbGo.name = "LightOrb";
+            orbGo.transform.SetParent(parent, false);
+            orbGo.transform.localPosition = LightOrbInitialLocal;
+            orbGo.transform.localScale = Vector3.one * (LightOrbRadius * 2f);
+
+            // 강한 emission 으로 빛나는 구체 — 멀리서도 잘 보이게.
+            var orbMat = MakeEmissiveMaterial("Cliff_LightOrbMat",
+                new Color(1.0f, 0.95f, 0.75f), new Color(2.4f, 2.0f, 1.0f));
+            orbGo.GetComponent<Renderer>().sharedMaterial = orbMat;
+
+            // CreatePrimitive(Sphere) 가 SphereCollider 자동 부착 — 그대로 잡기/트리거 감지에 사용.
+
+            var rb = orbGo.AddComponent<Rigidbody>();
+            rb.useGravity = true;
+            rb.isKinematic = false;
+            rb.linearDamping = 1.5f;
+            rb.angularDamping = 2.0f;
+            rb.interpolation = RigidbodyInterpolation.Interpolate;
+            rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+
+            var grab = orbGo.AddComponent<XRGrabInteractable>();
+            grab.throwOnDetach = false;
+            grab.smoothPosition = true;
+            grab.smoothRotation = true;
+
+            var orb = orbGo.AddComponent<LightOrb>();
+            orb.GlowRenderer = orbGo.GetComponent<Renderer>();
+            orb.RespawnPosition = orbGo.transform.position; // 월드 좌표 — 자기 초기 위치로 리스폰
+            orb.HasExplicitRespawn = true;
+            orb.FallThresholdY = -3f;
+            return orb;
+        }
+
+        /// <summary>orb 를 받는 socket — 받침대 + 위에 떠있는 트리거 zone.</summary>
+        static LightOrbSocket BuildLightOrbSocket(Transform parent, Material standMat)
+        {
+            var socketGo = new GameObject("LightOrbSocket");
+            socketGo.transform.SetParent(parent, false);
+            socketGo.transform.localPosition = LightOrbSocketLocal;
+
+            // 받침대 (cylinder) — 시각만, 콜라이더 제거.
+            var stand = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            stand.name = "Stand"; DisableColliderIfAny(stand);
+            stand.transform.SetParent(socketGo.transform, false);
+            stand.transform.localPosition = new Vector3(0f, 0.07f, 0f);
+            stand.transform.localScale = new Vector3(0.22f, 0.07f, 0.22f);
+            AssignMat(stand, standMat);
+
+            // 그릇(상단) — 시각만.
+            var bowl = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            bowl.name = "Bowl"; DisableColliderIfAny(bowl);
+            bowl.transform.SetParent(socketGo.transform, false);
+            bowl.transform.localPosition = new Vector3(0f, LightOrbSocketHeight, 0f);
+            bowl.transform.localScale = new Vector3(0.18f, 0.02f, 0.18f);
+            var bowlMat = MakeEmissiveMaterial("Cliff_OrbSocketBowlMat",
+                new Color(0.30f, 0.35f, 0.45f), new Color(0.6f, 0.7f, 1.0f) * 0.6f);
+            bowl.GetComponent<Renderer>().sharedMaterial = bowlMat;
+
+            // DockPoint — orb 가 스냅될 정확한 위치/회전.
+            var dock = new GameObject("DockPoint");
+            dock.transform.SetParent(socketGo.transform, false);
+            dock.transform.localPosition = new Vector3(0f, LightOrbSocketHeight + LightOrbRadius, 0f);
+
+            // 트리거 — orb 가 가까이 떨어지면 자동 스냅.
+            var trigger = socketGo.AddComponent<SphereCollider>();
+            trigger.isTrigger = true;
+            trigger.center = new Vector3(0f, LightOrbSocketHeight + LightOrbRadius, 0f);
+            trigger.radius = LightOrbSocketTriggerRadius;
+
+            var socket = socketGo.AddComponent<LightOrbSocket>();
+            socket.DockPoint = dock.transform;
+            return socket;
+        }
+
+        /// <summary>socket ↔ emitter/panel 브리지.</summary>
+        static LightOrbActivator BuildLightOrbActivator(Transform parent,
+            LightOrbSocket socket, LightBeamEmitter emitter, ColorOrderPanel panel)
+        {
+            var go = new GameObject("LightOrbActivator");
+            go.transform.SetParent(parent, false);
+            var act = go.AddComponent<LightOrbActivator>();
+            act.Socket = socket;
+            act.Emitter = emitter;
+            act.Panel = panel;
+            return act;
         }
 
         static LightBeamReceiver BuildReceiver(Transform parent, Vector3 localPos, Quaternion localRot,
@@ -665,10 +968,7 @@ namespace PipePuz.RoomCarpet.EditorTools
             MakeBoxLocal(chamber.transform, "Wall_N",
                 new Vector3(xCenter, LeftChamberWallY * 0.5f, LeftChamberZmax + WallThickness * 0.5f),
                 new Vector3(xLen, LeftChamberWallY, WallThickness), wallMat);
-            // 좌측 챔버 남쪽 벽 (코리도 북쪽 벽이지만 z 가 약간 다름 — 챔버 안쪽 추가)
-            MakeBoxLocal(chamber.transform, "Wall_S",
-                new Vector3(xCenter, LeftChamberWallY * 0.5f, LeftChamberZmin - WallThickness * 0.5f),
-                new Vector3(xLen, LeftChamberWallY, WallThickness), wallMat);
+            // 남쪽 벽 = BuildCorridor 의 Wall_N_F1/D1Hdr/F2/D2Hdr/F3 가 챔버 높이까지 덮음 — 중복 안 만듦.
         }
 
         static void BuildRightChamberWalls(Transform parent, Material wallMat, Material floorMat)

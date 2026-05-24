@@ -6,6 +6,10 @@ namespace Stage1
     [RequireComponent(typeof(XRGrabInteractable))]
     public class LightBallPickupGate : MonoBehaviour
     {
+        [Header("Debug Settings")]
+        [SerializeField] private bool debugForceUnlockPickup;
+
+        [Header("Refs")]
         [SerializeField] private FireHazardController fireHazardController;
         [SerializeField] private XRGrabInteractable grabInteractable;
 
@@ -62,12 +66,13 @@ namespace Stage1
         {
             if (grabInteractable == null) return;
 
-            bool canPickup = fireHazardController != null && fireHazardController.CanPickupLightBall;
+            bool canPickup = debugForceUnlockPickup || (fireHazardController != null && fireHazardController.CanPickupLightBall);
             grabInteractable.enabled = canPickup;
         }
 
         void LockPickup()
         {
+            if (debugForceUnlockPickup) return;
             if (grabInteractable != null) grabInteractable.enabled = false;
         }
 
