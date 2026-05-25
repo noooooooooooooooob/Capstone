@@ -13,13 +13,13 @@ public class SlimeCreature : MonoBehaviour
     private Animator anim;
     private AudioSource audioSource;
     private XRGrabInteractable grab;
+    private bool isCaged = false;
 
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
         agent.speed = speed;
         target = GameObject.FindWithTag("Scorpion").transform;
-
         anim = GetComponent<Animator>();
         grab = GetComponent<XRGrabInteractable>();
         if (grab != null)
@@ -27,7 +27,6 @@ public class SlimeCreature : MonoBehaviour
             grab.selectEntered.AddListener(OnGrabbed);
             grab.selectExited.AddListener(OnReleased);
         }
-
         audioSource = gameObject.AddComponent<AudioSource>();
         audioSource.clip = grabSound;
         audioSource.loop = true;
@@ -49,20 +48,28 @@ public class SlimeCreature : MonoBehaviour
             agent.ResetPath();
     }
 
-    void OnGrabbed(UnityEngine.XR.Interaction.Toolkit.SelectEnterEventArgs args)
-    {
-        if (anim != null) anim.SetInteger("Grabbed", 1);
-        if (audioSource != null && grabSound != null) audioSource.Play();
-    }
+void OnGrabbed(UnityEngine.XR.Interaction.Toolkit.SelectEnterEventArgs args)
+{
+    agent.enabled = false;
+    if (anim != null) anim.SetInteger("Grabbed", 1);
+    if (audioSource != null && grabSound != null) audioSource.Play();
+}
 
     void OnReleased(UnityEngine.XR.Interaction.Toolkit.SelectExitEventArgs args)
     {
         if (anim != null) anim.SetInteger("Grabbed", 0);
         if (audioSource != null) audioSource.Stop();
+
+        if (isCaged) return;
+
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null) rb.isKinematic = true;
+        agent.enabled = true;
     }
 
     public void SetCaged()
     {
+        isCaged = true;
         agent.enabled = false;
         Rigidbody rb = GetComponent<Rigidbody>();
         if (rb != null) rb.isKinematic = true;
@@ -72,6 +79,7 @@ public class SlimeCreature : MonoBehaviour
 
     public void SetFree()
     {
+        isCaged = false;
         agent.enabled = true;
         Rigidbody rb = GetComponent<Rigidbody>();
         if (rb != null) rb.isKinematic = false;

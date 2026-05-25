@@ -12,7 +12,7 @@ public class FlyingCreature : MonoBehaviour
     private XRGrabInteractable grab;
     private Animator anim;
     private Transform caughtInNet;
-    public GameObject glassJar;
+    public HintPaper hintPaper;
     public AudioClip grabSound;
     private AudioSource audioSource;
 
@@ -30,10 +30,18 @@ public class FlyingCreature : MonoBehaviour
         audioSource.clip = grabSound;
         audioSource.loop = true;
         audioSource.playOnAwake = false;
-        if (glassJar != null)
+
+        // lock hint paper on start
+        if (hintPaper != null)
         {
-            XRGrabInteractable jarGrab = glassJar.GetComponent<XRGrabInteractable>();
-            if (jarGrab != null) jarGrab.enabled = false;
+            Rigidbody rb = hintPaper.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.isKinematic = true;
+                rb.useGravity = false;
+            }
+            XRGrabInteractable paperGrab = hintPaper.GetComponent<XRGrabInteractable>();
+            if (paperGrab != null) paperGrab.enabled = false;
         }
     }
 
@@ -85,19 +93,7 @@ public class FlyingCreature : MonoBehaviour
         caughtInNet = netCenter;
         if (grab != null) grab.enabled = true;
         if (anim != null) anim.SetTrigger("Struggle");
-        if (glassJar != null)
-        {
-            glassJar.transform.SetParent(null);
-            Rigidbody rb = glassJar.GetComponent<Rigidbody>();
-            if (rb != null)
-            {
-                rb.isKinematic = false;
-                rb.useGravity = true;
-                rb.WakeUp();
-            }
-            XRGrabInteractable jarGrab = glassJar.GetComponent<XRGrabInteractable>();
-            if (jarGrab != null) jarGrab.enabled = true;
-        }
+        if (hintPaper != null) hintPaper.Drop();
     }
 
     void OnGrabbed(UnityEngine.XR.Interaction.Toolkit.SelectEnterEventArgs args)
@@ -110,7 +106,7 @@ public class FlyingCreature : MonoBehaviour
 
     void OnReleased(UnityEngine.XR.Interaction.Toolkit.SelectExitEventArgs args)
     {
-        if (audioSource != null) audioSource.Stop();    
+        if (audioSource != null) audioSource.Stop();
     }
 
     public void SetCaged()

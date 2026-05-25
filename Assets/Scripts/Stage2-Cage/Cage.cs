@@ -8,25 +8,11 @@ public class Cage : MonoBehaviour
     public TextMeshProUGUI label;
     public GameObject door;
     public Transform snapPoint;
-    public AudioClip victorySound;
-    public int totalCages = 4;
     public Vector3 doorCloseRotation = new Vector3(0, 90, 0);
     public float doorCloseDuration = 0.5f;
 
     private GameObject capturedCreature;
     private bool isLocked = false;
-
-    private static int correctCount = 0;
-    private static bool resetDone = false;
-
-    void Awake()
-    {
-        if (!resetDone)
-        {
-            correctCount = 0;
-            resetDone = true;
-        }
-    }
 
     void OnTriggerEnter(Collider other)
     {
@@ -73,10 +59,8 @@ public class Cage : MonoBehaviour
 
         label.color = Color.green;
         isLocked = true;
-        correctCount++;
-        if (correctCount >= totalCages && victorySound != null)
-            AudioSource.PlayClipAtPoint(victorySound, Camera.main.transform.position);
         if (door != null) StartCoroutine(CloseDoor());
+        ClearSoundMaker.Instance.OnCreatureCorrectlyCaged();
     }
 
     void OnTriggerExit(Collider other)
@@ -121,10 +105,5 @@ public class Cage : MonoBehaviour
             yield return null;
         }
         door.transform.localRotation = endRot;
-    }
-        void OnDisable()
-    {
-        correctCount = 0;
-        resetDone = false;
     }
 }
