@@ -1,31 +1,80 @@
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 public class SlimeCreature : MonoBehaviour
 {
-    public float followDistance = 3f; // 이 거리 안으로 안 들어감
-    public float speed = 2f; // 전갈보다 느리게
-    
+    public float followDistance = 3f;
+    public float speed = 2f;
+    public AudioClip grabSound;
+
     private NavMeshAgent agent;
     private Transform target;
+    private Animator anim;
+    private AudioSource audioSource;
+    private XRGrabInteractable grab;
 
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
         agent.speed = speed;
         target = GameObject.FindWithTag("Scorpion").transform;
+
+        anim = GetComponent<Animator>();
+        grab = GetComponent<XRGrabInteractable>();
+        if (grab != null)
+        {
+            grab.selectEntered.AddListener(OnGrabbed);
+            grab.selectExited.AddListener(OnReleased);
+        }
+
+        audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.clip = grabSound;
+        audioSource.loop = true;
+        audioSource.playOnAwake = false;
     }
 
     void Update()
     {
+        if (transform.position.y < -5f)
+            transform.position = new Vector3(transform.position.x, 0f, transform.position.z);
+
+        if (!agent.enabled) return;
         if (target == null) return;
-        
+
         float dist = Vector3.Distance(transform.position, target.position);
-        
-        // 일정 거리 이상이면 따라감
         if (dist > followDistance)
             agent.SetDestination(target.position);
         else
-            agent.ResetPath(); // 너무 가까우면 멈춤
+            agent.ResetPath();
+    }
+
+    void OnGrabbed(UnityEngine.XR.Interaction.Toolkit.SelectEnterEventArgs args)
+    {
+        if (anim != null) anim.SetInteger("Grabbed", 1);
+        if (audioSource != null && grabSound != null) audioSource.Play();
+    }
+
+    void OnReleased(UnityEngine.XR.Interaction.Toolkit.SelectExitEventArgs args)
+    {
+        if (anim != null) anim.SetInteger("Grabbed", 0);
+        if (audioSource != null) audioSource.Stop();
+    }
+
+    public void SetCaged()
+    {
+        agent.enabled = false;
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null) rb.isKinematic = true;
+        if (anim != null) anim.SetTrigger("Caged");
+        if (audioSource != null) audioSource.Stop();
+    }
+
+    public void SetFree()
+    {
+        agent.enabled = true;
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null) rb.isKinematic = false;
+        if (anim != null) anim.SetInteger("Grabbed", 0);
     }
 }

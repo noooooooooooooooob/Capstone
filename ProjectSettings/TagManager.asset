@@ -11,6 +11,10 @@ TagManager:
   - Door
   - Scorpion
   - Box
+  - Flying
+  - Slime
+  - Boxer
+  - Creature
   layers:
   - Default
   - TransparentFX
