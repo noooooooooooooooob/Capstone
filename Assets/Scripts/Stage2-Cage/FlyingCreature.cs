@@ -30,6 +30,11 @@ public class FlyingCreature : MonoBehaviour
         audioSource.clip = grabSound;
         audioSource.loop = true;
         audioSource.playOnAwake = false;
+        if (glassJar != null)
+        {
+            XRGrabInteractable jarGrab = glassJar.GetComponent<XRGrabInteractable>();
+            if (jarGrab != null) jarGrab.enabled = false;
+        }
     }
 
     void Update()
@@ -81,7 +86,18 @@ public class FlyingCreature : MonoBehaviour
         if (grab != null) grab.enabled = true;
         if (anim != null) anim.SetTrigger("Struggle");
         if (glassJar != null)
+        {
             glassJar.transform.SetParent(null);
+            Rigidbody rb = glassJar.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.isKinematic = false;
+                rb.useGravity = true;
+                rb.WakeUp();
+            }
+            XRGrabInteractable jarGrab = glassJar.GetComponent<XRGrabInteractable>();
+            if (jarGrab != null) jarGrab.enabled = true;
+        }
     }
 
     void OnGrabbed(UnityEngine.XR.Interaction.Toolkit.SelectEnterEventArgs args)
@@ -94,7 +110,7 @@ public class FlyingCreature : MonoBehaviour
 
     void OnReleased(UnityEngine.XR.Interaction.Toolkit.SelectExitEventArgs args)
     {
-        // 놓아도 Grabbed 상태 유지 (Caged될 때까지)
+        if (audioSource != null) audioSource.Stop();    
     }
 
     public void SetCaged()

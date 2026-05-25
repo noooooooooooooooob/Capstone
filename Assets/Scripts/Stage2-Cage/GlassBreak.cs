@@ -8,17 +8,29 @@ public class GlassBreak : MonoBehaviour
 
     void Start()
     {
-        // Shard들 전부 비활성화
         foreach (Transform child in transform)
             if (child.name.Contains("Shard"))
                 child.gameObject.SetActive(false);
+
+        if (hintPaper != null)
+        {
+            hintPaper.SetActive(false);
+            XRGrabInteractable grab = hintPaper.GetComponent<XRGrabInteractable>();
+            if (grab != null) grab.enabled = false;
+        }
+
+        // make sure jar starts kinematic and collider enabled
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null) rb.isKinematic = true;
+
+        Collider col = GetComponent<Collider>();
+        if (col != null) col.enabled = true;
     }
 
     void OnCollisionEnter(Collision collision)
     {
         if (isBroken) return;
         if (collision.relativeVelocity.magnitude < 2f) return;
-
         Break();
     }
 
@@ -26,22 +38,45 @@ public class GlassBreak : MonoBehaviour
     {
         isBroken = true;
 
-        // 병 메시 숨기기
         MeshRenderer mr = GetComponent<MeshRenderer>();
         if (mr != null) mr.enabled = false;
 
         Collider col = GetComponent<Collider>();
         if (col != null) col.enabled = false;
 
-        // Shard 활성화
-        foreach (Transform child in transform)
-            if (child.name.Contains("Shard"))
-                child.gameObject.SetActive(true);
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null) rb.isKinematic = true;
 
-        // 힌트 페이퍼 활성화
+        foreach (Transform child in transform)
+        {
+            if (child.name.Contains("Shard"))
+            {
+                child.gameObject.SetActive(true);
+                Rigidbody shardRb = child.GetComponent<Rigidbody>();
+                if (shardRb != null)
+                {
+                    shardRb.isKinematic = false;
+                    shardRb.useGravity = true;
+                    shardRb.AddExplosionForce(150f, transform.position, 0.5f);
+                }
+            }
+        }
+
         if (hintPaper != null)
         {
             hintPaper.SetActive(true);
+            hintPaper.transform.SetParent(null);
+
+            Rigidbody paperRb = hintPaper.GetComponent<Rigidbody>();
+            if (paperRb != null)
+            {
+                paperRb.isKinematic = false;
+                paperRb.useGravity = true;
+            }
+
+            Collider paperCol = hintPaper.GetComponent<Collider>();
+            if (paperCol != null) paperCol.enabled = true;
+
             XRGrabInteractable grab = hintPaper.GetComponent<XRGrabInteractable>();
             if (grab != null) grab.enabled = true;
         }
