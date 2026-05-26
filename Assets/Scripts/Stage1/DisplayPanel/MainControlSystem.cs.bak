@@ -29,10 +29,6 @@ public class MainControlSystem : NetworkBehaviour
     public Transform batterySlot;          // MainControlPanel 배터리 슬롯 위치
     public float snapDistance = 0.35f;     // 스냅 거리
 
-    [Header("Starting Doors")]
-    [Tooltip("Doors that slide open when power goes off and INSERT BATTERY is shown.")]
-    public Stage1.Stage1SlidingDoor[] startingDoors;
-
     public enum SystemState { Idle, Stabilizing, BatteryLow, PowerOff, Rebooting }
     
     [Networked]
@@ -45,8 +41,7 @@ public class MainControlSystem : NetworkBehaviour
 
     GameObject snappedBattery = null;
 
-    // Initialised to an out-of-range sentinel so the first Render() always runs UpdateStateVisuals.
-    private SystemState _lastState = (SystemState)(-1);
+    private SystemState _lastState = SystemState.Idle;
 
     void Awake() 
     { 
@@ -121,7 +116,7 @@ public class MainControlSystem : NetworkBehaviour
                 if (batteryWarningPanel) batteryWarningPanel.SetActive(true);
                 break;
             case SystemState.PowerOff:
-                if (statusText) statusText.text = "INSERT BATTERY";
+                if (statusText) statusText.text = "POWER OFFLINE";
                 if (batteryWarningPanel) batteryWarningPanel.SetActive(true);
                 TurnOffLights();
                 break;
@@ -271,14 +266,6 @@ public class MainControlSystem : NetworkBehaviour
     {
         if (roomLightingController != null) roomLightingController.DimLights();
         SetLightBallBrightness(2f);
-        OpenStartingDoors();
-    }
-
-    void OpenStartingDoors()
-    {
-        if (startingDoors == null) return;
-        foreach (var door in startingDoors)
-            if (door != null) door.OpenDoor();
     }
 
     void RestoreLights()
