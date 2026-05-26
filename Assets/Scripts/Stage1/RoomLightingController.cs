@@ -5,23 +5,49 @@ namespace Stage1
     public class RoomLightingController : MonoBehaviour
     {
         [SerializeField] private Light[] roomLights;
-        [SerializeField] private float lightIntesity;
+
+        [Tooltip("Fallback restore intensity used only for lights whose original intensity is 0 at startup.")]
+        [SerializeField] private float lightIntesity = 2f;
+
+        // Per-light original intensities captured at Awake so restore is always accurate.
+        private float[] _originalIntensities;
+
+        private void Awake()
+        {
+            CaptureOriginalIntensities();
+        }
+
+        private void CaptureOriginalIntensities()
+        {
+            if (roomLights == null) return;
+            _originalIntensities = new float[roomLights.Length];
+            for (int i = 0; i < roomLights.Length; i++)
+            {
+                if (roomLights[i] == null) continue;
+                float orig = roomLights[i].intensity;
+                // If a light is already at 0 at startup (e.g. scene saved mid-poweroff),
+                // fall back to the Inspector value so we don't restore to 0.
+                _originalIntensities[i] = orig > 0f ? orig : lightIntesity;
+            }
+        }
 
         public void DimLights()
         {
-            Debug.Log("Dimming lights");
+            Debug.Log("[RoomLighting] Dimming lights");
             foreach (var l in roomLights)
-            {
                 if (l != null) l.intensity = 0f;
-            }
         }
 
         public void RestoreLights()
         {
-            Debug.Log("Restoring lights");
-            foreach (var l in roomLights)
+            Debug.Log("[RoomLighting] Restoring lights");
+            if (_originalIntensities == null || _originalIntensities.Length != roomLights.Length)
+                CaptureOriginalIntensities();
+
+            for (int i = 0; i < roomLights.Length; i++)
             {
-                if (l != null) l.intensity = lightIntesity;
+                if (roomLights[i] == null) continue;
+                roomLights[i].intensity = _originalIntensities[i];
             }
         }
     }
