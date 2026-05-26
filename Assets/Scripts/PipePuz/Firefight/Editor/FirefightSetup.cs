@@ -359,9 +359,16 @@ namespace PipePuz.Firefight.EditorTools
                 ff.StartStrength = 0.15f;
                 ff.GrowthRate = 0.04f;   // 더 천천히 자라 — 테스트 중 폭주 방지
                 ff.MaxStrength = 1.0f;
-                ff.MaxEmissionRate = 35f;
-                ff.MinStartSize = 0.15f;
-                ff.MaxStartSize = 0.80f;
+                // 위협적 톤 — 메인 불꽃을 더 크고 강하게.
+                ff.MaxEmissionRate = 60f;
+                ff.MinStartSize = 0.20f;
+                ff.MaxStartSize = 1.10f;
+                ff.AutoEnhanceFlames = true;
+                ff.TurbulenceStrength = 0.8f;
+                ff.MaxLightIntensity = 4.5f;
+                ff.LightRange = 5f;
+                ff.LightFlickerSpeed = 18f;
+                ff.MaxEmberRate = 70f;
 
                 fireComps[i] = ff;
             }
@@ -455,40 +462,46 @@ namespace PipePuz.Firefight.EditorTools
 
         static void ConfigureFire(ParticleSystem ps)
         {
+            // 메인 불꽃 — 흰열 코어가 도는 위협적 화염.
+            // 색 그라데이션 / 난기류 / main 모듈은 FirefightFire.EnhanceFlameVisuals() 가 런타임에 다시 덮어쓰지만,
+            // 여기서도 동일한 톤으로 셋업해서 에디터 미리보기에서 즉시 위협적으로 보이도록 한다.
             var main = ps.main;
             main.duration = 2.0f;
             main.loop = true;
-            main.startLifetime = 0.65f;
-            main.startSpeed = 1.8f;
-            main.startSize = 0.4f; // 런타임에 strength 비례로 덮어씀
-            main.startColor = new Color(1f, 0.6f, 0.18f, 0.95f);
-            main.maxParticles = 200;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.7f, 1.1f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.8f, 1.6f);
+            main.startSize = 0.5f; // 런타임에 strength 비례로 덮어씀
+            main.startColor = new Color(1f, 0.55f, 0.15f, 1f);
+            main.maxParticles = 400;
             main.simulationSpace = ParticleSystemSimulationSpace.Local;
             main.playOnAwake = true;
-            main.gravityModifier = -0.4f; // 위로 솟음
+            main.gravityModifier = -0.35f; // 위로 솟음 — 너무 빠르지 않게 (발원지에 머무는 시간 ↑)
 
             var emission = ps.emission;
-            emission.rateOverTime = 25f;
+            emission.rateOverTime = 35f;
 
             var shape = ps.shape;
             shape.shapeType = ParticleSystemShapeType.Cone;
-            shape.angle = 18f;
-            shape.radius = 0.08f;
+            shape.angle = 20f;
+            shape.radius = 0.10f;
             shape.rotation = new Vector3(-90f, 0f, 0f); // 위쪽 방향
 
+            // 색: 흰열 코어 → 진한 적색 → 그을음 (위협적 톤)
+            // 시작 알파가 0 이면 발원지 근처가 비어 보임 → 0.4 로 시작.
             var color = ps.colorOverLifetime;
             color.enabled = true;
             var grad = new Gradient();
             grad.SetKeys(
                 new[] {
-                    new GradientColorKey(new Color(1f, 0.85f, 0.25f), 0f),
-                    new GradientColorKey(new Color(1f, 0.4f, 0.1f), 0.5f),
-                    new GradientColorKey(new Color(0.5f, 0.18f, 0.05f), 1f),
+                    new GradientColorKey(new Color(1.4f, 1.1f, 0.55f), 0f),
+                    new GradientColorKey(new Color(1.0f, 0.45f, 0.08f), 0.35f),
+                    new GradientColorKey(new Color(0.7f, 0.12f, 0.03f), 0.75f),
+                    new GradientColorKey(new Color(0.12f, 0.04f, 0.02f), 1f),
                 },
                 new[] {
-                    new GradientAlphaKey(0.0f, 0f),
-                    new GradientAlphaKey(0.95f, 0.2f),
-                    new GradientAlphaKey(0.7f, 0.6f),
+                    new GradientAlphaKey(0.4f, 0f),
+                    new GradientAlphaKey(1.0f, 0.2f),
+                    new GradientAlphaKey(0.9f, 0.7f),
                     new GradientAlphaKey(0f, 1f),
                 });
             color.color = grad;
@@ -500,6 +513,15 @@ namespace PipePuz.Firefight.EditorTools
             sizeCurve.AddKey(0.4f, 1.0f);
             sizeCurve.AddKey(1f, 0.2f);
             size.size = new ParticleSystem.MinMaxCurve(1f, sizeCurve);
+
+            // 난기류 — 불꽃이 흔들리며 위협감 ↑
+            var noise = ps.noise;
+            noise.enabled = true;
+            noise.strength = 0.8f;
+            noise.frequency = 1.2f;
+            noise.scrollSpeed = 1.5f;
+            noise.damping = true;
+            noise.octaveCount = 2;
 
             var renderer = ps.GetComponent<ParticleSystemRenderer>();
             if (renderer != null)
