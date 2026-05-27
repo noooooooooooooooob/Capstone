@@ -288,6 +288,11 @@ namespace PipePuz.Firefight
 
         void ConfigureEmbers(ParticleSystem ps)
         {
+            // ParticleSystem은 AddComponent 직후 자동 재생 상태일 수 있다.
+            // 재생 중에는 main.duration을 못 바꾸므로 반드시 먼저 Stop+Clear.
+            if (ps.isPlaying || ps.particleCount > 0)
+                ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
             var main = ps.main;
             main.duration = 2f;
             main.loop = true;
@@ -345,6 +350,9 @@ namespace PipePuz.Firefight
             var srcRenderer = FireParticles != null ? FireParticles.GetComponent<ParticleSystemRenderer>() : null;
             if (renderer != null && srcRenderer != null)
                 renderer.sharedMaterial = srcRenderer.sharedMaterial;
+
+            // 설정 끝 — 다시 재생 (Stop했었기 때문).
+            ps.Play(true);
         }
     }
 }
