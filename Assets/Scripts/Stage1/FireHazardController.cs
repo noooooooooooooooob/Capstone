@@ -50,6 +50,12 @@ namespace Stage1
             Debug.Log("[FireHazardController] All fires extinguished. LightBall pickup unlocked.");
         }
 
+        [Header("Sound")]
+        [Tooltip("AudioManager에 등록된 불 루프 사운드 클립 이름")]
+        [SerializeField] private string fireSoundName;
+
+        private TemporarySoundPlayer fireSound;
+
         public void ActivateFires()
         {
             firesHaveActivated = true;
@@ -61,6 +67,9 @@ namespace Stage1
                 if (f) f.SetActive(true);
             }
 
+            if (!string.IsNullOrEmpty(fireSoundName) && AudioManager.Instance != null)
+                fireSound = AudioManager.Instance.PlaySoundAt(fireSoundName, transform.position, isLoop: true);
+
             FiresActivated.Invoke();
             Debug.Log("[FireHazardController] Fires activated!");
         }
@@ -69,6 +78,12 @@ namespace Stage1
         {
             firesHaveActivated = false;
             allFiresExtinguishedNotified = false;
+
+            if (fireSound != null && AudioManager.Instance != null)
+            {
+                AudioManager.Instance.StopLoopSound(fireSound);
+                fireSound = null;
+            }
 
             if (fireObjects == null) return;
             foreach (var f in fireObjects)
