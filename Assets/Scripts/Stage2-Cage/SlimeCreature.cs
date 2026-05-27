@@ -38,7 +38,7 @@ public class SlimeCreature : MonoBehaviour
         if (transform.position.y < -5f)
             transform.position = new Vector3(transform.position.x, 0f, transform.position.z);
 
-        if (!agent.enabled) return;
+        if (!agent.enabled || !agent.isOnNavMesh) return;
         if (target == null) return;
 
         float dist = Vector3.Distance(transform.position, target.position);
