@@ -38,6 +38,17 @@ public class SubtitleHUD : MonoBehaviour
     public float fadeInDuration = 0.18f;
     public float fadeOutDuration = 0.28f;
 
+    [Header("Animalese 음성")]
+    [Tooltip("글자마다 랜덤 재생할 짧은 클립들 (Inspector에서 드래그)")]
+    public AudioClip[] animaleseSyllables;
+    [Tooltip("글자당 타이핑 간격(초)")]
+    public float typeInterval = 0.06f;
+    [Tooltip("피치 랜덤 범위")]
+    public float pitchMin = 0.85f;
+    public float pitchMax = 1.2f;
+
+    AudioSource _animaleseSource;
+
     [Header("디버그")]
     [Tooltip("Editor에서 GameManager 없이도 표시 테스트 — 페이드 없이 계속 표시 (위치/크기 튜닝용)")]
     public bool showOnStartForTest = false;
@@ -58,6 +69,9 @@ public class SubtitleHUD : MonoBehaviour
     void Awake()
     {
         BuildCanvas();
+        _animaleseSource = gameObject.AddComponent<AudioSource>();
+        _animaleseSource.playOnAwake = false;
+        _animaleseSource.spatialBlend = 0f;
     }
 
     void Start()
@@ -131,12 +145,33 @@ public class SubtitleHUD : MonoBehaviour
     IEnumerator ShowLine(string speaker, string text, float duration)
     {
         string speakerHex = ColorUtility.ToHtmlStringRGB(speakerColor);
-        _textMesh.text = string.IsNullOrEmpty(speaker)
-            ? text
-            : $"<color=#{speakerHex}><b>{speaker}</b></color>  {text}";
+        string prefix = string.IsNullOrEmpty(speaker)
+            ? ""
+            : $"<color=#{speakerHex}><b>{speaker}</b></color>  ";
 
+        _textMesh.text = prefix;
         yield return Fade(0f, 1f, fadeInDuration);
-        yield return new WaitForSeconds(Mathf.Max(0.1f, duration - fadeInDuration - fadeOutDuration));
+
+        float typeTime = 0f;
+        for (int i = 0; i < text.Length; i++)
+        {
+            _textMesh.text = prefix + text.Substring(0, i + 1);
+
+            if (!char.IsWhiteSpace(text[i]) && animaleseSyllables != null && animaleseSyllables.Length > 0)
+            {
+                _animaleseSource.clip = animaleseSyllables[Random.Range(0, animaleseSyllables.Length)];
+                _animaleseSource.pitch = Random.Range(pitchMin, pitchMax);
+                _animaleseSource.Play();
+            }
+
+            typeTime += typeInterval;
+            yield return new WaitForSeconds(typeInterval);
+        }
+
+        float remaining = duration - fadeInDuration - fadeOutDuration - typeTime;
+        if (remaining > 0f)
+            yield return new WaitForSeconds(remaining);
+
         yield return Fade(1f, 0f, fadeOutDuration);
         _textMesh.text = string.Empty;
     }
