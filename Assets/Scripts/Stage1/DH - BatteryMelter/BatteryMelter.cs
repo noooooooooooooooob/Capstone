@@ -54,7 +54,22 @@ public class BatteryMelter : MonoBehaviour
 
     void HandleLightBall()
     {
-        GameObject lb = GameObject.FindGameObjectWithTag("LightBall");
+        // 변경: 단일 → 다중 LightBall 지원.
+        // 이미 스냅된 게 있으면 그것을 추적. 없으면 lightBallHole에 가장 가까운 미파지 LightBall 선택.
+        GameObject lb = snappedLightBall;
+        if (lb == null)
+        {
+            GameObject[] all = GameObject.FindGameObjectsWithTag("LightBall");
+            float bestD = snapDistance;
+            foreach (var b in all)
+            {
+                if (b == null) continue;
+                var bg = b.GetComponent<XRGrabInteractable>();
+                if (bg != null && bg.isSelected) continue;
+                float d = Vector3.Distance(b.transform.position, lightBallHole.position);
+                if (d < bestD) { bestD = d; lb = b; }
+            }
+        }
         if (lb == null) return;
 
         var grab = lb.GetComponent<XRGrabInteractable>();
