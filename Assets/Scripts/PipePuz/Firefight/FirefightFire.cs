@@ -68,6 +68,12 @@ namespace PipePuz.Firefight
         [Tooltip("최대 강도일 때 ember 분출량 (개/초).")]
         public float MaxEmberRate = 70f;
 
+        [Header("Sound")]
+        [Tooltip("AudioManager에 등록된 불 루프 사운드 클립 이름")]
+        public string fireSoundName;
+        [Tooltip("시작 랜덤 딜레이 최대값(초)")]
+        public float maxStartDelay = 0.5f;
+
         [Header("Events")]
         public UnityEvent OnExtinguished;
 
@@ -78,6 +84,7 @@ namespace PipePuz.Firefight
 
         // 깜박임 위상이 fire 마다 다르도록 랜덤 시드.
         float _flickerSeed;
+        TemporarySoundPlayer _fireSound;
 
         void Awake()
         {
@@ -88,6 +95,7 @@ namespace PipePuz.Firefight
             EnsureFireParticlesPlaying();
             ApplyVisual();
             DumpDiagnostics();
+            StartFireSound();
         }
 
         /// <summary>
@@ -163,6 +171,7 @@ namespace PipePuz.Firefight
                 if (EmberParticles != null)
                     EmberParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
                 if (FireLight != null) FireLight.enabled = false;
+                StopFireSound();
                 OnExtinguished?.Invoke();
                 Debug.Log($"[FirefightFire {name}] EXTINGUISHED!");
                 gameObject.SetActive(false);
@@ -353,6 +362,21 @@ namespace PipePuz.Firefight
 
             // 설정 끝 — 다시 재생 (Stop했었기 때문).
             ps.Play(true);
+        }
+
+        void StartFireSound()
+        {
+            if (string.IsNullOrEmpty(fireSoundName) || AudioManager.Instance == null) return;
+            float delay = Random.Range(0f, maxStartDelay);
+            _fireSound = AudioManager.Instance.PlaySoundAt(
+                fireSoundName, transform.position, delay: delay, isLoop: true);
+        }
+
+        void StopFireSound()
+        {
+            if (_fireSound == null || AudioManager.Instance == null) return;
+            AudioManager.Instance.StopLoopSound(_fireSound);
+            _fireSound = null;
         }
     }
 }

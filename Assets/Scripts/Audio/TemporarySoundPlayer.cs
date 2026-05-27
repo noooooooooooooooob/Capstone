@@ -60,6 +60,11 @@ public class TemporarySoundPlayer : MonoBehaviour
         source.dopplerLevel = 0f; // VR 어색함 방지용 기본값
     }
 
+    public void SetVolume(float volume)
+    {
+        if (source != null) source.volume = volume;
+    }
+
     /// <summary>현재 재생 중인지(루프 사운드 상태 체크용).</summary>
     public bool IsPlaying => source != null && source.isPlaying;
 }

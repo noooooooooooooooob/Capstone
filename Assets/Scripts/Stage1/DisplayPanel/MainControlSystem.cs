@@ -33,6 +33,13 @@ public class MainControlSystem : NetworkBehaviour
     [Tooltip("Doors that slide open when power goes off and INSERT BATTERY is shown.")]
     public Stage1.Stage1SlidingDoor[] startingDoors;
 
+    [Header("Sound")]
+    [Tooltip("AudioManager에 등록된 비상 알람 루프 클립 이름")]
+    public string alarmSoundName;
+    [Range(0f, 1f)]
+    [Tooltip("알람 볼륨 (0~1)")]
+    public float alarmVolume = 0.4f;
+
     [Header("Debug")]
     public Button debugSkipCurrentButton;
 
@@ -47,6 +54,7 @@ public class MainControlSystem : NetworkBehaviour
     public static MainControlSystem Instance;
 
     GameObject snappedBattery = null;
+    TemporarySoundPlayer _alarmSound;
 
     // Initialised to an out-of-range sentinel so the first Render() always runs UpdateStateVisuals.
     private SystemState _lastState = (SystemState)(-1);
@@ -140,7 +148,7 @@ public class MainControlSystem : NetworkBehaviour
         switch (state)
         {
             case SystemState.Idle:
-                if (statusText) 
+                if (statusText)
                 {
                     if (GameManager.Instance != null && GameManager.Instance.CurrentPuzzleIndex >= 0)
                     {
@@ -154,6 +162,7 @@ public class MainControlSystem : NetworkBehaviour
                     }
                 }
                 if (batteryWarningPanel) batteryWarningPanel.SetActive(false);
+                StopAlarm();
                 RestoreLights();
                 break;
             case SystemState.Stabilizing:
@@ -162,6 +171,7 @@ public class MainControlSystem : NetworkBehaviour
             case SystemState.BatteryLow:
                 if (statusText) statusText.text = "BATTERY CRITICAL!";
                 if (batteryWarningPanel) batteryWarningPanel.SetActive(true);
+                StartAlarm();
                 break;
             case SystemState.PowerOff:
                 if (statusText) statusText.text = "INSERT BATTERY";
@@ -369,5 +379,20 @@ public class MainControlSystem : NetworkBehaviour
 
         Stability = maxStability;
         CurrentState = SystemState.Idle;
+    }
+
+    void StartAlarm()
+    {
+        if (_alarmSound != null) return;
+        if (string.IsNullOrEmpty(alarmSoundName) || AudioManager.Instance == null) return;
+        _alarmSound = AudioManager.Instance.PlaySoundAt(alarmSoundName, transform.position, isLoop: true);
+        _alarmSound.SetVolume(alarmVolume);
+    }
+
+    void StopAlarm()
+    {
+        if (_alarmSound == null || AudioManager.Instance == null) return;
+        AudioManager.Instance.StopLoopSound(_alarmSound);
+        _alarmSound = null;
     }
 }

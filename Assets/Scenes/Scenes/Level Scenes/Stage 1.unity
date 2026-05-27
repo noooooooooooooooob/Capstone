@@ -20559,6 +20559,8 @@ MonoBehaviour:
   LightRange: 6
   LightFlickerSpeed: 16
   MaxEmberRate: 110
+  fireSoundName: 
+  maxStartDelay: 0.5
   OnExtinguished:
     m_PersistentCalls:
       m_Calls: []
@@ -57850,7 +57852,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 892758181003375738, guid: c2a5020a729e96c46bba295eff24094d, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1292139664640859952, guid: c2a5020a729e96c46bba295eff24094d, type: 3}
       propertyPath: m_LocalPosition.x
@@ -57963,6 +57965,10 @@ PrefabInstance:
     - target: {fileID: 8383972104977282633, guid: c2a5020a729e96c46bba295eff24094d, type: 3}
       propertyPath: batterySlot
       value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 8383972104977282633, guid: c2a5020a729e96c46bba295eff24094d, type: 3}
+      propertyPath: alarmSoundName
+      value: Battery Insert
       objectReference: {fileID: 0}
     - target: {fileID: 8383972104977282633, guid: c2a5020a729e96c46bba295eff24094d, type: 3}
       propertyPath: lightBallLight
@@ -66499,6 +66505,8 @@ MonoBehaviour:
   LightRange: 6
   LightFlickerSpeed: 16
   MaxEmberRate: 110
+  fireSoundName: 
+  maxStartDelay: 0.5
   OnExtinguished:
     m_PersistentCalls:
       m_Calls: []
@@ -82811,6 +82819,8 @@ MonoBehaviour:
   LightRange: 6
   LightFlickerSpeed: 16
   MaxEmberRate: 110
+  fireSoundName: 
+  maxStartDelay: 0.5
   OnExtinguished:
     m_PersistentCalls:
       m_Calls: []
@@ -99622,7 +99632,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::AudioManager
   audioMixer: {fileID: 24100000, guid: 1fa3d991dba66c94b9eb3ac993160967, type: 2}
   preloadClips:
-  - {fileID: 8300000, guid: 8b2296979e8f8ad4696b1e1df1afad38, type: 3}
+  - {fileID: 8300000, guid: 6d37c8b5b21f8fa4094a56f3472b52c0, type: 3}
+  - {fileID: 8300000, guid: 78230774d77a02944894205b481c4823, type: 3}
   masterSlider: {fileID: 0}
   bgmSlider: {fileID: 0}
   sfxSlider: {fileID: 0}
@@ -115697,6 +115708,8 @@ MonoBehaviour:
   LightRange: 6
   LightFlickerSpeed: 16
   MaxEmberRate: 110
+  fireSoundName: 
+  maxStartDelay: 0.5
   OnExtinguished:
     m_PersistentCalls:
       m_Calls: []
@@ -127942,6 +127955,8 @@ MonoBehaviour:
   LightRange: 6
   LightFlickerSpeed: 16
   MaxEmberRate: 110
+  fireSoundName: 
+  maxStartDelay: 0.5
   OnExtinguished:
     m_PersistentCalls:
       m_Calls: []
@@ -151792,6 +151807,8 @@ MonoBehaviour:
   LightRange: 6
   LightFlickerSpeed: 16
   MaxEmberRate: 110
+  fireSoundName: 
+  maxStartDelay: 0.5
   OnExtinguished:
     m_PersistentCalls:
       m_Calls: []
@@ -152220,6 +152237,8 @@ MonoBehaviour:
   LightRange: 6
   LightFlickerSpeed: 16
   MaxEmberRate: 110
+  fireSoundName: 
+  maxStartDelay: 0.5
   OnExtinguished:
     m_PersistentCalls:
       m_Calls: []
@@ -153409,7 +153428,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 892758181003375738, guid: c2a5020a729e96c46bba295eff24094d, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1292139664640859952, guid: c2a5020a729e96c46bba295eff24094d, type: 3}
       propertyPath: m_LocalPosition.x
@@ -153482,6 +153501,10 @@ PrefabInstance:
     - target: {fileID: 4585768226420726918, guid: c2a5020a729e96c46bba295eff24094d, type: 3}
       propertyPath: m_Colors.m_ColorMultiplier
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6873284620178817458, guid: c2a5020a729e96c46bba295eff24094d, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 7167015813738011481, guid: c2a5020a729e96c46bba295eff24094d, type: 3}
       propertyPath: m_LocalRotation.x
@@ -160281,6 +160304,8 @@ MonoBehaviour:
   LightRange: 6
   LightFlickerSpeed: 16
   MaxEmberRate: 110
+  fireSoundName: 
+  maxStartDelay: 0.5
   OnExtinguished:
     m_PersistentCalls:
       m_Calls: []
@@ -160899,7 +160924,6 @@ MonoBehaviour:
   AllFiresExtinguished:
     m_PersistentCalls:
       m_Calls: []
-  fireSoundName: Fire
 --- !u!4 &1790729976
 Transform:
   m_ObjectHideFlags: 0
