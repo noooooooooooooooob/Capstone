@@ -33,6 +33,9 @@ public class MainControlSystem : NetworkBehaviour
     [Tooltip("Doors that slide open when power goes off and INSERT BATTERY is shown.")]
     public Stage1.Stage1SlidingDoor[] startingDoors;
 
+    [Header("Debug")]
+    public Button debugSkipCurrentButton;
+
     public enum SystemState { Idle, Stabilizing, BatteryLow, PowerOff, Rebooting }
     
     [Networked]
@@ -70,6 +73,18 @@ public class MainControlSystem : NetworkBehaviour
             startButton.onClick.RemoveAllListeners();
             startButton.onClick.AddListener(OnStabilizeButtonPressed);
         }
+
+        if (debugSkipCurrentButton != null)
+        {
+            debugSkipCurrentButton.onClick.RemoveAllListeners();
+            debugSkipCurrentButton.onClick.AddListener(OnDebugSkipPressed);
+        }
+    }
+
+    void OnDebugSkipPressed()
+    {
+        if (GameManager.Instance == null) return;
+        GameManager.Instance.DebugCompleteCurrentPuzzle();
     }
 
     public override void Spawned()
@@ -80,7 +95,23 @@ public class MainControlSystem : NetworkBehaviour
             Stability = 0f;
         }
         
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.OnPuzzleActivated += OnPuzzleChanged;
+            GameManager.Instance.OnAllPuzzlesCompleted += OnAllFixed;
+        }
+
         UpdateVisuals();
+    }
+
+    void OnPuzzleChanged(int index)
+    {
+        UpdateVisuals();
+    }
+
+    void OnAllFixed()
+    {
+        if (statusText) statusText.text = "ALL SYSTEMS NOMINAL - PROCEED TO STAGE 2";
     }
 
     public override void Render()
@@ -109,7 +140,19 @@ public class MainControlSystem : NetworkBehaviour
         switch (state)
         {
             case SystemState.Idle:
-                if (statusText) statusText.text = "SYSTEM ONLINE";
+                if (statusText) 
+                {
+                    if (GameManager.Instance != null && GameManager.Instance.CurrentPuzzleIndex >= 0)
+                    {
+                        int idx = GameManager.Instance.CurrentPuzzleIndex;
+                        string hint = GameManager.Instance.CurrentPuzzleHint;
+                        statusText.text = $"PUZZLE {idx + 1}: {hint.ToUpper()}";
+                    }
+                    else
+                    {
+                        statusText.text = "SYSTEM ONLINE";
+                    }
+                }
                 if (batteryWarningPanel) batteryWarningPanel.SetActive(false);
                 RestoreLights();
                 break;
@@ -128,7 +171,6 @@ public class MainControlSystem : NetworkBehaviour
             case SystemState.Rebooting:
                 if (statusText) statusText.text = "REBOOTING...";
                 if (batteryWarningPanel) batteryWarningPanel.SetActive(false);
-                // RestoreLights() removed from here
                 break;
         }
     }

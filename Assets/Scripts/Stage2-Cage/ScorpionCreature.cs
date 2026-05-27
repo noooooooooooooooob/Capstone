@@ -37,14 +37,14 @@ public class ScorpionCreature : MonoBehaviour
         if (transform.position.y < -5f)
             transform.position = new Vector3(transform.position.x, 0f, transform.position.z);
 
-        if (!agent.enabled) return;
+        if (!agent.enabled || !agent.isOnNavMesh) return;
         if (!agent.pathPending && agent.remainingDistance < 0.5f)
             SetNewDestination();
     }
 
     void SetNewDestination()
     {
-        if (!agent.enabled) return;
+        if (!agent.enabled || !agent.isOnNavMesh) return;
         Vector3 randomDirection = Random.insideUnitSphere * wanderRadius;
         randomDirection += transform.position;
         NavMeshHit hit;

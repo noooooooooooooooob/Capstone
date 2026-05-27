@@ -34,6 +34,8 @@ public class GameManager : NetworkBehaviour
     [Networked] public int CurrentPuzzleIndex { get; set; }
     [Networked] public NetworkBool AllCompleted { get; set; }
 
+    bool _debugCompletingAll;
+
     /// <summary>(speaker, text, duration) — SubtitleHUD가 구독해 화면에 표시.</summary>
     public event Action<string, string, float> OnDialoguePlayed;
 
@@ -66,6 +68,8 @@ public class GameManager : NetworkBehaviour
             AllCompleted = false;
         }
 
+        AutoSetupPuzzles();
+
         // 모든 피어가 퍼즐 컨트롤러의 완료 이벤트를 듣지만,
         // 실제 진행(다음 퍼즐 활성화)은 권한자만 수행.
         for (int i = 0; i < puzzles.Length; i++)
@@ -77,6 +81,67 @@ public class GameManager : NetworkBehaviour
 
         if (HasStateAuthority)
             StartCoroutine(BootSequence());
+    }
+
+    private void AutoSetupPuzzles()
+    {
+        // Find existing wrappers
+        var foundWrappers = FindObjectsByType<PuzzleController>(FindObjectsSortMode.None);
+        foreach (var w in foundWrappers)
+        {
+            if (w.puzzleIndex >= 0 && w.puzzleIndex < puzzles.Length)
+            {
+                puzzles[w.puzzleIndex] = w;
+                WireKnownPuzzleEvents(w.gameObject, w);
+            }
+        }
+
+        // Auto-wrap known puzzle logic if slots are empty
+        TryWrapPuzzle<PipePuz.SmokePuzzle.PipeAllPuzzleController>(0, "Fix the leaking pipes to restore air flow.");
+        TryWrapPuzzle<ClearSoundMaker>(1, "Capture each creature and lock it in the matching cage.");
+        TryWrapPuzzle<PipePuz.Zoo.ZooPuzzleController>(1, "Capture all escaped creatures back into their cages.");
+        TryWrapPuzzle<PipePuz.LightBeam.LightBeamController>(2, "Align the light beams to power the main reactor.");
+    }
+
+    private void TryWrapPuzzle<T>(int index, string hint) where T : MonoBehaviour
+    {
+        if (index < 0 || index >= puzzles.Length || puzzles[index] != null) return;
+
+        T logic = FindFirstObjectByType<T>();
+        if (logic != null)
+        {
+            PuzzleController wrapper = logic.GetComponent<PuzzleController>();
+            if (wrapper == null) wrapper = logic.gameObject.AddComponent<PuzzleController>();
+
+            wrapper.puzzleIndex = index;
+            wrapper.puzzleHint = hint;
+            
+            WireKnownPuzzleEvents(logic.gameObject, wrapper);
+
+            puzzles[index] = wrapper;
+            Debug.Log($"[GameManager] Auto-wrapped {typeof(T).Name} into slot {index}");
+        }
+    }
+
+    void WireKnownPuzzleEvents(GameObject source, PuzzleController wrapper)
+    {
+        if (source == null || wrapper == null) return;
+
+        var pipe = source.GetComponent<PipePuz.SmokePuzzle.PipeAllPuzzleController>();
+        if (pipe != null)
+            pipe.OnSolved.AddListener(() => wrapper.CompletePuzzle());
+
+        var zoo = source.GetComponent<PipePuz.Zoo.ZooPuzzleController>();
+        if (zoo != null)
+            zoo.OnSolved.AddListener(() => wrapper.CompletePuzzle());
+
+        var cageRoom = source.GetComponent<ClearSoundMaker>();
+        if (cageRoom != null)
+            cageRoom.OnSolved.AddListener(() => wrapper.CompletePuzzle());
+
+        var beam = source.GetComponent<PipePuz.LightBeam.LightBeamController>();
+        if (beam != null)
+            beam.OnAllReceiversHit.AddListener(() => wrapper.CompletePuzzle());
     }
 
     IEnumerator BootSequence()
@@ -113,6 +178,133 @@ public class GameManager : NetworkBehaviour
         CurrentPuzzleIndex = next;
         ActivatePuzzleRpc(next);
         StartCoroutine(PlayPuzzleStartDialogue(next));
+    }
+
+    public void RequestAdvanceToNextPuzzle()
+    {
+        if (Object != null && Object.IsValid && !HasStateAuthority)
+        {
+            RequestAdvanceToNextPuzzleRpc();
+            return;
+        }
+
+        AdvanceToNextPuzzle();
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    void RequestAdvanceToNextPuzzleRpc()
+    {
+        AdvanceToNextPuzzle();
+    }
+
+    /// <summary>
+    /// Debug/test hook: completes the currently active puzzle through the same
+    /// PuzzleController.CompletePuzzle path used by real puzzle solve events.
+    /// Safe to call from either headset; the request is routed to state authority.
+    /// </summary>
+    public void DebugCompleteCurrentPuzzle()
+    {
+        DebugCompletePuzzle(CurrentPuzzleIndex);
+    }
+
+    /// <summary>
+    /// Debug/test hook for a specific active puzzle. This intentionally does not
+    /// jump game state; non-current puzzle requests are ignored so the normal
+    /// completion dialogue and progression path stays intact.
+    /// </summary>
+    public void DebugCompletePuzzle(int puzzleIndex)
+    {
+        if (Object != null && Object.IsValid && !HasStateAuthority)
+        {
+            DebugCompletePuzzleRpc(puzzleIndex);
+            return;
+        }
+
+        CompletePuzzleAsSolved(puzzleIndex);
+    }
+
+    /// <summary>
+    /// Debug/test hook: completes each remaining current puzzle in sequence,
+    /// waiting for GameManager's normal advance coroutine between completions.
+    /// </summary>
+    public void DebugCompleteAllRemainingPuzzles()
+    {
+        if (Object != null && Object.IsValid && !HasStateAuthority)
+        {
+            DebugCompleteAllRemainingPuzzlesRpc();
+            return;
+        }
+
+        if (!_debugCompletingAll)
+            StartCoroutine(DebugCompleteAllRemainingRoutine());
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    void DebugCompletePuzzleRpc(int puzzleIndex)
+    {
+        CompletePuzzleAsSolved(puzzleIndex);
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    void DebugCompleteAllRemainingPuzzlesRpc()
+    {
+        if (!_debugCompletingAll)
+            StartCoroutine(DebugCompleteAllRemainingRoutine());
+    }
+
+    void CompletePuzzleAsSolved(int puzzleIndex)
+    {
+        if (!HasStateAuthority) return;
+        if (AllCompleted) return;
+        if (puzzleIndex != CurrentPuzzleIndex)
+        {
+            Debug.LogWarning($"[GameManager] Debug skip ignored. Requested puzzle {puzzleIndex}, current puzzle is {CurrentPuzzleIndex}.");
+            return;
+        }
+        if (puzzleIndex < 0 || puzzleIndex >= puzzles.Length)
+        {
+            Debug.LogWarning($"[GameManager] Debug skip ignored. Invalid puzzle index: {puzzleIndex}.");
+            return;
+        }
+
+        var puzzle = puzzles[puzzleIndex];
+        if (puzzle == null)
+        {
+            Debug.LogWarning($"[GameManager] Debug skip ignored. Puzzle slot {puzzleIndex} is empty.");
+            return;
+        }
+        if (puzzle.IsCompleted) return;
+
+        Debug.Log($"[GameManager] Debug completing puzzle {puzzleIndex} through PuzzleController.CompletePuzzle().");
+        puzzle.CompletePuzzle();
+    }
+
+    IEnumerator DebugCompleteAllRemainingRoutine()
+    {
+        _debugCompletingAll = true;
+
+        while (!AllCompleted)
+        {
+            int before = CurrentPuzzleIndex;
+            CompletePuzzleAsSolved(before);
+
+            float timeout = 30f;
+            while (!AllCompleted && CurrentPuzzleIndex == before && timeout > 0f)
+            {
+                timeout -= Time.deltaTime;
+                yield return null;
+            }
+
+            if (timeout <= 0f)
+            {
+                Debug.LogWarning("[GameManager] Debug skip all stopped while waiting for next puzzle.");
+                break;
+            }
+
+            yield return null;
+        }
+
+        _debugCompletingAll = false;
     }
 
     IEnumerator PlayPuzzleStartDialogue(int index)

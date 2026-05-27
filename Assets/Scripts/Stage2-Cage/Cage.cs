@@ -10,14 +10,22 @@ public class Cage : MonoBehaviour
     public Transform snapPoint;
     public Vector3 doorCloseRotation = new Vector3(0, 90, 0);
     public float doorCloseDuration = 0.5f;
+    public Color idleLabelColor = Color.white;
+    public Color wrongLabelColor = Color.red;
+    public float wrongFeedbackDuration = 0.35f;
 
     private GameObject capturedCreature;
     private bool isLocked = false;
+    private Coroutine wrongFeedbackRoutine;
 
     void OnTriggerEnter(Collider other)
     {
         if (isLocked) return;
-        if (!other.transform.root.CompareTag(correctCreatureTag)) return;
+        if (!other.transform.root.CompareTag(correctCreatureTag))
+        {
+            ShowWrongFeedback();
+            return;
+        }
 
         capturedCreature = other.transform.root.gameObject;
 
@@ -57,10 +65,11 @@ public class Cage : MonoBehaviour
         BoxerCreature boxer = capturedCreature.GetComponent<BoxerCreature>();
         if (boxer != null) boxer.SetCaged();
 
-        label.color = Color.green;
+        if (label != null) label.color = Color.green;
         isLocked = true;
         if (door != null) StartCoroutine(CloseDoor());
-        ClearSoundMaker.Instance.OnCreatureCorrectlyCaged();
+        if (ClearSoundMaker.Instance != null)
+            ClearSoundMaker.Instance.OnCreatureCorrectlyCaged();
     }
 
     void OnTriggerExit(Collider other)
@@ -69,7 +78,7 @@ public class Cage : MonoBehaviour
         if (capturedCreature == null) return;
         if (other.transform.root.gameObject != capturedCreature) return;
 
-        label.color = Color.white;
+        if (label != null) label.color = idleLabelColor;
 
         NavMeshAgent agent = capturedCreature.GetComponent<NavMeshAgent>();
         if (agent != null) agent.enabled = true;
@@ -105,5 +114,21 @@ public class Cage : MonoBehaviour
             yield return null;
         }
         door.transform.localRotation = endRot;
+    }
+
+    void ShowWrongFeedback()
+    {
+        if (label == null) return;
+        if (wrongFeedbackRoutine != null)
+            StopCoroutine(wrongFeedbackRoutine);
+        wrongFeedbackRoutine = StartCoroutine(WrongFeedbackRoutine());
+    }
+
+    System.Collections.IEnumerator WrongFeedbackRoutine()
+    {
+        label.color = wrongLabelColor;
+        yield return new WaitForSeconds(wrongFeedbackDuration);
+        if (!isLocked) label.color = idleLabelColor;
+        wrongFeedbackRoutine = null;
     }
 }

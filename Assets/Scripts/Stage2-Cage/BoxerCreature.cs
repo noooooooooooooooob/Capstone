@@ -26,7 +26,7 @@ public class BoxerCreature : MonoBehaviour
         agent.angularSpeed = 9999f;
         agent.acceleration = 9999f;
         agent.autoBraking = false;
-        agent.SetDestination(waypoints[0].position);
+        if (agent.isOnNavMesh) agent.SetDestination(waypoints[0].position);
 
         grab = GetComponent<XRGrabInteractable>();
         if (grab != null)
@@ -47,7 +47,7 @@ public class BoxerCreature : MonoBehaviour
         if (transform.position.y < -5f)
             transform.position = new Vector3(transform.position.x, 0f, transform.position.z);
 
-        if (!agent.enabled) return;
+        if (!agent.enabled || !agent.isOnNavMesh) return;
         if (isStunned) return;
 
         if (Vector3.Distance(transform.position, waypoints[currentTarget].position) < 2f)
@@ -104,7 +104,7 @@ public class BoxerCreature : MonoBehaviour
         agent.speed = speed;
         if (grab != null) grab.enabled = false;
         if (anim != null) anim.SetTrigger("Recovered");
-        agent.SetDestination(waypoints[currentTarget].position);
+        if (agent.isOnNavMesh) agent.SetDestination(waypoints[currentTarget].position);
     }
 
     public void SetCaged()
@@ -121,6 +121,6 @@ public class BoxerCreature : MonoBehaviour
         agent.enabled = true;
         agent.speed = speed;
         if (grab != null) grab.enabled = false;
-        agent.SetDestination(waypoints[currentTarget].position);
+        if (agent.isOnNavMesh) agent.SetDestination(waypoints[currentTarget].position);
     }
 }
