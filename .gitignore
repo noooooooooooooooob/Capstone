@@ -56,7 +56,6 @@ ExportedObj/
 *.csproj
 *.unityproj
 *.sln
-*.slnx
 *.suo
 *.tmp
 *.user
@@ -68,10 +67,6 @@ ExportedObj/
 *.mdb
 *.opendb
 *.VC.db
-
-# OpenXR settings
-/[Aa]ssets/XR/Settings/OpenXR Package Settings.asset
-/[Aa]ssets/XR/Settings/OpenXR Package Settings.asset.meta
 
 # Unity3D generated meta files
 *.pidb.meta
