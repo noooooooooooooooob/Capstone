@@ -1,0 +1,29 @@
+Stage2SlidingDoor count: 2
+=== Door_Left_01 ===
+  SlideDirection : (1.00, 0.00, 0.00)
+  SlideDistance  : 1.5
+  OpenSpeed      : 2.5
+  CloseDelay     : 0.6
+  DetectionVolume: null
+  DetectionRadius: 2
+  LocalPosition  : (0.00, 0.00, 0.00)
+  WorldPosition  : (3.00, 0.00, 47.01)
+  Parent         : Stage2DoorRight
+  ChildColliders (2):
+    Door_Left_01 trigger=False active=True BoxCollider
+    Detection trigger=True active=True BoxCollider
+=== Door_Left_01 ===
+  SlideDirection : (-1.00, 0.00, 0.00)
+  SlideDistance  : 1.5
+  OpenSpeed      : 2.5
+  CloseDelay     : 0.6
+  DetectionVolume: null
+  DetectionRadius: 2
+  LocalPosition  : (0.00, 0.00, 0.00)
+  WorldPosition  : (-9.00, 0.00, 47.01)
+  Parent         : Stage2DoorLeft
+  ChildColliders (2):
+    Door_Left_01 trigger=False active=True BoxCollider
+    Detection (1) trigger=True active=True BoxCollider
+InstanceID -135082 = Door_Left_01 (parent: Stage2DoorRight) SlideDir=(1.00, 0.00, 0.00)
+InstanceID -135066 = Door_Left_01 (parent: Stage2DoorLeft) SlideDir=(-1.00, 0.00, 0.00)
