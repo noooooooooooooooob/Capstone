@@ -1,3 +1,4 @@
+using Fusion;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
@@ -286,6 +287,10 @@ namespace PipePuz.Firefight.EditorTools
             hoseGrab.throwOnDetach = false;
             hoseGrab.smoothPosition = false;
 
+            // 네트워크 잡기 동기화 — 다른 grabbable과 동일한 표준 레시피.
+            // 이게 없으면 호스는 순수 로컬 오브젝트라 한쪽이 잡고 움직여도 상대에겐 동기화되지 않는다.
+            SetupNetworkGrabbable(hoseGo);
+
             // Nozzle — empty Transform at front + small visual.
             var nozzle = new GameObject("Nozzle");
             nozzle.transform.SetParent(hoseGo.transform, false);
@@ -529,6 +534,31 @@ namespace PipePuz.Firefight.EditorTools
                 var mat = AssetDatabase.GetBuiltinExtraResource<Material>("Default-ParticleSystem.mat");
                 if (mat != null) renderer.sharedMaterial = mat;
             }
+        }
+
+        // ---- Network grabbable ----
+
+        /// <summary>
+        /// Shared 모드에서 잡고 움직일 때 위치/회전이 상대에게 동기화되도록 표준 4종 부착:
+        ///   NetworkObject(AllowStateAuthorityOverride + AreaOfInterest) + NetworkTransform
+        ///   + GrabAuthorityHandover + GrabNetworkSyncPause.
+        /// (Tools/Network Interactable Setup 및 Grab Authority Setup 툴과 동일한 구성.)
+        /// </summary>
+        static void SetupNetworkGrabbable(GameObject go)
+        {
+            var no = go.GetComponent<NetworkObject>();
+            if (no == null) no = go.AddComponent<NetworkObject>();
+
+            var noSO = new SerializedObject(no);
+            var interest = noSO.FindProperty("ObjectInterest");
+            if (interest != null) interest.intValue = 1; // Area Of Interest
+            var flags = noSO.FindProperty("Flags");
+            if (flags != null) flags.intValue |= (int)NetworkObjectFlags.AllowStateAuthorityOverride;
+            noSO.ApplyModifiedProperties();
+
+            if (go.GetComponent<NetworkTransform>() == null) go.AddComponent<NetworkTransform>();
+            if (go.GetComponent<GrabAuthorityHandover>() == null) go.AddComponent<GrabAuthorityHandover>();
+            if (go.GetComponent<Stage1.GrabNetworkSyncPause>() == null) go.AddComponent<Stage1.GrabNetworkSyncPause>();
         }
 
         // ---- Material / utility ----
