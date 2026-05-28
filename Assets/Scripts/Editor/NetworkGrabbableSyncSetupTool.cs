@@ -91,6 +91,10 @@ public static class NetworkGrabbableSyncSetupTool
         var no = grab.GetComponent<NetworkObject>();
         if (no == null) return false;
 
+        // Parent 제거 (좌표 변환 방지)
+        if (grab.transform.parent != null)
+            grab.transform.parent = null;
+
         // NetworkGrabbableSync 는 NetworkTransform 을 요구. 없으면 추가.
         if (grab.GetComponent<NetworkTransform>() == null)
             Undo.AddComponent<NetworkTransform>(grab.gameObject);
