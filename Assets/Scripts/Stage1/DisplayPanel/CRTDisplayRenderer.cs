@@ -36,8 +36,13 @@ public class CRTDisplayRenderer : MonoBehaviour
         _blinkTimer += Time.deltaTime;
         if (_blinkTimer >= BLINK_RATE) { _blinkTimer -= BLINK_RATE; _blink = !_blink; }
 
-        if (crtText != null && mainControl != null)
-            crtText.text = Build();
+        // [Networked] 프로퍼티(CurrentState/Stability)는 Spawned() 이후에만 읽을 수 있다.
+        // NetworkObject가 아직 스폰되지 않았으면 빌드하지 않는다.
+        if (crtText == null || mainControl == null) return;
+        var no = mainControl.Object;
+        if (no == null || !no.IsValid) return;
+
+        crtText.text = Build();
     }
 
     // ─────────────────────────────────────────────
