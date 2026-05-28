@@ -65290,10 +65290,15 @@ MonoBehaviour:
   - {fileID: 0}
   dialogue: {fileID: 11400000, guid: 7c03980bea390814c93b5f25fe646269, type: 2}
   introDialogueIds:
-  - Intro
-  outroDialogueIds:
-  - Outro
+  - A1
+  - A2
+  - A3
+  - A4
+  - B1
+  - B2
+  outroDialogueIds: []
   introDelay: 1
+  dialogueTail: 0.3
   _CurrentPuzzleIndex: 0
   _AllCompleted:
     _value: 0
@@ -68297,12 +68302,16 @@ MonoBehaviour:
   pixelsPerUnit: 1000
   fontAsset: {fileID: 11400000, guid: 3dde6465261867448b59a5664d98715f, type: 2}
   fontSize: 56
+  autoSizeText: 1
+  fontSizeMin: 28
   fontStyle: 0
   textColor: {r: 1, g: 1, b: 1, a: 1}
   speakerColor: {r: 1, g: 0.82, b: 0.2, a: 1}
   backgroundAlpha: 0.55
   fadeInDuration: 0.18
   fadeOutDuration: 0.28
+  minReadTime: 1.2
+  voiceTail: 0.3
   animaleseSyllables:
   - {fileID: 8300000, guid: e566f092e5fd5374382835029ef5083f, type: 3}
   - {fileID: 8300000, guid: a79e7345c17de77449aa2d3592314995, type: 3}
@@ -110954,20 +110963,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7363e825949cc8f489d6a25a4f20d685, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Stage1.MelterColorChip
-  color: 0
-  preferLightBallColor: 0
-  warningRenderers:
-  - {fileID: 1139680139}
-  warningColor:
-    r: 1
-    g: 0.2
-    b: 0.2
-    a: 1
-  blinkSpeed: 4
-  melter: {fileID: 0}
-  originalColors: []
-  warningCached: 0
-  warningActive: 0
 --- !u!114 &1132036777
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -111925,11 +111920,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1139110842}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
---- !u!23 &1139680139 stripped
-MeshRenderer:
-  m_CorrespondingSourceObject: {fileID: 2608733873755950228, guid: fb57aee571b51da4696f523bffa39ffc, type: 3}
-  m_PrefabInstance: {fileID: 135445797}
-  m_PrefabAsset: {fileID: 0}
 --- !u!114 &1139680140
 MonoBehaviour:
   m_ObjectHideFlags: 0
