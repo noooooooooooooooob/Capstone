@@ -17,7 +17,7 @@ public class SubtitleHUD : MonoBehaviour
     public Camera targetCamera;
 
     [Header("카메라 로컬 좌표 — 자막 위치 (z=거리, y=수직 오프셋)")]
-    public Vector3 localOffset = new Vector3(0f, -0.35f, 1.2f);
+    public Vector3 localOffset = new Vector3(0f, -0.22f, 1.2f);
 
     [Header("캔버스 크기 (월드 단위)")]
     public Vector2 worldSize = new Vector2(1.6f, 0.4f);
@@ -28,7 +28,12 @@ public class SubtitleHUD : MonoBehaviour
     [Header("스타일")]
     [Tooltip("비우면 TMP 기본 폰트 사용. 한글 자막이면 한글 글리프 포함된 SDF 폰트 지정 필수.")]
     public TMP_FontAsset fontAsset;
+    [Tooltip("자동 크기 OFF면 고정 크기. ON이면 최대 크기로 사용됨.")]
     public int fontSize = 56;
+    [Tooltip("긴 자막이 박스를 넘으면 폰트를 줄여 맞춤 (세로 오버플로 방지)")]
+    public bool autoSizeText = true;
+    [Tooltip("자동 크기 ON일 때 줄어들 수 있는 최소 폰트 크기")]
+    public int fontSizeMin = 28;
     public FontStyles fontStyle = FontStyles.Normal;
     public Color textColor = Color.white;
     public Color speakerColor = new Color(1f, 0.82f, 0.2f);
@@ -38,16 +43,23 @@ public class SubtitleHUD : MonoBehaviour
     public float fadeInDuration = 0.18f;
     public float fadeOutDuration = 0.28f;
 
-    [Header("Animalese 음성")]
-    [Tooltip("글자마다 랜덤 재생할 짧은 클립들 (Inspector에서 드래그)")]
+    [Header("읽기 시간")]
+    [Tooltip("보이스 클립이 없을 때만 적용 — 타이핑 완료 후 최소 정지(읽기) 시간(초).")]
+    public float minReadTime = 1.2f;
+    [Tooltip("보이스 클립 종료 후 자막이 남아있는 여유(초). GameManager.dialogueTail과 일치시킬 것.")]
+    public float voiceTail = 0.3f;
+
+    [Header("Animalese 음성 (보이스 클립 없을 때 폴백)")]
+    [Tooltip("보이스 클립이 없는 라인에서만 글자마다 랜덤 재생할 짧은 클립들")]
     public AudioClip[] animaleseSyllables;
-    [Tooltip("글자당 타이핑 간격(초)")]
+    [Tooltip("글자당 타이핑 간격(초). 보이스가 있으면 클립 길이에 맞춰 자동 압축됨.")]
     public float typeInterval = 0.06f;
     [Tooltip("피치 랜덤 범위")]
     public float pitchMin = 0.85f;
     public float pitchMax = 1.2f;
 
     AudioSource _animaleseSource;
+    AudioSource _voiceSource;
 
     [Header("디버그")]
     [Tooltip("Editor에서 GameManager 없이도 표시 테스트 — 페이드 없이 계속 표시 (위치/크기 튜닝용)")]
@@ -64,7 +76,7 @@ public class SubtitleHUD : MonoBehaviour
     Coroutine _playRoutine;
     bool _subscribed;
 
-    struct QueuedLine { public string speaker; public string text; public float duration; }
+    struct QueuedLine { public string speaker; public string text; public float duration; public AudioClip voice; }
 
     void Awake()
     {
@@ -72,6 +84,10 @@ public class SubtitleHUD : MonoBehaviour
         _animaleseSource = gameObject.AddComponent<AudioSource>();
         _animaleseSource.playOnAwake = false;
         _animaleseSource.spatialBlend = 0f;
+
+        _voiceSource = gameObject.AddComponent<AudioSource>();
+        _voiceSource.playOnAwake = false;
+        _voiceSource.spatialBlend = 0f;
     }
 
     void Start()
@@ -126,9 +142,9 @@ public class SubtitleHUD : MonoBehaviour
         _subscribed = false;
     }
 
-    void Enqueue(string speaker, string text, float duration)
+    void Enqueue(string speaker, string text, float duration, AudioClip voice)
     {
-        _queue.Enqueue(new QueuedLine { speaker = speaker, text = text, duration = duration });
+        _queue.Enqueue(new QueuedLine { speaker = speaker, text = text, duration = duration, voice = voice });
         if (_playRoutine == null) _playRoutine = StartCoroutine(PlayQueue());
     }
 
@@ -137,17 +153,41 @@ public class SubtitleHUD : MonoBehaviour
         while (_queue.Count > 0)
         {
             var line = _queue.Dequeue();
-            yield return ShowLine(line.speaker, line.text, line.duration);
+            yield return ShowLine(line.speaker, line.text, line.duration, line.voice);
         }
         _playRoutine = null;
     }
 
-    IEnumerator ShowLine(string speaker, string text, float duration)
+    IEnumerator ShowLine(string speaker, string text, float duration, AudioClip voice)
     {
         string speakerHex = ColorUtility.ToHtmlStringRGB(speakerColor);
         string prefix = string.IsNullOrEmpty(speaker)
             ? ""
             : $"<color=#{speakerHex}><b>{speaker}</b></color>  ";
+
+        bool hasVoice = voice != null;
+
+        // 표시 총 시간: 보이스가 있으면 클립 길이에 맞춰 끝나자마자 사라짐(+voiceTail 여유).
+        // 없으면 duration을 따르되, 긴 자막이 잘리지 않게 타이핑+최소 읽기 시간을 보장.
+        float total = hasVoice
+            ? voice.length + voiceTail
+            : Mathf.Max(duration, fadeInDuration + text.Length * typeInterval + minReadTime + fadeOutDuration);
+
+        // 보이스가 있으면 타이핑이 보이스 길이 안에서 끝나도록 간격을 압축(동숲식 리빌은 유지).
+        float interval = typeInterval;
+        if (hasVoice && text.Length > 0)
+        {
+            float typingWindow = Mathf.Max(0.01f, total - fadeInDuration - fadeOutDuration);
+            interval = Mathf.Min(typeInterval, typingWindow * 0.9f / text.Length);
+        }
+
+        if (hasVoice)
+        {
+            _voiceSource.Stop();
+            _voiceSource.clip = voice;
+            _voiceSource.pitch = 1f;
+            _voiceSource.Play();
+        }
 
         _textMesh.text = prefix;
         yield return Fade(0f, 1f, fadeInDuration);
@@ -157,18 +197,19 @@ public class SubtitleHUD : MonoBehaviour
         {
             _textMesh.text = prefix + text.Substring(0, i + 1);
 
-            if (!char.IsWhiteSpace(text[i]) && animaleseSyllables != null && animaleseSyllables.Length > 0)
+            // 실제 보이스가 재생 중이면 글자별 animalese는 생략 (보이스 없을 때 폴백 전용).
+            if (!hasVoice && !char.IsWhiteSpace(text[i]) && animaleseSyllables != null && animaleseSyllables.Length > 0)
             {
                 _animaleseSource.clip = animaleseSyllables[Random.Range(0, animaleseSyllables.Length)];
                 _animaleseSource.pitch = Random.Range(pitchMin, pitchMax);
                 _animaleseSource.Play();
             }
 
-            typeTime += typeInterval;
-            yield return new WaitForSeconds(typeInterval);
+            typeTime += interval;
+            yield return new WaitForSeconds(interval);
         }
 
-        float remaining = duration - fadeInDuration - fadeOutDuration - typeTime;
+        float remaining = total - fadeInDuration - fadeOutDuration - typeTime;
         if (remaining > 0f)
             yield return new WaitForSeconds(remaining);
 
@@ -227,8 +268,16 @@ public class SubtitleHUD : MonoBehaviour
         _textMesh.fontStyle = fontStyle;
         _textMesh.alignment = TextAlignmentOptions.Center;
         _textMesh.color = textColor;
-        _textMesh.fontSize = fontSize;
-        _textMesh.enableAutoSizing = false;
+        _textMesh.enableAutoSizing = autoSizeText;
+        if (autoSizeText)
+        {
+            _textMesh.fontSizeMin = fontSizeMin;
+            _textMesh.fontSizeMax = fontSize;
+        }
+        else
+        {
+            _textMesh.fontSize = fontSize;
+        }
         _textMesh.text = string.Empty;
         var txtRT = _textMesh.GetComponent<RectTransform>();
         txtRT.anchorMin = Vector2.zero;
