@@ -88086,7 +88086,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6208d231fbcfbdd41979b202dd538f8a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Stage1.GrabNetworkSyncPause
-  pauseNetworkTransformWhileHeld: 1
+  pauseNetworkTransformWhileHeld: 0
   forceNoThrowOnDetach: 1
   verboseLog: 0
 --- !u!1001 &800708734
