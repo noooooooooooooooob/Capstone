@@ -114,7 +114,10 @@ namespace Stage1
                 }
 
                 if (closest != null)
+                {
                     SnapToSlot(closest, i);
+                    LockDispenser(expectedColor);
+                }
             }
 
             if (rebootTriggered) return;
@@ -124,6 +127,13 @@ namespace Stage1
             rebootTriggered = true;
             Debug.Log("[MultiBatterySlotPanel] 모든 슬롯 채워짐 → Reboot 트리거.");
             mainControl.OnBatteryInserted();
+        }
+
+        void LockDispenser(LightBallColor color)
+        {
+            var dispensers = Object.FindObjectsByType<BatteryDispenser>(FindObjectsSortMode.None);
+            foreach (var d in dispensers)
+                if (d.batteryColor == color) { d.Lock(); break; }
         }
 
         void SnapToSlot(GameObject bat, int slotIndex)

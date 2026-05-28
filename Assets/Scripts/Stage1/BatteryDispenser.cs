@@ -12,14 +12,13 @@ namespace Stage1
     public class BatteryDispenser : NetworkBehaviour
     {
         [Header("Battery Settings")]
-        public NetworkObject batteryPrefab;
+        public GameObject batteryPrefab; // Changed back to GameObject to preserve Unity serialization
         public Transform spawnPoint;
 
         [Tooltip("Color of the ball this battery must be paired with in the thawing machine.")]
         public LightBallColor batteryColor = LightBallColor.Red;
 
         [Header("Settings")]
-        public int maxDispense = 10;
         public float spawnCooldown = 1f;
 
         [Header("Hint Canvas")]
@@ -41,10 +40,14 @@ namespace Stage1
         };
 
         [Networked]
-        int _dispenseCount { get; set; }
-        
+        NetworkId _currentBatteryId { get; set; }
+
         [Networked]
         TickTimer _spawnCooldownTimer { get; set; }
+
+        /// <summary>Set by MultiBatterySlotPanel once a battery of this color is permanently inserted.</summary>
+        [Networked]
+        public NetworkBool Locked { get; set; }
 
         public override void Spawned()
         {
@@ -91,10 +94,20 @@ namespace Stage1
             hintSwatchImage.color = (idx >= 0 && idx < BallColors.Length) ? BallColors[idx] : Color.white;
         }
 
+        /// <summary>Permanently disables this dispenser. Called by MultiBatterySlotPanel on successful insertion.</summary>
+        public void Lock()
+        {
+            if (Object.HasStateAuthority) Locked = true;
+            else RpcLock();
+        }
+
+        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+        void RpcLock() => Locked = true;
+
         public void OnDispenseButtonPressed()
         {
+            if (Locked) return;
             if (!_spawnCooldownTimer.ExpiredOrNotRunning(Runner)) return;
-            if (_dispenseCount >= maxDispense) return;
 
             if (Object.HasStateAuthority)
             {
@@ -110,18 +123,36 @@ namespace Stage1
         void RpcRequestSpawn()
         {
             if (!_spawnCooldownTimer.ExpiredOrNotRunning(Runner)) return;
-            if (_dispenseCount >= maxDispense) return;
             SpawnBattery();
         }
 
         void SpawnBattery()
         {
-            if (batteryPrefab == null) return;
+            if (batteryPrefab == null)
+            {
+                Debug.LogError("[BatteryDispenser] batteryPrefab is null!");
+                return;
+            }
+
+            NetworkObject netPrefab = batteryPrefab.GetComponent<NetworkObject>();
+            if (netPrefab == null)
+            {
+                Debug.LogError("[BatteryDispenser] batteryPrefab does not have a NetworkObject!");
+                return;
+            }
+
+            // Despawn the previous battery if one still exists
+            if (_currentBatteryId != default &&
+                Runner.TryFindObject(_currentBatteryId, out NetworkObject existing))
+            {
+                Runner.Despawn(existing);
+            }
+            _currentBatteryId = default;
 
             Vector3 spawnPos = spawnPoint != null ? spawnPoint.position : transform.position + transform.forward * 0.2f;
             Quaternion spawnRot = spawnPoint != null ? spawnPoint.rotation : Quaternion.identity;
 
-            Runner.Spawn(batteryPrefab, spawnPos, spawnRot, Runner.LocalPlayer, (runner, obj) =>
+            Runner.Spawn(netPrefab, spawnPos, spawnRot, Runner.LocalPlayer, (runner, obj) =>
             {
                 var state = obj.GetComponent<BatteryState>();
                 if (state != null)
@@ -129,13 +160,14 @@ namespace Stage1
                     state.Color = batteryColor;
                     state.IsMelted = false;
                 }
-                
+
                 // Legacy support if needed
                 var colorTag = obj.GetComponent<BatteryColorTag>();
                 if (colorTag != null) colorTag.color = batteryColor;
+
+                _currentBatteryId = obj.Id;
             });
 
-            _dispenseCount++;
             _spawnCooldownTimer = TickTimer.CreateFromSeconds(Runner, spawnCooldown);
         }
     }

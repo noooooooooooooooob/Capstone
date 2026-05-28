@@ -123,6 +123,10 @@ namespace PipePuz.Firefight.EditorTools
             body.transform.localPosition = new Vector3(0f, PumpBodyHeight * 0.5f, 0f);
             body.transform.localScale = new Vector3(PumpBodyDiameter, PumpBodyHeight * 0.5f, PumpBodyDiameter);
             AssignMat(body, pumpStandMat);
+            // BoxCollider sized to match cylinder outline (local size 1×2×1 = full cylinder bounds).
+            var bodyCol = body.AddComponent<BoxCollider>();
+            bodyCol.size   = new Vector3(1f, 2f, 1f);
+            bodyCol.center = Vector3.zero;
 
             // Body 위쪽 림 — 얇은 디스크로 펌프 캡 느낌.
             var bodyCap = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -192,10 +196,9 @@ namespace PipePuz.Firefight.EditorTools
             gaugeGo.transform.SetParent(room.transform, false);
             gaugeGo.transform.localPosition = GaugePos;
 
-            // Frame
+            // Frame — keep default BoxCollider (cube, already matches outline).
             var frame = GameObject.CreatePrimitive(PrimitiveType.Cube);
             frame.name = "Frame";
-            Object.DestroyImmediate(frame.GetComponent<Collider>());
             frame.transform.SetParent(gaugeGo.transform, false);
             frame.transform.localPosition = Vector3.zero;
             frame.transform.localScale = new Vector3(GaugeFrameW, GaugeFrameH, GaugeFrameThickness);
@@ -255,6 +258,10 @@ namespace PipePuz.Firefight.EditorTools
             hoseStandGo.transform.localPosition = new Vector3(HoseStandPos.x, HoseStandHeight * 0.5f, HoseStandPos.z);
             hoseStandGo.transform.localScale = new Vector3(0.18f, HoseStandHeight * 0.5f, 0.18f);
             AssignMat(hoseStandGo, hoseStandMat);
+            // BoxCollider sized to cylinder outline.
+            var hoseStandCol = hoseStandGo.AddComponent<BoxCollider>();
+            hoseStandCol.size   = new Vector3(1f, 2f, 1f);
+            hoseStandCol.center = Vector3.zero;
 
             // ===== Hose =====
             var hoseGo = new GameObject("Hose");
@@ -343,10 +350,9 @@ namespace PipePuz.Firefight.EditorTools
                 fCol.radius = FireColliderRadius;
                 fCol.isTrigger = true;
 
-                // Base 시각 — 작은 검게 탄 큐브.
+                // Base 시각 — 작은 검게 탄 큐브. Keep default BoxCollider (matches outline).
                 var baseGo = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 baseGo.name = "Base";
-                Object.DestroyImmediate(baseGo.GetComponent<Collider>());
                 baseGo.transform.SetParent(fGo.transform, false);
                 baseGo.transform.localPosition = new Vector3(0f, -0.10f, 0f);
                 baseGo.transform.localScale = new Vector3(0.22f, 0.06f, 0.22f);
