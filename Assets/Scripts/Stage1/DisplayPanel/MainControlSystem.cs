@@ -53,7 +53,7 @@ public class MainControlSystem : NetworkBehaviour
 
     public static MainControlSystem Instance;
 
-    GameObject snappedBattery = null;
+    public GameObject snappedBattery = null;
     TemporarySoundPlayer _alarmSound;
 
     // Initialised to an out-of-range sentinel so the first Render() always runs UpdateStateVisuals.
