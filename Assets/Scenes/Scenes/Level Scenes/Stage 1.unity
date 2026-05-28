@@ -87827,6 +87827,7 @@ MonoBehaviour:
   MaxStartSpeed: 10
   MaxStartSize: 0.06
   MinPressureToFire: 0.05
+  logNetSync: 1
 --- !u!4 &798446892
 Transform:
   m_ObjectHideFlags: 0
@@ -88058,6 +88059,7 @@ MonoBehaviour:
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 798446896}
+  - {fileID: 798446898}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &798446898
 MonoBehaviour:
@@ -88068,11 +88070,20 @@ MonoBehaviour:
   m_GameObject: {fileID: 798446890}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 56a3ac6dca1a1fb44a6938b5b66a9721, type: 3}
+  m_Script: {fileID: 11500000, guid: d7fda9926b6d55840bc89ebd330769b3, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GrabAuthorityHandover
-  releaseOnDeselect: 0
-  verboseLog: 1
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbableSync
+  forceNoThrowOnDetach: 1
+  allowNonTransferableObject: 0
+  verboseLog: 0
+  onGrab:
+    m_PersistentCalls:
+      m_Calls: []
+  onUngrab:
+    m_PersistentCalls:
+      m_Calls: []
+  _IsGrabbed:
+    _value: 0
 --- !u!1001 &800708734
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -150699,7 +150710,7 @@ Material:
     RenderType: Opaque
   disabledShaderPasses:
   - MOTIONVECTORS
-  m_LockedProperties:
+  m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
