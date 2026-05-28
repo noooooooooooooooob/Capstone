@@ -17064,6 +17064,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 169829169}
+  - component: {fileID: 169829170}
   m_Layer: 0
   m_Name: Battery stuff
   m_TagString: Untagged
@@ -17089,6 +17090,28 @@ Transform:
   - {fileID: 1161191704}
   m_Father: {fileID: 265603324}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &169829170
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 169829168}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b068b11a78f0a8547ac41d7a0c86fca0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PuzzleController
+  puzzleIndex: 0
+  puzzleHint: 
+  startDialogueIds: []
+  completeDialogueIds: []
+  OnPuzzleActivated:
+    m_PersistentCalls:
+      m_Calls: []
+  OnPuzzleCompletedEvent:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1001 &169992969
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -23616,6 +23639,7 @@ GameObject:
   m_Component:
   - component: {fileID: 287789905}
   - component: {fileID: 287789904}
+  - component: {fileID: 287789906}
   m_Layer: 0
   m_Name: PipeSmokePuz
   m_TagString: Untagged
@@ -23666,6 +23690,30 @@ Transform:
   - {fileID: 1647185868}
   m_Father: {fileID: 265603324}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &287789906
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 287789903}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b068b11a78f0a8547ac41d7a0c86fca0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PuzzleController
+  puzzleIndex: 1
+  puzzleHint: 
+  startDialogueIds:
+  - A3
+  completeDialogueIds:
+  - A4
+  OnPuzzleActivated:
+    m_PersistentCalls:
+      m_Calls: []
+  OnPuzzleCompletedEvent:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1001 &287864263
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -93426,7 +93474,7 @@ MonoBehaviour:
   version: 2
   globalVolume: 0
   mode: 1
-  size: {x: 50.99067, y: 7, z: 88.10333}
+  size: {x: 50.990673, y: 7, z: 88.10333}
   overrideRendererFilters: 0
   minRendererVolumeSize: 0.1
   objectLayerMask:
@@ -93464,7 +93512,7 @@ Transform:
   m_GameObject: {fileID: 662307333}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -14.994663, y: 1.75, z: 21.45589}
+  m_LocalPosition: {x: -14.994661, y: 1.75, z: 21.45589}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -94315,10 +94363,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b068b11a78f0a8547ac41d7a0c86fca0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PuzzleController
-  puzzleIndex: 1
+  puzzleIndex: 2
   puzzleHint: Capture each creature and lock it in the matching cage.
   startDialogueIds: []
-  completeDialogueIds: []
+  completeDialogueIds:
+  - B2
   OnPuzzleActivated:
     m_PersistentCalls:
       m_Calls: []
@@ -202461,8 +202510,24 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6873284620178817458, guid: c2a5020a729e96c46bba295eff24094d, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6873284620178817458, guid: c2a5020a729e96c46bba295eff24094d, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
+      objectReference: {fileID: 628568939}
+    - target: {fileID: 6873284620178817458, guid: c2a5020a729e96c46bba295eff24094d, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
+      value: PlayDialogue
+      objectReference: {fileID: 0}
+    - target: {fileID: 6873284620178817458, guid: c2a5020a729e96c46bba295eff24094d, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
+      value: GameManager, Assembly-CSharp
+      objectReference: {fileID: 0}
+    - target: {fileID: 6873284620178817458, guid: c2a5020a729e96c46bba295eff24094d, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_StringArgument
+      value: B1
       objectReference: {fileID: 0}
     - target: {fileID: 7167015813738011481, guid: c2a5020a729e96c46bba295eff24094d, type: 3}
       propertyPath: m_LocalRotation.x
