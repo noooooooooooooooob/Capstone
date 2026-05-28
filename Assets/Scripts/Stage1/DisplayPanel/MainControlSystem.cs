@@ -253,41 +253,25 @@ public class MainControlSystem : NetworkBehaviour
         }
 
         // 2. 상태 체크
-        if (CurrentState != SystemState.Idle) 
+        if (CurrentState != SystemState.Idle)
         {
             Debug.Log($"[MainControlSystem] Cannot start: Current state is {CurrentState}");
             return;
         }
-        
-        // 3. 권한 획득 및 시작
-        StartCoroutine(RequestAuthorityAndStart());
+
+        // 3. 권한 이전 없이 현재 State Authority에게 시작 요청 (P1/P2 누구나 가능).
+        //    RequestStateAuthority 방식은 AllowStateAuthorityOverride가 꺼져 있으면
+        //    비권한 피어(P2)에서 거부돼 "Failed to get State Authority"로 실패했음.
+        RpcStartStabilize();
     }
 
-    IEnumerator RequestAuthorityAndStart()
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    void RpcStartStabilize()
     {
-        if (!Object.HasStateAuthority)
-        {
-            Debug.Log("[MainControlSystem] Requesting State Authority...");
-            Object.RequestStateAuthority();
-            
-            // 권한이 넘어올 때까지 잠시 대기 (Shared Mode)
-            float timeout = 2f;
-            while (!Object.HasStateAuthority && timeout > 0)
-            {
-                timeout -= Time.deltaTime;
-                yield return null;
-            }
-        }
-
-        if (Object.HasStateAuthority)
-        {
-            Debug.Log("[MainControlSystem] Starting Stabilize Sequence.");
-            StartCoroutine(StabilizeSequence());
-        }
-        else
-        {
-            Debug.LogError("[MainControlSystem] Failed to get State Authority.");
-        }
+        // 권한자에서만 실행 — [Networked] 상태는 권한자만 쓸 수 있다.
+        if (CurrentState != SystemState.Idle) return; // 동시 입력 가드
+        Debug.Log("[MainControlSystem] Starting Stabilize Sequence.");
+        StartCoroutine(StabilizeSequence());
     }
 
     IEnumerator StabilizeSequence()
