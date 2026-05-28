@@ -5,6 +5,8 @@ using TMPro;
 public class Cage : MonoBehaviour
 {
     public string correctCreatureTag;
+    [Tooltip("ClearSoundMaker 가 태그 기준으로 자동 부여 — 수동 설정 불필요")]
+    public int puzzleCageIndex = -1;
     public TextMeshProUGUI label;
     public GameObject door;
     public Transform snapPoint;
@@ -69,7 +71,7 @@ public class Cage : MonoBehaviour
         isLocked = true;
         if (door != null) StartCoroutine(CloseDoor());
         if (ClearSoundMaker.Instance != null)
-            ClearSoundMaker.Instance.OnCreatureCorrectlyCaged();
+            ClearSoundMaker.Instance.ReportCageLocked(puzzleCageIndex);
     }
 
     void OnTriggerExit(Collider other)
