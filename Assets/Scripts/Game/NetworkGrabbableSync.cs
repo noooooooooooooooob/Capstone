@@ -62,9 +62,9 @@ public class NetworkGrabbableSync : NetworkBehaviour, IStateAuthorityChanged
         // XRIT 이 Update 에서 위치를 직접 갱신하므로 보간이 이를 되돌리지 않도록 끈다.
 #if FUSION_2_1_OR_NEWER
         try { _nt.ConfigFlags = NetworkTransform.NetworkTransformFlags.DisableSharedModeInterpolation; }
-        catch { _nt.DisableSharedModeInterpolation = true; }
+        catch { _nt.DisableSharedModeInterpolation = false; }
 #else
-        _nt.DisableSharedModeInterpolation = true;
+        _nt.DisableSharedModeInterpolation = false;
 #endif
 
         // XRIT 가 grab 중에 parent 변환으로 좌표를 건드리므로 네트워크 동기화에서 제외.
@@ -84,16 +84,14 @@ public class NetworkGrabbableSync : NetworkBehaviour, IStateAuthorityChanged
     {
         if (Object == null || !Object.IsValid) return;
 
-        // Grab 중에 parent 제거 (XRIT 좌표 변환 방지)
+        // Grab 중에 parent 제거 (좌표 변환 방지)
         if (transform.parent != null)
             transform.parent = null;
 
         if (!Object.HasStateAuthority)
         {
             Object.RequestStateAuthority();
-            _isReceivingAuthority = true;
-            StoreState();
-            if (verboseLog) Debug.Log($"[NGS:{name}] RequestStateAuthority — auth gap 시작", this);
+            if (verboseLog) Debug.Log($"[NGS:{name}] RequestStateAuthority 요청", this);
         }
     }
 
@@ -104,14 +102,6 @@ public class NetworkGrabbableSync : NetworkBehaviour, IStateAuthorityChanged
             transform.parent = _originalParent;
     }
 
-    // 권위가 아직 안 넘어온 동안, XRIT 가 매 프레임 손 위치로 옮겨 둔 트랜스폼을 저장.
-    // 권위 측 스냅샷이 이 위치를 덮어쓰기 전에 다시 적용하기 위함.
-    void FixedUpdate()
-    {
-        if (Object != null && Object.IsValid && !Object.HasStateAuthority && _isReceivingAuthority)
-            StoreState();
-    }
-
     public override void FixedUpdateNetwork()
     {
         bool selected = _grab.isSelected;
@@ -119,27 +109,11 @@ public class NetworkGrabbableSync : NetworkBehaviour, IStateAuthorityChanged
         // grab 상태가 바뀌면 XRIT 의 위치 점프 구간이라 보간 금지.
         if (IsGrabbed != selected) _nt.Teleport();
         IsGrabbed = selected;
-
-        // 권위를 막 받았으면 갭 동안 따라가던 위치를 확정.
-        if (Object.HasStateAuthority && _isReceivingAuthority)
-        {
-            transform.SetPositionAndRotation(_transferPosition, _transferRotation);
-            _isReceivingAuthority = false;
-        }
     }
 
     public override void Render()
     {
-        // 권위 받는 중인 비권위 측: 스냅샷이 되감기로 보이지 않도록 저장 위치 유지.
-        // 또한 모든 비권위 측이 권위 측과 동기화되도록 함.
-        if (Object != null && Object.IsValid && !Object.HasStateAuthority && _isReceivingAuthority)
-            transform.SetPositionAndRotation(_transferPosition, _transferRotation);
-    }
-
-    void StoreState()
-    {
-        _transferPosition = transform.position;
-        _transferRotation = transform.rotation;
+        // NetworkTransform 이 정상 보간으로 처리
     }
 
     // 권위 강탈 대응: 누군가 이 오브젝트를 가져가 내가 권위를 잃었는데 아직 잡고 있으면 강제로 놓는다.
