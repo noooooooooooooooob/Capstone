@@ -9,6 +9,9 @@ namespace Stage1
         [Tooltip("Fallback restore intensity used only for lights whose original intensity is 0 at startup.")]
         [SerializeField] private float lightIntesity = 2f;
 
+        [Tooltip("Intensity to use when lights are dimmed. Adjust this in the Inspector to tune the effect.")]
+        [SerializeField] private float dimIntensity = 0.05f;
+
         // Per-light original intensities captured at Awake so restore is always accurate.
         private float[] _originalIntensities;
 
@@ -35,7 +38,7 @@ namespace Stage1
         {
             Debug.Log("[RoomLighting] Dimming lights");
             foreach (var l in roomLights)
-                if (l != null) l.intensity = 0f;
+                if (l != null) l.intensity = dimIntensity;
         }
 
         public void RestoreLights()

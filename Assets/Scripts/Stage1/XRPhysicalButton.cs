@@ -2,75 +2,112 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
-// Cube 오브젝트에 붙이는 물리 버튼
-// XR Simple Interactable 컴포넌트와 함께 사용
-[RequireComponent(typeof(XRSimpleInteractable))]
-public class XRPhysicalButton : MonoBehaviour
+using Fusion;
+
+namespace Stage1
 {
-    [Header("버튼 눌림 효과")]
-    public float pressDepth = 0.005f;       // 눌리는 깊이
-    public float returnSpeed = 8f;          // 복귀 속도
-    public Color normalColor = Color.gray;
-    public Color pressedColor = Color.white;
-
-    [Header("연결할 기능 (하나만 연결)")]
-    public BatteryDispenser dispenser;      // 디스펜서 버튼이면 연결
-    public MainControlSystem controlSystem; // 메인 컨트롤 버튼이면 연결
-
-    [Header("쿨다운")]
-    public float cooldown = 0.5f;
-
-    private Vector3 originalLocalPos;
-    private XRSimpleInteractable interactable;
-    private Renderer rend;
-    private bool isOnCooldown = false;
-
-    void Start()
+    /// <summary>
+    /// A networked physical button using XR Interaction Toolkit.
+    /// Synchronizes the visual press state across the network.
+    /// </summary>
+    [RequireComponent(typeof(XRSimpleInteractable))]
+    public class XRPhysicalButton : NetworkBehaviour
     {
-        originalLocalPos = transform.localPosition;
-        rend = GetComponent<Renderer>();
-        if (rend) rend.material.color = normalColor;
+        [Header("버튼 눌림 효과")]
+        public float pressDepth = 0.005f;       // 눌리는 깊이
+        public float returnSpeed = 8f;          // 복귀 속도
+        public Color normalColor = Color.gray;
+        public Color pressedColor = Color.white;
 
-        interactable = GetComponent<XRSimpleInteractable>();
+        [Header("연결할 기능 (하나만 연결)")]
+        public BatteryDispenser dispenser;      // 디스펜서 버튼이면 연결
+        public MainControlSystem controlSystem; // 메인 컨트롤 버튼이면 연결
 
-        // Ray 또는 손으로 Select(잡기/클릭)했을 때
-        interactable.selectEntered.AddListener(OnPressed);
-    }
+        [Header("쿨다운")]
+        public float cooldown = 0.5f;
 
-    void OnPressed(SelectEnterEventArgs args)
-    {
-        if (isOnCooldown) return;
-        StartCoroutine(PressRoutine());
-    }
+        [Networked]
+        public NetworkBool IsPressed { get; set; }
 
-    IEnumerator PressRoutine()
-    {
-        isOnCooldown = true;
+        private Vector3 originalLocalPos;
+        private XRSimpleInteractable interactable;
+        private Renderer rend;
+        private bool isOnCooldown = false;
 
-        // 눌림 효과
-        transform.localPosition = originalLocalPos - new Vector3(0, pressDepth, 0);
-        if (rend) rend.material.color = pressedColor;
+        public override void Spawned()
+        {
+            originalLocalPos = transform.localPosition;
+            rend = GetComponent<Renderer>();
+            interactable = GetComponent<XRSimpleInteractable>();
 
-        // 기능 실행
-        if (dispenser != null)
-            dispenser.OnDispenseButtonPressed();
+            if (rend) rend.material.color = IsPressed ? pressedColor : normalColor;
+            
+            // Register interaction listener only locally
+            interactable.selectEntered.AddListener(OnPressed);
+        }
 
-        if (controlSystem != null)
-            controlSystem.OnStabilizeButtonPressed();
+        public override void Render()
+        {
+            // Update visual position and color based on IsPressed state
+            Vector3 targetPos = IsPressed ? originalLocalPos - (transform.up * pressDepth) : originalLocalPos;
+            
+            if (Vector3.Distance(transform.localPosition, targetPos) > 0.0001f)
+            {
+                transform.localPosition = Vector3.Lerp(transform.localPosition, targetPos, Time.deltaTime * returnSpeed);
+            }
 
-        yield return new WaitForSeconds(0.15f);
+            if (rend)
+            {
+                Color targetColor = IsPressed ? pressedColor : normalColor;
+                rend.material.color = Color.Lerp(rend.material.color, targetColor, Time.deltaTime * returnSpeed);
+            }
+        }
 
-        // 복귀
-        transform.localPosition = originalLocalPos;
-        if (rend) rend.material.color = normalColor;
+        void OnPressed(SelectEnterEventArgs args)
+        {
+            if (isOnCooldown) return;
+            
+            if (Object.HasStateAuthority)
+            {
+                StartCoroutine(PressRoutine());
+            }
+            else
+            {
+                RpcRequestPress();
+            }
+        }
 
-        yield return new WaitForSeconds(cooldown);
-        isOnCooldown = false;
-    }
+        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+        void RpcRequestPress()
+        {
+            if (isOnCooldown) return;
+            StartCoroutine(PressRoutine());
+        }
 
-    void OnDestroy()
-    {
-        if (interactable != null)
-            interactable.selectEntered.RemoveListener(OnPressed);
+        IEnumerator PressRoutine()
+        {
+            isOnCooldown = true;
+            IsPressed = true;
+
+            // 기능 실행
+            if (dispenser != null)
+                dispenser.OnDispenseButtonPressed();
+
+            if (controlSystem != null)
+                controlSystem.OnStabilizeButtonPressed();
+
+            yield return new WaitForSeconds(0.15f);
+
+            IsPressed = false;
+
+            yield return new WaitForSeconds(cooldown);
+            isOnCooldown = false;
+        }
+
+        public override void Despawned(NetworkRunner runner, bool hasState)
+        {
+            if (interactable != null)
+                interactable.selectEntered.RemoveListener(OnPressed);
+        }
     }
 }

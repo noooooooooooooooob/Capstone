@@ -1,22 +1,15 @@
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
+using Fusion;
 
 namespace Stage1
 {
     /// <summary>
     /// MainControlSystem과 같은 GameObject(또는 자식 어디든)에 부착하는 외부 다중 슬롯 모듈.
-    /// MainControlSystem 코드는 한 줄도 안 건드림.
-    ///
     /// 동작:
     ///   - PowerOff 상태에서 매 프레임 폴링
-    ///   - 각 슬롯은 자기 색상에 매칭하는 (BatteryColorTag.color == slotColors[i]) 해동된 배터리만 받음
-    ///   - 같은 색이 이미 다른 슬롯에 들어가 있으면 추가 받지 않음 (중복 카운트 방지)
+    ///   - 각 슬롯은 자기 색상에 매칭하는 (BatteryState.Color == slotColors[i]) 해동된 배터리만 받음
     ///   - 모든 슬롯이 채워지면 MainControlSystem.OnBatteryInserted() 호출 → Reboot 트리거
-    ///
-    /// 세팅:
-    ///   - mainControl: 비워두면 GetComponent / FindFirstObjectByType로 자동 검출
-    ///   - slots[N], slotColors[N]: 1:1 매칭. 보통 3개 (Red/Yellow/Blue)
-    ///   - 활성 시 mainControl.batterySlot 은 None으로 비워두는 걸 권장 (Legacy 단일 슬롯과 충돌 방지)
     /// </summary>
     [DisallowMultipleComponent]
     public class MultiBatterySlotPanel : MonoBehaviour
@@ -51,21 +44,17 @@ namespace Stage1
             if (snappedBatteries == null || snappedBatteries.Length != slots.Length)
                 snappedBatteries = new GameObject[slots.Length];
 
-            // [Networked] 프로퍼티는 Spawned() 호출 후에만 접근 가능 —
-            // NetworkObject가 valid 아니면 즉시 return (CurrentState 접근 전에 차단).
             if (mainControl.Object == null || !mainControl.Object.IsValid) return;
 
-            // 권한이 있는 피어만 스냅 처리
+            // 권한이 있는 피어만 스냅 처리 (네트워크 정합성 유지)
             if (!mainControl.Object.HasStateAuthority) return;
 
             var state = mainControl.CurrentState;
 
-            // PowerOff 사이클 새로 시작되면 트리거 + 슬롯 리셋
             if (state != MainControlSystem.SystemState.PowerOff)
             {
                 if (rebootTriggered && state == MainControlSystem.SystemState.Idle)
                 {
-                    // Reboot 완료 후 Idle 복귀 — 다음 사이클 대비 리셋
                     for (int i = 0; i < snappedBatteries.Length; i++) snappedBatteries[i] = null;
                     rebootTriggered = false;
                 }
@@ -90,14 +79,28 @@ namespace Stage1
                 {
                     if (bat == null) continue;
 
-                    // 해동 필수
-                    if (bat.GetComponent<MeltedBattery>() == null) continue;
+                    // 해동 여부 체크 (Networked state 우선)
+                    var bState = bat.GetComponent<BatteryState>();
+                    bool isMelted = false;
+                    LightBallColor bColor = LightBallColor.Red;
 
-                    // 색상 매칭
-                    var ct = bat.GetComponent<BatteryColorTag>();
-                    if (ct == null || ct.color != expectedColor) continue;
+                    if (bState != null)
+                    {
+                        isMelted = bState.IsMelted;
+                        bColor = bState.Color;
+                    }
+                    else
+                    {
+                        // Legacy fallback
+                        isMelted = bat.GetComponent<MeltedBattery>() != null;
+                        var bTag = bat.GetComponent<BatteryColorTag>();
+                        if (bTag != null) bColor = bTag.color;
+                    }
 
-                    // 중복 방지 — 이미 다른 슬롯에 들어간 배터리
+                    if (!isMelted) continue;
+                    if (bColor != expectedColor) continue;
+
+                    // 중복 방지
                     bool claimed = false;
                     for (int j = 0; j < snappedBatteries.Length; j++)
                         if (snappedBatteries[j] == bat) { claimed = true; break; }
@@ -114,7 +117,6 @@ namespace Stage1
                     SnapToSlot(closest, i);
             }
 
-            // 3개 다 채워졌는지
             if (rebootTriggered) return;
             for (int i = 0; i < snappedBatteries.Length; i++)
                 if (snappedBatteries[i] == null) return;
@@ -151,10 +153,11 @@ namespace Stage1
             for (int i = 0; i < snappedBatteries.Length; i++)
                 if (snappedBatteries[i] != null) filled++;
 
-            Debug.Log($"[MultiBatterySlotPanel] Slot {slotIndex} ({slot.name}, color={(slotColors != null && slotIndex < slotColors.Length ? slotColors[slotIndex].ToString() : slotIndex.ToString())}) 채움 ({filled}/{slots.Length}).");
+            Debug.Log($"[MultiBatterySlotPanel] Slot {slotIndex} ({slot.name}) 채움 ({filled}/{slots.Length}).");
 
             if (mainControl != null && mainControl.statusText != null)
                 mainControl.statusText.text = $"INSERT BATTERY ({filled}/{slots.Length})";
         }
     }
 }
+

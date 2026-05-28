@@ -114,6 +114,21 @@ public class MainControlSystem : NetworkBehaviour
 
     void OnPuzzleChanged(int index)
     {
+        // When the game advances to a new puzzle the previous one is considered solved.
+        // If this system is still in a non-Idle state (e.g. debug skip bypassed the
+        // normal battery-insert reboot path), force it back to Idle so lights restore.
+        if (Object != null && Object.IsValid && Object.HasStateAuthority)
+        {
+            if (CurrentState == SystemState.PowerOff ||
+                CurrentState == SystemState.BatteryLow ||
+                CurrentState == SystemState.Rebooting)
+            {
+                StopAlarm();
+                snappedBattery = null;
+                Stability = maxStability;
+                CurrentState = SystemState.Idle;
+            }
+        }
         UpdateVisuals();
     }
 

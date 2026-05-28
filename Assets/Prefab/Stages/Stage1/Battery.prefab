@@ -75,6 +75,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 88ace55bd224f124081137107cd26736, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3196847802479976898}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 88ace55bd224f124081137107cd26736, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4779473624435448688}
   m_SourcePrefab: {fileID: 100100000, guid: 88ace55bd224f124081137107cd26736, type: 3}
 --- !u!1 &446344913247429742 stripped
 GameObject:
@@ -278,6 +281,7 @@ MonoBehaviour:
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 3196847802479976898}
+  - {fileID: 4779473624435448688}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &3196847802479976898
 MonoBehaviour:
@@ -296,3 +300,21 @@ MonoBehaviour:
   SyncParent: 0
   _autoAOIOverride: 1
   DisableSharedModeInterpolation: 0
+--- !u!114 &4779473624435448688
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 446344913247429742}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 67a4b43d7a8eb7f42abb17665a0a2438, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Stage1.BatteryState
+  _Color: 0
+  _IsMelted:
+    _value: 0
+  coreRenderer: {fileID: 0}
+  frozenMaterial: {fileID: 0}
+  meltedMaterial: {fileID: 0}

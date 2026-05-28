@@ -8,9 +8,9 @@ namespace Stage1
     {
         public UnityEvent OnPowerRestored;
 
-        public void OnBatteryInserted(FrozenBattery battery)
+        public void OnBatteryInserted(GameObject battery)
         {
-            if (battery != null && battery.IsThawed)
+            if (battery != null && battery.GetComponent<MeltedBattery>() != null)
             {
                 if (Object.HasStateAuthority)
                 {

@@ -209,6 +209,8 @@ MonoBehaviour:
   dispenser: {fileID: 5236502351316992526}
   controlSystem: {fileID: 0}
   cooldown: 0.5
+  _IsPressed:
+    _value: 0
 --- !u!114 &7469099058379987263
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -226,6 +228,7 @@ MonoBehaviour:
   Flags: 786433
   NestedObjects: []
   NetworkedBehaviours:
+  - {fileID: 4987389476183088337}
   - {fileID: 8060267776229196817}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &8060267776229196817
@@ -398,8 +401,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BatteryDispenser
   batteryPrefab: {fileID: 446344913247429742, guid: da0c53c07cb17624dbf23e490cdebb1a, type: 3}
   spawnPoint: {fileID: 7647232404315732059}
+  batteryColor: 0
   maxDispense: 10
   spawnCooldown: 1
+  hintSwatchImage: {fileID: 0}
+  autoCanvasWorldSize: {x: 0.15, y: 0.15}
+  autoCanvasOffset: {x: 0, y: 0.1, z: 0.05}
 --- !u!65 &1239309513976911998
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -439,6 +446,7 @@ MonoBehaviour:
   NestedObjects:
   - {fileID: 7469099058379987263}
   NetworkedBehaviours:
+  - {fileID: 5236502351316992526}
   - {fileID: 8989937863767997393}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &8989937863767997393

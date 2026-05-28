@@ -2,8 +2,10 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
+using Stage1;
+using Fusion;
 
-public class BatteryMelter : MonoBehaviour
+public class BatteryMelter : NetworkBehaviour
 {
     [Header("References")]
     public Transform glassHinge;
@@ -21,7 +23,9 @@ public class BatteryMelter : MonoBehaviour
     public float buttonPressDepth = 0.015f;
     public float animSpeed = 2.5f;
 
-    bool isOpen = false;
+    [Networked]
+    public NetworkBool IsOpen { get; set; }
+
     bool isAnimating = false;
 
     GameObject snappedBattery = null;
@@ -32,7 +36,7 @@ public class BatteryMelter : MonoBehaviour
     Vector3 glassButtonOrigin;
     Vector3 activateButtonOrigin;
 
-    void Start()
+    public override void Spawned()
     {
         hingeClosedRot = glassHinge.localRotation;
         hingeOpenedRot = Quaternion.Euler(
@@ -42,20 +46,38 @@ public class BatteryMelter : MonoBehaviour
         );
         glassButtonOrigin    = glassButton.localPosition;
         activateButtonOrigin = activateButton.localPosition;
+        
+        // Initial state
+        glassHinge.localRotation = IsOpen ? hingeOpenedRot : hingeClosedRot;
+    }
+
+    public override void Render()
+    {
+        // Smoothly animate glass based on networked state if not locally animating
+        if (!isAnimating)
+        {
+            Quaternion targetRot = IsOpen ? hingeOpenedRot : hingeClosedRot;
+            if (Quaternion.Angle(glassHinge.localRotation, targetRot) > 0.01f)
+            {
+                glassHinge.localRotation = Quaternion.Slerp(glassHinge.localRotation, targetRot, Time.deltaTime * animSpeed * 2f);
+            }
+        }
     }
 
     void Update()
     {
-        HandleLightBall();
-        HandleBattery();
+        // Snapping logic should ideally only run on State Authority to avoid jitter/conflicts
+        if (Object != null && Object.HasStateAuthority)
+        {
+            HandleLightBall();
+            HandleBattery();
+        }
     }
 
     // ── LightBall ──────────────────────────────────────────
 
     void HandleLightBall()
     {
-        // 변경: 단일 → 다중 LightBall 지원.
-        // 이미 스냅된 게 있으면 그것을 추적. 없으면 lightBallHole에 가장 가까운 미파지 LightBall 선택.
         GameObject lb = snappedLightBall;
         if (lb == null)
         {
@@ -100,7 +122,7 @@ public class BatteryMelter : MonoBehaviour
 
     void HandleBattery()
     {
-        if (!isOpen || isAnimating) return;
+        if (!IsOpen || isAnimating) return;
 
         if (snappedBattery != null)
         {
@@ -144,7 +166,7 @@ public class BatteryMelter : MonoBehaviour
         {
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
-            rb.constraints = RigidbodyConstraints.FreezeAll;  // kinematic 대신 이걸로
+            rb.constraints = RigidbodyConstraints.FreezeAll;
         }
 
         obj.transform.position = slot.position;
@@ -166,7 +188,7 @@ public class BatteryMelter : MonoBehaviour
         var rb = obj.GetComponent<Rigidbody>();
         if (rb)
         {
-            rb.constraints = RigidbodyConstraints.None;  // constraints 해제
+            rb.constraints = RigidbodyConstraints.None;
             rb.useGravity = true;
         }
 
@@ -178,60 +200,98 @@ public class BatteryMelter : MonoBehaviour
     public void OnGlassButtonPressed()
     {
         if (isAnimating) return;
-        StartCoroutine(PressButton(glassButton, glassButtonOrigin));
-        StartCoroutine(AnimateGlass());
+        
+        if (Object.HasStateAuthority)
+        {
+            ToggleGlass();
+        }
+        else
+        {
+            RpcRequestToggleGlass();
+        }
+        
+        StartCoroutine(PressButtonVisual(glassButton, glassButtonOrigin));
     }
 
-    IEnumerator AnimateGlass()
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    void RpcRequestToggleGlass()
     {
-        isAnimating = true;
-        isOpen = !isOpen;
+        ToggleGlass();
+    }
 
-        Quaternion startRot  = glassHinge.localRotation;
-        Quaternion targetRot = isOpen ? hingeOpenedRot : hingeClosedRot;
-        float t = 0f;
-
-        while (t < 1f)
-        {
-            t += Time.deltaTime * animSpeed;
-            glassHinge.localRotation = Quaternion.Slerp(startRot, targetRot, Mathf.Clamp01(t));
-            yield return null;
-        }
-        glassHinge.localRotation = targetRot;
-        isAnimating = false;
-        Debug.Log($"Glass {(isOpen ? "OPEN" : "CLOSED")}");
+    void ToggleGlass()
+    {
+        IsOpen = !IsOpen;
+        Debug.Log($"Glass {(IsOpen ? "OPEN" : "CLOSED")}");
     }
 
     // ── Activate Button ────────────────────────────────────
 
     public void OnActivateButtonPressed()
     {
-        if (isOpen) { Debug.Log("Close glass first!"); return; }
+        if (IsOpen) { Debug.Log("Close glass first!"); return; }
         if (snappedBattery == null) { Debug.Log("No battery!"); return; }
         if (snappedLightBall == null) { Debug.Log("No light ball!"); return; }
 
-        StartCoroutine(PressButton(activateButton, activateButtonOrigin));
-        MeltBatteryInstant();
+        // Color validation
+        var bState = snappedBattery.GetComponent<BatteryState>();
+        var lTag = snappedLightBall.GetComponent<LightBallColorTag>();
+        
+        LightBallColor bColor = LightBallColor.Red;
+        if (bState != null) bColor = bState.Color;
+        else {
+            var bTag = snappedBattery.GetComponent<BatteryColorTag>();
+            if (bTag != null) bColor = bTag.color;
+        }
+
+        if (lTag != null && bColor != lTag.color)
+        {
+            Debug.Log($"[BatteryMelter] Color mismatch! Battery:{bColor}, Ball:{lTag.color}");
+            return;
+        }
+
+        if (Object.HasStateAuthority)
+        {
+            MeltBatteryLogic();
+        }
+        else
+        {
+            RpcRequestMelt();
+        }
+        
+        StartCoroutine(PressButtonVisual(activateButton, activateButtonOrigin));
     }
 
-    void MeltBatteryInstant()
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    void RpcRequestMelt()
     {
-        foreach (Transform child in snappedBattery.GetComponentsInChildren<Transform>())
+        MeltBatteryLogic();
+    }
+
+    void MeltBatteryLogic()
+    {
+        if (snappedBattery == null) return;
+        
+        var bState = snappedBattery.GetComponent<BatteryState>();
+        if (bState != null)
         {
-            if (child.name.ToLower().Contains("core"))
-            {
-                var rend = child.GetComponent<Renderer>();
-                if (rend && meltedBatteryCore != null)
-                    rend.material = meltedBatteryCore;
-                Debug.Log("Battery core melted!");
-                break;
-            }
+            // Pass materials from the machine if the battery doesn't have them assigned
+            if (bState.frozenMaterial == null) bState.frozenMaterial = frozenBatteryCore;
+            if (bState.meltedMaterial == null) bState.meltedMaterial = meltedBatteryCore;
+
+            bState.Melt();
+        }
+        
+        // Legacy support
+        if (snappedBattery.GetComponent<MeltedBattery>() == null)
+        {
+            snappedBattery.AddComponent<MeltedBattery>();
         }
     }
 
     // ── Button Press ───────────────────────────────────────
 
-    IEnumerator PressButton(Transform btn, Vector3 origin)
+    IEnumerator PressButtonVisual(Transform btn, Vector3 origin)
     {
         Vector3 pressed = origin - new Vector3(0, buttonPressDepth, 0);
         float t = 0f;

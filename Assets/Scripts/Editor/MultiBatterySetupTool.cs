@@ -18,7 +18,7 @@ namespace Stage1.Editor
     ///   Table3 + LightBall (2)  = Blue
     ///
     /// BatteryMelter / MainControlSystem 원본 코드는 절대 안 건드림 —
-    /// 모든 색/매칭/슬롯 로직은 외부 컴포넌트 (MelterColorChip, MultiBatterySlotPanel)로 처리.
+    /// 모든 색/매칭/슬롯 로직은 외부 컴포넌트 (BatteryMelter, MultiBatterySlotPanel)로 처리.
     /// </summary>
     public static class MultiBatterySetupTool
     {
@@ -35,13 +35,13 @@ namespace Stage1.Editor
         // Run All
         // ─────────────────────────────────────────────────────
 
-        [MenuItem("Tools/Stage 1/Battery Color Setup/Run All (Holes + LightBalls + Slots + Chips + Sync)")]
+        [MenuItem("Tools/Stage 1/Battery Color Setup/Run All (Holes + LightBalls + Slots + Sync)")]
         public static void RunAll()
         {
             TintLightBallHoles();
             SetupLightBalls();
             SetupBatterySlotPanel();
-            SetupMelterChips();
+            // Melter chips are no longer needed as BatteryMelter handles color validation internally.
             SetupLightBallLightSync();
             Debug.Log("[Setup] Run All 완료.");
         }
@@ -448,56 +448,6 @@ namespace Stage1.Editor
         }
 
         // ─────────────────────────────────────────────────────
-        // 4. (옵션) 씬 안 모든 BatteryMelter에 MelterColorChip 부착
-        // ─────────────────────────────────────────────────────
-
-        [MenuItem("Tools/Stage 1/Battery Color Setup/4. Setup Melter Chips (auto color by Table parent)")]
-        public static void SetupMelterChips()
-        {
-            int n = 0;
-            foreach (var melter in Object.FindObjectsByType<BatteryMelter>(FindObjectsSortMode.None))
-            {
-                var chip = melter.GetComponent<MelterColorChip>();
-                if (chip == null) chip = Undo.AddComponent<MelterColorChip>(melter.gameObject);
-
-                Undo.RecordObject(chip, "Configure MelterColorChip");
-
-                // 머신이 어느 Table 자손인지 추적 → 해당 색 매핑 적용
-                LightBallColor matched = LightBallColor.Red;
-                bool foundTable = false;
-                Transform t = melter.transform;
-                while (t != null)
-                {
-                    foreach (var m in Mapping)
-                    {
-                        if (t.name == m.tableName) { matched = m.color; foundTable = true; break; }
-                    }
-                    if (foundTable) break;
-                    t = t.parent;
-                }
-
-                chip.color = matched;
-                chip.preferLightBallColor = false; // 색 매칭 강제 (warning 동작 + 머신 색으로 배터리 생성)
-
-                // warningRenderers 자동 와이어링 — 같은 Table 안의 LightBallHole Renderer들
-                if (foundTable && t != null)
-                {
-                    Transform hole = FindDescendantContaining(t, "LightBallHole");
-                    if (hole != null)
-                    {
-                        var renderers = hole.GetComponentsInChildren<Renderer>(true);
-                        chip.warningRenderers = renderers;
-                    }
-                }
-
-                EditorUtility.SetDirty(chip);
-                Debug.Log($"[Setup] BatteryMelter '{melter.name}' → 색 {matched} 매핑 (Table parent 검출 {foundTable}).");
-                n++;
-            }
-            Debug.Log($"[Setup] {n}개 BatteryMelter에 MelterColorChip 부착 + 색 매핑 + warningRenderers 와이어링.");
-        }
-
-        // ─────────────────────────────────────────────────────
         // 5. LightBall Light Sync — 모든 LightBall의 Light을 원본과 sync
         // ─────────────────────────────────────────────────────
 
@@ -571,7 +521,7 @@ namespace Stage1.Editor
                 }
             }
 
-            // 3) BatteryMelter들 검증 — MelterColorChip 부착됐는지
+            // 3) BatteryMelter들 검증
             var melters = Object.FindObjectsByType<BatteryMelter>(FindObjectsSortMode.None);
             if (melters.Length == 0)
             {
@@ -579,18 +529,6 @@ namespace Stage1.Editor
             }
             foreach (var melter in melters)
             {
-                var chip = melter.GetComponent<MelterColorChip>();
-                if (chip == null)
-                {
-                    Debug.LogWarning($"[Validate] BatteryMelter '{melter.name}'에 MelterColorChip 없음 — 'Setup Melter Chips' 실행 필요."); warnings++;
-                }
-                else
-                {
-                    if (chip.warningRenderers == null || chip.warningRenderers.Length == 0)
-                    {
-                        Debug.LogWarning($"[Validate] MelterColorChip '{melter.name}'.warningRenderers 비어있음 — 색 불일치 경고 표시 안 됨."); warnings++;
-                    }
-                }
                 if (melter.meltedBatteryCore == null)
                 {
                     Debug.LogError($"[Validate] BatteryMelter '{melter.name}'.meltedBatteryCore 미할당 — 해동 감지 불가."); errors++;
