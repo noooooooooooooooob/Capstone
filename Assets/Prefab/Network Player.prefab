@@ -107,6 +107,7 @@ GameObject:
   - component: {fileID: 6991562696938531743}
   - component: {fileID: 5835766649901115942}
   - component: {fileID: 425972298800952878}
+  - component: {fileID: 1357924680135792468}
   m_Layer: 0
   m_Name: VoiceNetworkObject
   m_TagString: Untagged
@@ -273,7 +274,7 @@ MonoBehaviour:
   microphoneType: 1
   audioClip: {fileID: 0}
   loopAudioClip: 1
-  recordingEnabled: 1
+  recordingEnabled: 0
   audioSessionParameters:
     Category: 4
     Mode: 1
@@ -287,6 +288,19 @@ MonoBehaviour:
   useOnAudioFilterRead: 0
   useMicrophoneTypeFallback: 1
   recordWhenJoined: 1
+--- !u!114 &1357924680135792468
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 795717944676512760}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 98fbb947c07407d4db937da17af98cbf, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: PhotonVoice::Photon.Voice.Unity.UtilityScripts.MicrophonePermission
+  autoStart: 1
 --- !u!1 &1353692269924937275
 GameObject:
   m_ObjectHideFlags: 0
