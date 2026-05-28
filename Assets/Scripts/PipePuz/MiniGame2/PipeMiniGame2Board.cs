@@ -47,7 +47,7 @@ namespace PipePuz.MiniGame2
         [Header("Snap")]
         [Tooltip("Slot 중심에서의 부착 반경(m). Slot 의 trigger SphereCollider radius 와 동일 의미. " +
                  "값이 작을수록 pipe 가 slot 중심에 가까이 와야 부착. (legacy FindContainingSlot 도 동일 값 사용)")]
-        public float SnapDistance = 0.115f;
+        public float SnapDistance = 0.23f;
 
         [Header("Materials")]
         public Material ConnectedMaterial;

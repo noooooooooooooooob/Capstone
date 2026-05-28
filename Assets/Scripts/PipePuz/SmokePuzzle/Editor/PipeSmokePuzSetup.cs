@@ -104,7 +104,7 @@ namespace PipePuz.SmokePuzzle.EditorTools
         const float MG_WallY         = 1.40f;
         const float MG_PanelZ        = -0.025f;
         const float MG_FloorY        = 0.06f;
-        const float MG_SnapDistance  = 0.115f; // 0.23 의 절반 — slot 영역 반으로 축소 (더 엄격한 부착)
+        const float MG_SnapDistance  = 0.23f; // slot 가로 0.46 의 절반 — 너그러운 부착 판정
 
         // fallback Cube arm용 (프리팹 못 찾을 때만 동작). 평소엔 안 씀.
         const float MG_ArmThickness  = 0.05f;
@@ -461,29 +461,53 @@ namespace PipePuz.SmokePuzzle.EditorTools
 
         static void CleanupExistingContainer(UnityEngine.SceneManagement.Scene scene)
         {
-            // 동일 이름의 root GO 들을 모두 제거. (다른 씬 오브젝트엔 손대지 않음)
+            // 동일 이름의 GO 를 씬 전체에서 재귀 탐색해 모두 제거.
+            // (사용자가 PipeSmokePuz 를 Stage 1 자식으로 옮긴 케이스도 처리.)
             var roots = scene.GetRootGameObjects();
-            foreach (var go in roots)
+            foreach (var root in roots)
             {
-                if (go != null && go.name == ContainerName)
-                {
+                if (root == null) continue;
+                var matches = new List<GameObject>();
+                CollectByNameRecursive(root.transform, ContainerName, matches);
+                foreach (var go in matches)
                     Undo.DestroyObjectImmediate(go);
-                }
             }
         }
 
         /// <summary>
-        /// 씬에서 ContainerName 과 같은 이름의 root GO 중 첫 번째를 반환. 없으면 null.
+        /// 씬에서 ContainerName 과 같은 이름의 GO 첫 번째를 재귀 탐색해 반환. 없으면 null.
+        /// (root level 뿐 아니라 모든 자식까지 검색 — Stage 1 자식 같은 케이스 지원.)
         /// </summary>
         static GameObject FindExistingContainer(UnityEngine.SceneManagement.Scene scene)
         {
             var roots = scene.GetRootGameObjects();
-            foreach (var go in roots)
+            foreach (var root in roots)
             {
-                if (go != null && go.name == ContainerName)
-                    return go;
+                if (root == null) continue;
+                var t = FindByNameRecursive(root.transform, ContainerName);
+                if (t != null) return t.gameObject;
             }
             return null;
+        }
+
+        static Transform FindByNameRecursive(Transform t, string name)
+        {
+            if (t == null) return null;
+            if (t.name == name) return t;
+            for (int i = 0; i < t.childCount; i++)
+            {
+                var found = FindByNameRecursive(t.GetChild(i), name);
+                if (found != null) return found;
+            }
+            return null;
+        }
+
+        static void CollectByNameRecursive(Transform t, string name, List<GameObject> outList)
+        {
+            if (t == null) return;
+            if (t.name == name) outList.Add(t.gameObject);
+            for (int i = 0; i < t.childCount; i++)
+                CollectByNameRecursive(t.GetChild(i), name, outList);
         }
 
         // --------------------------------------------------------------------
@@ -702,7 +726,7 @@ namespace PipePuz.SmokePuzzle.EditorTools
                     var trigger = slotGo.AddComponent<SphereCollider>();
                     trigger.isTrigger = true;
                     trigger.center = Vector3.zero;
-                    trigger.radius = MG_SnapDistance; // 0.115 — slot 영역 (slot 가로 0.46 의 ¼)
+                    trigger.radius = MG_SnapDistance; // 0.23 — slot 가로 0.46 의 절반
 
                     board.Slots[x + y * W] = slot;
                 }
