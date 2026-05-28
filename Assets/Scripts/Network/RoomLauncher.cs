@@ -222,7 +222,12 @@ namespace Capstone.Network
             runner.Spawn(userPrefab, sp.position, sp.rotation, onBeforeSpawned: (r, no) =>
             {
                 var np = no.GetComponent<NetworkPlayer>();
-                if (np != null) np.Slot = slot;
+                if (np != null)
+                {
+                    np.Slot = slot;
+                    np.SpawnPosition = sp.position;
+                    np.SpawnRotation = sp.rotation;
+                }
             });
         }
 
@@ -238,7 +243,12 @@ namespace Capstone.Network
                     onBeforeSpawned: (r, n) =>
                     {
                         var np = n.GetComponent<NetworkPlayer>();
-                        if (np != null) np.Slot = slot;
+                        if (np != null)
+                        {
+                            np.Slot = slot;
+                            np.SpawnPosition = sp.position;
+                            np.SpawnRotation = sp.rotation;
+                        }
                     });
                 _spawnedUsers[player] = no;
             }

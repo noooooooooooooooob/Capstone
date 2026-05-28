@@ -33,9 +33,17 @@ namespace Capstone.Network
         public PlayerRef Owner => Object.StateAuthority;
 
         [Networked] public int Slot { get; set; }
+        [Networked] public Vector3 SpawnPosition { get; set; }
+        [Networked] public Quaternion SpawnRotation { get; set; }
 
         public override void Spawned()
         {
+            // 루트엔 NetworkTransform이 없어 runner.Spawn() 위치가 프록시로 복제되지 않는다.
+            // (head/hand 앵커의 NetworkTransform은 "루트 기준 상대 좌표"만 동기화하므로,
+            //  프록시 루트가 프리팹 기본값 (0,0,0)에 남아 아바타가 월드 원점=복도에 그려짐.)
+            // 모든 피어가 네트워크로 받은 스폰 포즈로 루트를 직접 배치 → 양쪽이 같은 공유 방 좌표에 정렬.
+            transform.SetPositionAndRotation(SpawnPosition, SpawnRotation);
+
             Debug.Log($"[NetworkPlayer] Spawned slot={Slot} hasAuthority={HasStateAuthority} pos={transform.position} rot={transform.eulerAngles}");
 
             if (HasStateAuthority)
