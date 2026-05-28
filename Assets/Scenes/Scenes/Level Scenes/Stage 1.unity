@@ -19784,7 +19784,7 @@ MonoBehaviour:
   roomLights:
   - {fileID: 101635667}
   - {fileID: 1548395133}
-  - {fileID: 208051157}
+  - {fileID: 0}
   - {fileID: 1763561275}
   - {fileID: 596805444}
   - {fileID: 670259254}
