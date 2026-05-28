@@ -15,6 +15,7 @@ public class FlyingCreature : MonoBehaviour
     public HintPaper hintPaper;
     public AudioClip grabSound;
     private AudioSource audioSource;
+    private NetworkGrabbableSync netGrab;
 
     void Start()
     {
@@ -30,6 +31,15 @@ public class FlyingCreature : MonoBehaviour
         audioSource.clip = grabSound;
         audioSource.loop = true;
         audioSource.playOnAwake = false;
+
+        // 그랩 사운드를 네트워크 그랩 상태(IsGrabbed)에 연동 → 모든 피어에서 재생.
+        // XRGrabInteractable 의 select 콜백은 잡은 클라이언트에서만 실행되기 때문.
+        netGrab = GetComponent<NetworkGrabbableSync>();
+        if (netGrab != null)
+        {
+            netGrab.onGrab.AddListener(ApplyGrabbed);
+            netGrab.onUngrab.AddListener(ApplyUngrabbed);
+        }
 
         // lock hint paper on start
         if (hintPaper != null)
@@ -98,15 +108,41 @@ public class FlyingCreature : MonoBehaviour
 
     void OnGrabbed(UnityEngine.XR.Interaction.Toolkit.SelectEnterEventArgs args)
     {
+        // 잡은 클라이언트에서 즉시 상태 전환 — 그물 위치로 스냅되는 1프레임 떨림 방지.
         currentState = State.Grabbed;
         caughtInNet = null;
-        if (anim != null) anim.SetTrigger("Stunned");
-        if (audioSource != null && grabSound != null) audioSource.Play();
+        // 네트워크 동기화가 없을 때(오프라인/에디터)만 로컬에서 직접 연출.
+        // 동기화가 있으면 ApplyGrabbed 가 onGrab 으로 모든 피어에서 호출됨.
+        if (netGrab == null) ApplyGrabbed();
     }
 
     void OnReleased(UnityEngine.XR.Interaction.Toolkit.SelectExitEventArgs args)
     {
+        if (netGrab == null) ApplyUngrabbed();
+    }
+
+    // onGrab(네트워크 IsGrabbed=true) → 모든 피어에서 호출. 상태·스턴 애니·사운드 동기.
+    void ApplyGrabbed()
+    {
+        currentState = State.Grabbed;
+        caughtInNet = null;
+        if (anim != null) anim.SetTrigger("Stunned");
+        if (audioSource != null && grabSound != null && !audioSource.isPlaying)
+            audioSource.Play();
+    }
+
+    void ApplyUngrabbed()
+    {
         if (audioSource != null) audioSource.Stop();
+    }
+
+    void OnDestroy()
+    {
+        if (netGrab != null)
+        {
+            netGrab.onGrab.RemoveListener(ApplyGrabbed);
+            netGrab.onUngrab.RemoveListener(ApplyUngrabbed);
+        }
     }
 
     public void SetCaged()

@@ -31,13 +31,16 @@ public class GameManager : NetworkBehaviour
     [Tooltip("Spawned 후 인트로 시작까지 대기 시간(권한자 한정)")]
     public float introDelay = 1f;
 
+    [Tooltip("보이스 클립 종료 후 자막이 남아있는 여유 시간(초). SubtitleHUD.voiceTail과 일치시킬 것.")]
+    public float dialogueTail = 0.3f;
+
     [Networked] public int CurrentPuzzleIndex { get; set; }
     [Networked] public NetworkBool AllCompleted { get; set; }
 
     bool _debugCompletingAll;
 
-    /// <summary>(speaker, text, duration) — SubtitleHUD가 구독해 화면에 표시.</summary>
-    public event Action<string, string, float> OnDialoguePlayed;
+    /// <summary>(speaker, text, duration, voiceClip) — SubtitleHUD가 구독해 화면에 표시 + 보이스 재생.</summary>
+    public event Action<string, string, float, AudioClip> OnDialoguePlayed;
 
     /// <summary>퍼즐이 활성화될 때 — 모든 피어에서 호출됨 (RPC 경로).</summary>
     public event Action<int> OnPuzzleActivated;
@@ -364,21 +367,36 @@ public class GameManager : NetworkBehaviour
             Debug.LogWarning($"[GameManager] dialogue id 없음: '{id}'");
             return;
         }
-        PlayDialogueRpc(line.speaker, line.text, line.duration);
+        PlayDialogueRpc(id);
     }
 
     IEnumerator PlayDialogueAndWait(string id)
     {
         var line = dialogue != null ? dialogue.Find(id) : null;
         if (line == null) yield break;
-        PlayDialogueRpc(line.speaker, line.text, line.duration);
-        yield return new WaitForSeconds(line.duration);
+        PlayDialogueRpc(id);
+        yield return new WaitForSeconds(DialogueDisplayTime(line));
+    }
+
+    /// <summary>자막이 화면에 떠 있어야 할 시간. 보이스가 있으면 클립 길이에 맞춰 다음 대사로 넘어감.</summary>
+    float DialogueDisplayTime(ResearcherDialogue.Line line)
+    {
+        if (line.voiceClip != null) return line.voiceClip.length + dialogueTail;
+        return line.duration;
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-    void PlayDialogueRpc(string speaker, string text, float duration)
+    void PlayDialogueRpc(string id)
     {
-        OnDialoguePlayed?.Invoke(speaker, text, duration);
+        // AudioClip은 네트워크 직렬화 불가 → id만 전송하고, 각 피어가 동일한
+        // ResearcherDialogue 자산에서 라인을 로컬 조회해 같은 보이스 클립을 재생.
+        var line = dialogue != null ? dialogue.Find(id) : null;
+        if (line == null)
+        {
+            Debug.LogWarning($"[GameManager] PlayDialogueRpc: id '{id}' 로컬 조회 실패");
+            return;
+        }
+        OnDialoguePlayed?.Invoke(line.speaker, line.text, line.duration, line.voiceClip);
     }
 
     /// <summary>현재 활성 퍼즐의 힌트 문자열 (UI에서 사용).</summary>
