@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace PipePuz.LightBeam
 {
@@ -43,17 +44,34 @@ namespace PipePuz.LightBeam
                  "비어있으면 매 Update 에서 씬에서 첫 활성 Receiver 자동 검색해 fallback 연결.")]
         public LightBeamReceiver Receiver;
 
+        [Header("Latch (퍼즐 완료 = 잠금 해제, 영구)")]
+        public bool LatchUnlock = false;
+
+        [Header("Proximity (잠금 해제 후 근접 시 열림)")]
+        public bool RequireProximity = false;
+        public float ProximityRadius = 2.5f;
+        public Transform ProximityCenter;
+
+        [Header("Force Open (편의 버튼 등)")]
+        public bool ForceOpenOverride = false;
+
         [Header("Debug")]
         [Tooltip("SetBeamConnected 호출 및 구독 시 Console 로그.")]
         public bool LogSignal = true;
+
+        [Header("Events")]
+        public UnityEvent OnFirstOpen;
 
         Quaternion _leftClosedRot;
         Quaternion _rightClosedRot;
         bool _initialized;
         bool _signaled;
-        float _lastSignalTime;
+        float _lastSignalTime = float.NegativeInfinity;
         bool _runtimeSubscribed;
         float _autoFindCooldown;
+        bool _latched;
+        bool _playerNear;
+        bool _firstOpenFired;
 
         void Awake()
         {
@@ -133,9 +151,22 @@ namespace PipePuz.LightBeam
                 }
             }
 
-            // 닫힘 지연
-            bool shouldOpen = _signaled || (Time.time - _lastSignalTime < CloseDelay);
+            bool signalActive = _signaled || (Time.time - _lastSignalTime < CloseDelay);
+            if (_signaled && LatchUnlock) _latched = true;
+            bool unlocked = LatchUnlock ? _latched : signalActive;
+            if (RequireProximity)
+                _playerNear = unlocked && IsPlayerNear();
+            else
+                _playerNear = unlocked;
+            bool shouldOpen = ForceOpenOverride || (unlocked && (!RequireProximity || _playerNear));
             float speed = shouldOpen ? OpenSpeedDegPerSec : CloseSpeedDegPerSec;
+
+            if (shouldOpen && !_firstOpenFired)
+            {
+                _firstOpenFired = true;
+                if (LogSignal) Debug.Log($"[BeamGatedDoor:{name}] OnFirstOpen 발화.");
+                OnFirstOpen?.Invoke();
+            }
 
             if (LeftPivot != null)
             {
@@ -153,6 +184,31 @@ namespace PipePuz.LightBeam
                 RightPivot.localRotation = Quaternion.RotateTowards(
                     RightPivot.localRotation, target, speed * Time.deltaTime);
             }
+        }
+
+        public void ForceOpen()
+        {
+            ForceOpenOverride = true;
+            if (LogSignal) Debug.Log($"[BeamGatedDoor:{name}] ForceOpen() — 강제 영구 열림.");
+        }
+
+        public void ResetForceOpen() { ForceOpenOverride = false; }
+
+        bool IsPlayerNear()
+        {
+            var cam = Camera.main;
+            if (cam == null) return false;
+            Transform center = ProximityCenter != null ? ProximityCenter : transform;
+            float sqr = (cam.transform.position - center.position).sqrMagnitude;
+            return sqr <= ProximityRadius * ProximityRadius;
+        }
+
+        void OnDrawGizmosSelected()
+        {
+            if (!RequireProximity) return;
+            Transform center = ProximityCenter != null ? ProximityCenter : transform;
+            Gizmos.color = new Color(0.4f, 1f, 0.6f, 0.35f);
+            Gizmos.DrawWireSphere(center.position, ProximityRadius);
         }
     }
 }
