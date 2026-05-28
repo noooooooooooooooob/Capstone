@@ -35,13 +35,14 @@ namespace Stage1.Editor
         // Run All
         // ─────────────────────────────────────────────────────
 
-        [MenuItem("Tools/Stage 1/Battery Color Setup/Run All (Holes + LightBalls + Slots + Chips)")]
+        [MenuItem("Tools/Stage 1/Battery Color Setup/Run All (Holes + LightBalls + Slots + Chips + Sync)")]
         public static void RunAll()
         {
             TintLightBallHoles();
             SetupLightBalls();
             SetupBatterySlotPanel();
             SetupMelterChips();
+            SetupLightBallLightSync();
             Debug.Log("[Setup] Run All 완료.");
         }
 
@@ -494,6 +495,31 @@ namespace Stage1.Editor
                 n++;
             }
             Debug.Log($"[Setup] {n}개 BatteryMelter에 MelterColorChip 부착 + 색 매핑 + warningRenderers 와이어링.");
+        }
+
+        // ─────────────────────────────────────────────────────
+        // 5. LightBall Light Sync — 모든 LightBall의 Light을 원본과 sync
+        // ─────────────────────────────────────────────────────
+
+        [MenuItem("Tools/Stage 1/Battery Color Setup/5. Setup LightBall Light Sync (밝기 동기화)")]
+        public static void SetupLightBallLightSync()
+        {
+            MainControlSystem mcs = Object.FindFirstObjectByType<MainControlSystem>();
+            if (mcs == null)
+            {
+                Debug.LogError("[Setup] MainControlSystem 못 찾음.");
+                return;
+            }
+
+            var sync = mcs.GetComponent<LightBallLightSync>();
+            if (sync == null) sync = Undo.AddComponent<LightBallLightSync>(mcs.gameObject);
+
+            Undo.RecordObject(sync, "Setup LightBallLightSync");
+            sync.mainControl = mcs;
+            sync.AutoCollectLights();
+            EditorUtility.SetDirty(sync);
+
+            Debug.Log($"[Setup] LightBallLightSync 부착 + 보조 Light {(sync.syncedLights != null ? sync.syncedLights.Length : 0)}개 와이어링.");
         }
 
         // ─────────────────────────────────────────────────────

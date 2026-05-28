@@ -59,7 +59,16 @@ namespace PipePuz.MiniGame2
             if (Board != null) Board.OnFlowChanged();
         }
 
-        /// <summary>파이프를 이 slot 에 안착시킨다 (transform 포함).</summary>
+        /// <summary>
+        /// 파이프를 이 slot 에 안착시킨다.
+        ///
+        /// NetworkObject 친화 버전:
+        ///   - SetParent 안 함 (parent 변경 시 NetworkObject 권한/위치 sync 가 어긋남)
+        ///   - world position/rotation 직접 설정 → NetworkTransform 이 자연스럽게 동기화
+        ///   - transform 변경은 권위(HasStateAuthority) 측에서만 실행 → 비권위 측 깜박임 방지
+        ///   - logical state(CurrentPipe/CurrentSlot/Board) 는 모든 피어에서 동일하게 실행
+        /// 단독 모드(NetworkObject 없음)에서는 항상 transform 적용.
+        /// </summary>
         public void AcceptPipe(PipeMiniGame2Pipe pipe)
         {
             if (pipe == null) return;
@@ -74,18 +83,23 @@ namespace PipePuz.MiniGame2
             pipe.CurrentSlot = this;
             if (Board != null) pipe.Board = Board;
 
-            // 위치/회전 정렬.
-            pipe.transform.SetParent(transform, false);
-            pipe.transform.localPosition = Vector3.zero;
-            pipe.transform.localRotation = Quaternion.identity;
+            // === Transform 변경은 권위 측에서만. NetworkTransform 이 비권위 측에 sync ===
+            var netObj = pipe.GetComponent<Fusion.NetworkObject>();
+            bool isAuthority = (netObj == null) || netObj.HasStateAuthority;
 
-            // 물리 고정.
-            var rb = pipe.GetComponent<Rigidbody>();
-            if (rb != null)
+            if (isAuthority)
             {
-                rb.linearVelocity = Vector3.zero;
-                rb.angularVelocity = Vector3.zero;
-                rb.isKinematic = true;
+                // SetParent 안 함 — world 좌표로 직접 설정 (NetworkTransform world-sync 와 정합).
+                pipe.transform.position = transform.position;
+                pipe.transform.rotation = transform.rotation;
+
+                var rb = pipe.GetComponent<Rigidbody>();
+                if (rb != null)
+                {
+                    rb.linearVelocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
+                    rb.isKinematic = true;
+                }
             }
 
             UpdateOutline();
