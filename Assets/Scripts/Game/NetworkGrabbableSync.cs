@@ -58,8 +58,12 @@ public class NetworkGrabbableSync : NetworkBehaviour, IStateAuthorityChanged
         _grab.selectExited.AddListener(OnSelectExit);
 
         // XRIT 이 Update 에서 위치를 직접 갱신하므로 보간이 이를 되돌리지 않도록 끈다.
-        // (NetworkTransform 자체는 켜둬서 권위 측 위치는 계속 송신된다.)
+#if FUSION_2_1_OR_NEWER
+        try { _nt.ConfigFlags = NetworkTransform.NetworkTransformFlags.DisableSharedModeInterpolation; }
+        catch { _nt.DisableSharedModeInterpolation = true; }
+#else
         _nt.DisableSharedModeInterpolation = true;
+#endif
 
         if (forceNoThrowOnDetach) _grab.throwOnDetach = false;
     }
@@ -116,7 +120,8 @@ public class NetworkGrabbableSync : NetworkBehaviour, IStateAuthorityChanged
     public override void Render()
     {
         // 권위 받는 중인 비권위 측: 스냅샷이 되감기로 보이지 않도록 저장 위치 유지.
-        if (!Object.HasStateAuthority && _isReceivingAuthority)
+        // 또한 모든 비권위 측이 권위 측과 동기화되도록 함.
+        if (Object != null && Object.IsValid && !Object.HasStateAuthority && _isReceivingAuthority)
             transform.SetPositionAndRotation(_transferPosition, _transferRotation);
     }
 
