@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace PipePuz.LightBeam
 {
@@ -43,17 +44,45 @@ namespace PipePuz.LightBeam
                  "비어있으면 매 Update 에서 씬에서 첫 활성 Receiver 자동 검색해 fallback 연결.")]
         public LightBeamReceiver Receiver;
 
+        [Header("Latch (퍼즐 완료 = 잠금 해제, 영구)")]
+        [Tooltip("true 면 빔이 한 번이라도 receiver 에 도달하면 unlocked 로 latch — " +
+                 "이후 빔이 끊겨도 잠금 해제 상태 유지.")]
+        public bool LatchUnlock = false;
+
+        [Header("Proximity (잠금 해제 후 근접 시 열림)")]
+        [Tooltip("true 면 unlocked 상태에서 player 가 ProximityRadius 안에 들어와야 문이 열림. " +
+                 "false 면 unlocked 즉시 열림 (기존 동작).")]
+        public bool RequireProximity = false;
+        [Tooltip("player 감지 반경 (m). Camera.main(=로컬 player head) 와의 거리.")]
+        public float ProximityRadius = 2.5f;
+        [Tooltip("거리 측정의 기준점. 비어있으면 이 GameObject 의 transform 사용.")]
+        public Transform ProximityCenter;
+
+        [Header("Force Open (편의 버튼 등)")]
+        [Tooltip("true 면 Latch/Proximity 무시하고 강제 영구 열림. " +
+                 "외부에서 ForceOpen() 호출 시 자동으로 켜짐. 인스펙터로 미리 토글하면 게임 시작부터 열려있음.")]
+        public bool ForceOpenOverride = false;
+
         [Header("Debug")]
         [Tooltip("SetBeamConnected 호출 및 구독 시 Console 로그.")]
         public bool LogSignal = true;
+
+        [Header("Events")]
+        [Tooltip("문이 *처음으로* 열림 시작하는 순간 한 번 발화. Clear 시퀀스 등 외부 트리거용.")]
+        public UnityEvent OnFirstOpen;
 
         Quaternion _leftClosedRot;
         Quaternion _rightClosedRot;
         bool _initialized;
         bool _signaled;
-        float _lastSignalTime;
+        // 게임 시작 시 (_lastSignalTime=0, Time.time≈0) closeDelay 윈도가 가짜로 active 되는 걸 방지.
+        // SetBeamConnected(true) 가 한 번도 호출 안 됐으면 NegativeInfinity 유지 → signalActive=false 보장.
+        float _lastSignalTime = float.NegativeInfinity;
         bool _runtimeSubscribed;
         float _autoFindCooldown;
+        bool _latched;
+        bool _playerNear;
+        bool _firstOpenFired;
 
         void Awake()
         {
@@ -107,6 +136,25 @@ namespace PipePuz.LightBeam
                 Debug.Log($"[BeamGatedDoor:{name}] SetBeamConnected({connected}) — 문 {(connected ? "열림" : "닫힘 예약")}");
         }
 
+        /// <summary>
+        /// 모든 조건(Latch/Proximity)을 무시하고 영구 강제 열림.
+        /// 편의 버튼(XRSimpleInteractable.selectEntered) 같은 곳에서 호출.
+        /// </summary>
+        public void ForceOpen()
+        {
+            ForceOpenOverride = true;
+            if (LogSignal)
+                Debug.Log($"[BeamGatedDoor:{name}] ForceOpen() — 강제 영구 열림.");
+        }
+
+        /// <summary>강제 열림 해제 (원래 잠금/근접 로직으로 복귀).</summary>
+        public void ResetForceOpen()
+        {
+            ForceOpenOverride = false;
+            if (LogSignal)
+                Debug.Log($"[BeamGatedDoor:{name}] ResetForceOpen().");
+        }
+
         void Update()
         {
             if (!_initialized) Cache();
@@ -133,9 +181,35 @@ namespace PipePuz.LightBeam
                 }
             }
 
-            // 닫힘 지연
-            bool shouldOpen = _signaled || (Time.time - _lastSignalTime < CloseDelay);
+            // 빔 신호의 활성 여부 (CloseDelay 동안 active 유지) — 단지 닫힘 지연용.
+            bool signalActive = _signaled || (Time.time - _lastSignalTime < CloseDelay);
+
+            // **Latch 게이트** — 빛이 실제로 receiver 에 닿은 프레임(_signaled==true) 에만 latch.
+            // closeDelay 잔여시간이나 게임 시작 직후 가짜 윈도로는 절대 latch 되지 않음.
+            if (_signaled && LatchUnlock) _latched = true;
+
+            // 잠금 해제 상태:
+            //   - LatchUnlock=true: 한 번이라도 빔이 닿은 적 있어야 unlocked (영구)
+            //   - LatchUnlock=false: 빔이 현재 닿아있을 때만 unlocked (기존 동작)
+            bool unlocked = LatchUnlock ? _latched : signalActive;
+
+            // Proximity: unlocked 상태에서만 player 거리 검사 의미가 있음.
+            // **빔이 한 번도 닿지 않은 상태에서는 unlocked=false 이므로 가까이 가도 절대 안 열림.**
+            if (RequireProximity)
+                _playerNear = unlocked && IsPlayerNear();
+            else
+                _playerNear = unlocked;
+
+            bool shouldOpen = ForceOpenOverride || (unlocked && (!RequireProximity || _playerNear));
             float speed = shouldOpen ? OpenSpeedDegPerSec : CloseSpeedDegPerSec;
+
+            // 첫 열림 발화 (한 번만) — Clear 시퀀스 등 외부 트리거에 사용.
+            if (shouldOpen && !_firstOpenFired)
+            {
+                _firstOpenFired = true;
+                if (LogSignal) Debug.Log($"[BeamGatedDoor:{name}] OnFirstOpen 발화.");
+                OnFirstOpen?.Invoke();
+            }
 
             if (LeftPivot != null)
             {
@@ -153,6 +227,27 @@ namespace PipePuz.LightBeam
                 RightPivot.localRotation = Quaternion.RotateTowards(
                     RightPivot.localRotation, target, speed * Time.deltaTime);
             }
+        }
+
+        /// <summary>
+        /// 로컬 player(Camera.main, 즉 VR head) 가 ProximityRadius 안에 있는지.
+        /// 각 클라이언트는 자기 카메라 기준으로 평가하므로, 자기가 가까이 가면 자기 화면에서 열림.
+        /// </summary>
+        bool IsPlayerNear()
+        {
+            var cam = Camera.main;
+            if (cam == null) return false;
+            Transform center = ProximityCenter != null ? ProximityCenter : transform;
+            float sqr = (cam.transform.position - center.position).sqrMagnitude;
+            return sqr <= ProximityRadius * ProximityRadius;
+        }
+
+        void OnDrawGizmosSelected()
+        {
+            if (!RequireProximity) return;
+            Transform center = ProximityCenter != null ? ProximityCenter : transform;
+            Gizmos.color = new Color(0.4f, 1f, 0.6f, 0.35f);
+            Gizmos.DrawWireSphere(center.position, ProximityRadius);
         }
     }
 }
