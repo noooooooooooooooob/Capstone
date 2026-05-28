@@ -44,6 +44,7 @@ public class NetworkGrabbableSync : NetworkBehaviour, IStateAuthorityChanged
 
     XRGrabInteractable _grab;
     NetworkTransform _nt;
+    Transform _originalParent;
 
     bool _isReceivingAuthority;
     Vector3 _transferPosition;
@@ -53,6 +54,7 @@ public class NetworkGrabbableSync : NetworkBehaviour, IStateAuthorityChanged
     {
         _grab = GetComponent<XRGrabInteractable>();
         _nt = GetComponent<NetworkTransform>();
+        _originalParent = transform.parent;
 
         _grab.selectEntered.AddListener(OnSelectEnter);
         _grab.selectExited.AddListener(OnSelectExit);
@@ -82,6 +84,10 @@ public class NetworkGrabbableSync : NetworkBehaviour, IStateAuthorityChanged
     {
         if (Object == null || !Object.IsValid) return;
 
+        // Grab 중에 parent 제거 (XRIT 좌표 변환 방지)
+        if (transform.parent != null)
+            transform.parent = null;
+
         if (!Object.HasStateAuthority)
         {
             Object.RequestStateAuthority();
@@ -93,7 +99,9 @@ public class NetworkGrabbableSync : NetworkBehaviour, IStateAuthorityChanged
 
     void OnSelectExit(SelectExitEventArgs _)
     {
-        // 권위는 그대로 유지(놓아도 다음 사람이 끊김 없이 가져감). 별도 처리 없음.
+        // Ungrab 후 원래 parent로 복원
+        if (transform.parent == null && _originalParent != null)
+            transform.parent = _originalParent;
     }
 
     // 권위가 아직 안 넘어온 동안, XRIT 가 매 프레임 손 위치로 옮겨 둔 트랜스폼을 저장.
