@@ -65,6 +65,9 @@ public class NetworkGrabbableSync : NetworkBehaviour, IStateAuthorityChanged
         _nt.DisableSharedModeInterpolation = true;
 #endif
 
+        // XRIT 가 grab 중에 parent 변환으로 좌표를 건드리므로 네트워크 동기화에서 제외.
+        _nt.SyncParent = false;
+
         if (forceNoThrowOnDetach) _grab.throwOnDetach = false;
     }
 
