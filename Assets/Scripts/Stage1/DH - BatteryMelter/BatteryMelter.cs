@@ -18,10 +18,20 @@ public class BatteryMelter : NetworkBehaviour
     public Material meltedBatteryCore;
 
     [Header("Settings")]
-    public float snapDistance = 0.3f;
+    public float snapDistance = 0.55f;
     public float glassOpenAngle = 90f;
     public float buttonPressDepth = 0.015f;
     public float animSpeed = 2.5f;
+
+    [Header("Battery Snap Alignment")]
+    [Tooltip("Local position offset applied on top of batterySlot so the battery sits flush inside the device.")]
+    public Vector3 batterySnapPositionOffset = Vector3.zero;
+    [Tooltip("Euler rotation offset applied on top of batterySlot so the battery lies horizontally.")]
+    public Vector3 batterySnapRotationOffset = new Vector3(0f, 0f, 90f);
+
+    [Header("Light Ball Snap Alignment")]
+    [Tooltip("Local position offset applied on top of lightBallHole so the ball sits snug.")]
+    public Vector3 lightBallSnapPositionOffset = Vector3.zero;
 
     [Networked]
     public NetworkBool IsOpen { get; set; }
@@ -46,9 +56,26 @@ public class BatteryMelter : NetworkBehaviour
         );
         glassButtonOrigin    = glassButton.localPosition;
         activateButtonOrigin = activateButton.localPosition;
-        
+
         // Initial state
         glassHinge.localRotation = IsOpen ? hingeOpenedRot : hingeClosedRot;
+
+        // Button colors: glass/open = red, activate/thaw = green
+        SetButtonColor(glassButton,    new Color(0.85f, 0.12f, 0.12f));
+        SetButtonColor(activateButton, new Color(0.12f, 0.75f, 0.22f));
+    }
+
+    static readonly int BaseColorID = Shader.PropertyToID("_BaseColor");
+
+    void SetButtonColor(Transform btn, Color color)
+    {
+        if (btn == null) return;
+        var rend = btn.GetComponent<Renderer>();
+        if (rend == null) return;
+        var mpb = new MaterialPropertyBlock();
+        rend.GetPropertyBlock(mpb);
+        mpb.SetColor(BaseColorID, color);
+        rend.SetPropertyBlock(mpb);
     }
 
     public override void Render()
@@ -105,15 +132,14 @@ public class BatteryMelter : NetworkBehaviour
             }
             else
             {
-                lb.transform.position = lightBallHole.position;
-                lb.transform.rotation = lightBallHole.rotation;
+                ApplySnap(lb, lightBallHole, lightBallSnapPositionOffset, Vector3.zero);
             }
         }
         else
         {
             if (!isHeld && Vector3.Distance(lb.transform.position, lightBallHole.position) < snapDistance)
             {
-                Snap(lb, lightBallHole, ref snappedLightBall);
+                Snap(lb, lightBallHole, lightBallSnapPositionOffset, Vector3.zero, ref snappedLightBall);
             }
         }
     }
@@ -135,8 +161,7 @@ public class BatteryMelter : NetworkBehaviour
             }
             else
             {
-                snappedBattery.transform.position = batterySlot.position;
-                snappedBattery.transform.rotation = batterySlot.rotation;
+                ApplySnap(snappedBattery, batterySlot, batterySnapPositionOffset, batterySnapRotationOffset);
             }
             return;
         }
@@ -149,7 +174,7 @@ public class BatteryMelter : NetworkBehaviour
 
             if (Vector3.Distance(bat.transform.position, batterySlot.position) < snapDistance)
             {
-                Snap(bat, batterySlot, ref snappedBattery);
+                Snap(bat, batterySlot, batterySnapPositionOffset, batterySnapRotationOffset, ref snappedBattery);
                 break;
             }
         }
@@ -157,21 +182,26 @@ public class BatteryMelter : NetworkBehaviour
 
     // ── Snap / Unsnap ──────────────────────────────────────
 
-    void Snap(GameObject obj, Transform slot, ref GameObject snapRef)
+    // Applies position+rotation to an already-snapped object every frame.
+    void ApplySnap(GameObject obj, Transform slot, Vector3 posOffset, Vector3 rotOffset)
+    {
+        obj.transform.position = slot.TransformPoint(posOffset);
+        obj.transform.rotation = slot.rotation * Quaternion.Euler(rotOffset);
+    }
+
+    void Snap(GameObject obj, Transform slot, Vector3 posOffset, Vector3 rotOffset, ref GameObject snapRef)
     {
         snapRef = obj;
 
         var rb = obj.GetComponent<Rigidbody>();
         if (rb)
         {
-            rb.linearVelocity = Vector3.zero;
+            rb.linearVelocity  = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
-            rb.constraints = RigidbodyConstraints.FreezeAll;
+            rb.constraints     = RigidbodyConstraints.FreezeAll;
         }
 
-        obj.transform.position = slot.position;
-        obj.transform.rotation = slot.rotation;
-
+        ApplySnap(obj, slot, posOffset, rotOffset);
         Debug.Log($"{obj.name} snapped!");
     }
 
@@ -246,7 +276,12 @@ public class BatteryMelter : NetworkBehaviour
 
         if (lTag != null && bColor != lTag.color)
         {
-            Debug.Log($"[BatteryMelter] Color mismatch! Battery:{bColor}, Ball:{lTag.color}");
+            Debug.Log($"[BatteryMelter] Color mismatch ({bColor} vs {lTag.color}) — opening lid and ejecting battery.");
+            if (Object.HasStateAuthority)
+                EjectBattery();
+            else
+                RpcRequestEject();
+            StartCoroutine(PressButtonVisual(activateButton, activateButtonOrigin));
             return;
         }
 
@@ -258,7 +293,7 @@ public class BatteryMelter : NetworkBehaviour
         {
             RpcRequestMelt();
         }
-        
+
         StartCoroutine(PressButtonVisual(activateButton, activateButtonOrigin));
     }
 
@@ -266,6 +301,31 @@ public class BatteryMelter : NetworkBehaviour
     void RpcRequestMelt()
     {
         MeltBatteryLogic();
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    void RpcRequestEject()
+    {
+        EjectBattery();
+    }
+
+    void EjectBattery()
+    {
+        if (snappedBattery == null) return;
+
+        IsOpen = true;
+
+        var bat = snappedBattery;
+        snappedBattery = null;
+
+        var rb = bat.GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.constraints = RigidbodyConstraints.None;
+            rb.useGravity   = true;
+            // Toss forward and slightly upward so it lands in front of the machine.
+            rb.linearVelocity = transform.forward * 2f + Vector3.up * 1f;
+        }
     }
 
     void MeltBatteryLogic()
