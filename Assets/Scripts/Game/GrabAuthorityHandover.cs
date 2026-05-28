@@ -71,7 +71,30 @@ public class GrabAuthorityHandover : MonoBehaviour
             Debug.Log($"[GAH:{name}] RequestStateAuthority() 호출 — AllowOverride={allowed}, currentAuth={_no.StateAuthority}, localPlayer={_no.Runner?.LocalPlayer}", this);
         _no.RequestStateAuthority();
         if (verboseLog)
+        {
             Debug.Log($"[GAH:{name}] 호출 직후 HasStateAuthority={_no.HasStateAuthority}, currentAuth={_no.StateAuthority}", this);
+            // RequestStateAuthority는 비동기(~1 RTT) — 권한이 실제로 넘어오는지 다음 ~1.5초간 추적.
+            _pollTicks = 90;
+        }
+    }
+
+    int _pollTicks;
+
+    void Update()
+    {
+        if (_pollTicks <= 0) return;
+        _pollTicks--;
+        if (_no == null || !_no.IsValid) return;
+
+        if (_no.HasStateAuthority)
+        {
+            Debug.Log($"[GAH:{name}] 권한 획득 완료 (남은 tick={_pollTicks}) currentAuth={_no.StateAuthority}", this);
+            _pollTicks = 0;
+        }
+        else if (_pollTicks == 0)
+        {
+            Debug.LogWarning($"[GAH:{name}] ~1.5초 내 권한 획득 실패 — currentAuth={_no.StateAuthority}, AllowOverride={(_no.Flags & NetworkObjectFlags.AllowStateAuthorityOverride) == NetworkObjectFlags.AllowStateAuthorityOverride}", this);
+        }
     }
 
     void OnSelectExited(UnityEngine.XR.Interaction.Toolkit.SelectExitEventArgs _)

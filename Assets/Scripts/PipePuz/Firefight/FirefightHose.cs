@@ -1,3 +1,4 @@
+using Fusion;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
@@ -42,6 +43,13 @@ namespace PipePuz.Firefight
 
         XRGrabInteractable _grab;
 
+        [Header("Debug — 네트워크 동기 진단 (확인 후 끄세요)")]
+        [Tooltip("0.5초마다 각 피어에서 호스 위치/권한/이동 여부를 콘솔에 찍는다.")]
+        public bool logNetSync = true;
+        NetworkObject _no;
+        float _netLogTimer;
+        Vector3 _lastLoggedPos;
+
         public bool IsActive
         {
             get
@@ -55,10 +63,28 @@ namespace PipePuz.Firefight
         void Awake()
         {
             _grab = GetComponent<XRGrabInteractable>();
+            _no = GetComponent<NetworkObject>();
+            _lastLoggedPos = transform.position;
         }
 
         void Update()
         {
+            if (logNetSync)
+            {
+                _netLogTimer += Time.deltaTime;
+                if (_netLogTimer >= 0.5f)
+                {
+                    _netLogTimer = 0f;
+                    bool moved = (transform.position - _lastLoggedPos).sqrMagnitude > 1e-8f;
+                    bool valid = _no != null && _no.IsValid;
+                    Debug.Log($"[Hose net] pos={transform.position} moved={moved} " +
+                              $"valid={valid} hasAuth={(valid && _no.HasStateAuthority)} " +
+                              $"auth={(valid ? _no.StateAuthority.ToString() : "-")} " +
+                              $"grabbed={(_grab != null && _grab.isSelected)} ntEnabled={(_no != null && _no.GetComponent<NetworkTransform>() != null && _no.GetComponent<NetworkTransform>().enabled)}");
+                    _lastLoggedPos = transform.position;
+                }
+            }
+
             if (Nozzle == null) return;
 
             float pressure = Controller != null ? Controller.CurrentPressure : 0f;
