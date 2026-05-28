@@ -17,6 +17,7 @@ public class BoxerCreature : MonoBehaviour
     private Animator anim;
     private AudioSource audioSource;
     private bool isCaged = false;
+    private NetworkGrabbableSync netGrab;
 
     void Start()
     {
@@ -40,6 +41,14 @@ public class BoxerCreature : MonoBehaviour
         audioSource.clip = grabSound;
         audioSource.loop = true;
         audioSource.playOnAwake = false;
+
+        // 그랩 사운드를 네트워크 그랩 상태에 연동 → 모든 피어에서 재생.
+        netGrab = GetComponent<NetworkGrabbableSync>();
+        if (netGrab != null)
+        {
+            netGrab.onGrab.AddListener(ApplyGrabbed);
+            netGrab.onUngrab.AddListener(ApplyUngrabbed);
+        }
     }
 
     void Update()
@@ -69,12 +78,33 @@ public class BoxerCreature : MonoBehaviour
 
     void OnGrabbed(UnityEngine.XR.Interaction.Toolkit.SelectEnterEventArgs args)
     {
-        if (audioSource != null && grabSound != null) audioSource.Play();
+        if (netGrab == null) ApplyGrabbed();
     }
 
     void OnReleased(UnityEngine.XR.Interaction.Toolkit.SelectExitEventArgs args)
     {
+        if (netGrab == null) ApplyUngrabbed();
+    }
+
+    // onGrab(네트워크 IsGrabbed=true) → 모든 피어에서 호출. 그랩 사운드 동기.
+    void ApplyGrabbed()
+    {
+        if (audioSource != null && grabSound != null && !audioSource.isPlaying)
+            audioSource.Play();
+    }
+
+    void ApplyUngrabbed()
+    {
         if (audioSource != null) audioSource.Stop();
+    }
+
+    void OnDestroy()
+    {
+        if (netGrab != null)
+        {
+            netGrab.onGrab.RemoveListener(ApplyGrabbed);
+            netGrab.onUngrab.RemoveListener(ApplyUngrabbed);
+        }
     }
 
     public void GetStunned()
