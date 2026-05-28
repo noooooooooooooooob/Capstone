@@ -177,6 +177,11 @@ public class MainControlSystem : NetworkBehaviour
                 if (statusText) statusText.text = "INSERT BATTERY";
                 if (batteryWarningPanel) batteryWarningPanel.SetActive(true);
                 TurnOffLights();
+                // 불 점화는 네트워크 상태(PowerOff)에 연동 — Render()가 모든 피어에서 실행되므로
+                // 권한자/프록시 모두 동일하게 점화된다. (예전엔 권한자 전용 StabilizeSequence에서만
+                // 호출해 P2엔 불이 안 났음. 늦게 합류한 피어도 상태 전이 감지로 점화됨.)
+                if (Stage1.FireHazardController.Instance != null)
+                    Stage1.FireHazardController.Instance.ActivateFires();
                 break;
             case SystemState.Rebooting:
                 if (statusText) statusText.text = "REBOOTING...";
@@ -311,12 +316,7 @@ public class MainControlSystem : NetworkBehaviour
         yield return new WaitForSeconds(1.5f);
         CurrentState = SystemState.PowerOff;
         Stability = 0f;
-
-        // NEW: Trigger fire spawning when power goes off
-        if (Stage1.FireHazardController.Instance != null)
-        {
-            Stage1.FireHazardController.Instance.ActivateFires();
-        }
+        // 불 점화는 UpdateStateVisuals(PowerOff)에서 네트워크 상태 기반으로 처리 → 모든 피어 동기화.
     }
 
     void TurnOffLights()
