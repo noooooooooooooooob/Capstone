@@ -113507,7 +113507,9 @@ MonoBehaviour:
   MaxStartSpeed: 10
   MaxStartSize: 0.06
   MinPressureToFire: 0.05
-  logNetSync: 1
+  _NetSpraying:
+    _value: 0
+  _NetPressure: 0
 --- !u!4 &798446892
 Transform:
   m_ObjectHideFlags: 0
@@ -113738,6 +113740,7 @@ MonoBehaviour:
   Flags: 786433
   NestedObjects: []
   NetworkedBehaviours:
+  - {fileID: 798446891}
   - {fileID: 798446896}
   - {fileID: 798446898}
   ForceRemoteRenderTimeframe: 0

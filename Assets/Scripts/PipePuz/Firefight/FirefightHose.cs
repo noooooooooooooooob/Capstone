@@ -5,13 +5,25 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 namespace PipePuz.Firefight
 {
     /// <summary>
-    /// 사용자가 잡고 조준하는 호스.
-    /// 잡혀있고 (XRGrabInteractable.isSelected) Controller.CurrentPressure > 0 일 때 자동 분사.
-    /// 매 프레임 Nozzle.forward 로 Raycast (max range = MaxRange × pressure),
-    /// hit 한 FirefightFire 에 ApplyDamage 호출.
-    /// WaterStream ParticleSystem 의 emission rate / startSpeed / startSize 를 pressure 비례 갱신.
+    /// 사용자가 잡고 조준하는 호스. (Fusion Shared Mode 동기화)
+    ///
+    /// ── 왜 NetworkBehaviour 인가 ───────────────────────────────────────────
+    /// 예전엔 분사/데미지를 로컬 _grab.isSelected + 로컬 Controller.CurrentPressure 로 게이팅했다.
+    /// 두 값 모두 "잡은 피어에서만" 의미가 있어서 상대 화면에선 물도 안 나오고 불도 안 꺼졌다.
+    ///   · _grab.isSelected : 잡은 피어에서만 true (원격엔 복제 안 됨)
+    ///   · CurrentPressure  : 네트워크 값이 아니라 각 피어가 따로 계산 → 관측자 쪽이 0일 수 있음
+    ///
+    /// 해결: 호스를 잡은 사람(State Authority)이 "분사 중인가 + 현재 압력"을 [Networked] 로 방송한다.
+    ///       모든 피어는 그 방송값(NetSpraying / NetPressure)만 보고
+    ///         (1) WaterStream 물줄기 이펙트를 재생하고,
+    ///         (2) Nozzle(위치/방향은 NetworkTransform 으로 동기화됨) 에서 SphereCast 해
+    ///             자기 로컬 FirefightFire 에 데미지를 적용한다.
+    ///       → 누가 잡든 양쪽 화면에서 물이 보이고, 불도 양쪽에서 함께 꺼진다.
+    ///
+    /// 주의: 베이스 클래스를 NetworkBehaviour 로 바꿨으므로, 씬을 한 번 저장(또는 플레이 진입)해
+    ///       Fusion 이 이 호스 NetworkObject 의 NetworkedBehaviours 를 재베이크해야 한다.
     /// </summary>
-    public class FirefightHose : MonoBehaviour
+    public class FirefightHose : NetworkBehaviour
     {
         [Header("Refs")]
         [Tooltip("물줄기의 출발 Transform. forward 가 분사 방향.")]
@@ -42,38 +54,23 @@ namespace PipePuz.Firefight
         public float MinPressureToFire = 0.05f;
 
         XRGrabInteractable _grab;
-        NetworkGrabbableSync _ngs;
 
-        [Header("Debug — 네트워크 동기 진단 (확인 후 끄세요)")]
-        [Tooltip("0.5초마다 각 피어에서 호스 위치/권한/이동 여부를 콘솔에 찍는다.")]
-        public bool logNetSync = true;
-        NetworkObject _no;
-        float _netLogTimer;
-        Vector3 _lastLoggedPos;
+        // ── 잡은 사람(권위)이 방송하는 분사 상태 ──
+        // 모든 피어가 이 값으로 물 이펙트 + 데미지를 실행한다.
+        [Networked] public NetworkBool NetSpraying { get; set; }
+        [Networked] public float NetPressure { get; set; }
 
-        /// <summary>
-        /// "누군가 호스를 잡고 있는가" — 네트워크로 공유된 grab 상태.
-        /// 로컬 _grab.isSelected 는 잡은 피어에서만 true 라서, 그걸로 분사/데미지를 게이팅하면
-        /// 상대 화면에선 물도 안 보이고 불도 안 꺼진다. NetworkGrabbableSync.IsGrabbed 는
-        /// 잡은 사람이 누구든 모든 피어에 복제되므로, 이걸로 게이팅하면 분사 비주얼과
-        /// SphereCast 데미지가 양쪽에서 동일하게 실행된다.
-        /// 네트워크 미초기화(단독 에디터)면 로컬 select 로 폴백.
-        /// </summary>
-        bool HeldByAnyone
-        {
-            get
-            {
-                if (_ngs != null && _no != null && _no.IsValid)
-                    return (bool)_ngs.IsGrabbed;
-                return _grab != null && _grab.isSelected;
-            }
-        }
+        // 러너 스폰 완료(네트워크 유효) 여부.
+        bool NetReady => Object != null && Object.IsValid;
 
+        /// <summary>누군가 실제로 분사 중인가(모든 피어 공통). 외부 조회용.</summary>
         public bool IsActive
         {
             get
             {
-                if (!HeldByAnyone) return false;
+                if (NetReady) return (bool)NetSpraying;
+                // 네트워크 미초기화(단독 에디터): 로컬 상태로 폴백.
+                if (_grab == null || !_grab.isSelected) return false;
                 if (Controller == null) return false;
                 return Controller.CurrentPressure > MinPressureToFire;
             }
@@ -82,44 +79,51 @@ namespace PipePuz.Firefight
         void Awake()
         {
             _grab = GetComponent<XRGrabInteractable>();
-            _ngs = GetComponent<NetworkGrabbableSync>();
-            _no = GetComponent<NetworkObject>();
-            _lastLoggedPos = transform.position;
+        }
+
+        /// <summary>
+        /// 권위(=호스를 잡은 피어)만 실제 분사 상태/압력을 계산해 [Networked] 로 방송한다.
+        /// 비권위 피어는 여기서 아무것도 쓰지 않고 방송값을 수신만 한다.
+        /// </summary>
+        public override void FixedUpdateNetwork()
+        {
+            if (!Object.HasStateAuthority) return;
+
+            float p = Controller != null ? Controller.CurrentPressure : 0f;
+            bool spraying = _grab != null && _grab.isSelected && p > MinPressureToFire;
+
+            NetSpraying = spraying;
+            NetPressure = p;
         }
 
         void Update()
         {
-            if (logNetSync)
-            {
-                _netLogTimer += Time.deltaTime;
-                if (_netLogTimer >= 0.5f)
-                {
-                    _netLogTimer = 0f;
-                    bool moved = (transform.position - _lastLoggedPos).sqrMagnitude > 1e-8f;
-                    bool valid = _no != null && _no.IsValid;
-                    Debug.Log($"[Hose net] pos={transform.position} moved={moved} " +
-                              $"valid={valid} hasAuth={(valid && _no.HasStateAuthority)} " +
-                              $"auth={(valid ? _no.StateAuthority.ToString() : "-")} " +
-                              $"grabbed={(_grab != null && _grab.isSelected)} ntEnabled={(_no != null && _no.GetComponent<NetworkTransform>() != null && _no.GetComponent<NetworkTransform>().enabled)}");
-                    _lastLoggedPos = transform.position;
-                }
-            }
-
             if (Nozzle == null) return;
 
-            float pressure = Controller != null ? Controller.CurrentPressure : 0f;
-            bool active = IsActive;
+            // 분사 여부/압력: 네트워크가 살아있으면 방송값을, 아니면 로컬값을 사용.
+            bool spraying;
+            float pressure;
+            if (NetReady)
+            {
+                spraying = (bool)NetSpraying;
+                pressure = NetPressure;
+            }
+            else
+            {
+                pressure = Controller != null ? Controller.CurrentPressure : 0f;
+                spraying = _grab != null && _grab.isSelected && pressure > MinPressureToFire;
+            }
 
-            UpdateStreamVisual(active, pressure);
+            // (1) 물줄기 이펙트 — 모든 피어에서 재생/정지.
+            UpdateStreamVisual(spraying, pressure);
 
-            if (!active) return;
+            if (!spraying) return;
 
-            // 사정거리 = pressure 비례.
+            // (2) 데미지 — 모든 피어에서 자기 로컬 불에 적용 → 양쪽에서 함께 꺼진다.
+            //     Nozzle 위치/방향은 호스 NetworkTransform 으로 동기화되므로 양쪽이 같은 불을 맞춘다.
             float range = MaxRange * Mathf.Clamp01(pressure);
             if (range < 0.05f) return;
 
-            // SphereCast — Raycast 의 직선 정확도 부담 제거. HitRadius 만큼의 굵은 줄기로 hit 검사.
-            // 자기 자신(hose 콜라이더) 와의 충돌 피하려 Nozzle 보다 살짝 앞에서 시작.
             Vector3 origin = Nozzle.position + Nozzle.forward * 0.05f;
             float castRange = Mathf.Max(0.05f, range - 0.05f);
             if (Physics.SphereCast(origin, HitRadius, Nozzle.forward, out var hit, castRange, FireMask, QueryTriggerInteraction.Collide))
