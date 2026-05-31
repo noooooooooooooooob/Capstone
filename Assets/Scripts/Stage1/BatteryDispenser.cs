@@ -165,6 +165,19 @@ namespace Stage1
                 var colorTag = obj.GetComponent<BatteryColorTag>();
                 if (colorTag != null) colorTag.color = batteryColor;
 
+                // ── 양쪽 플레이어가 모두 잡을 수 있게 보장 ──────────────────────────
+                // Battery.prefab 에는 권위 이전 컴포넌트(NetworkGrabbableSync)가 없어서,
+                // 스폰한 권한자만 실제로 움직일 수 있고 상대가 잡으면 NetworkTransform 이
+                // 위치를 되돌려 "안 잡히는" 것처럼 보였다. GrabAuthorityHandover 는
+                // MonoBehaviour 라 런타임 AddComponent 로 즉시 동작하며, 잡는 순간
+                // RequestStateAuthority 로 권위를 끌어와 그때부터 위치가 상대에게 전파된다.
+                // (NetworkObject.AllowStateAuthorityOverride 플래그가 이미 켜져 있어 동작함.)
+                if (obj.GetComponent<GrabAuthorityHandover>() == null &&
+                    obj.GetComponent<NetworkGrabbableSync>() == null)
+                {
+                    obj.gameObject.AddComponent<GrabAuthorityHandover>();
+                }
+
                 _currentBatteryId = obj.Id;
             });
 
