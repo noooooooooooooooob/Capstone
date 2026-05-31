@@ -148,7 +148,9 @@ public class BatteryMelter : NetworkBehaviour
 
     void HandleBattery()
     {
-        if (!IsOpen || isAnimating) return;
+        // 유리 열림(IsOpen) 여부와 무관하게 "근처에 대면" 자동으로 가로 스냅하도록 게이트 제거.
+        // (충전(Activate)은 여전히 유리를 닫은 상태에서만 동작.)
+        if (isAnimating) return;
 
         if (snappedBattery != null)
         {
