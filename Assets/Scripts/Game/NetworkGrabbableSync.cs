@@ -71,6 +71,24 @@ public class NetworkGrabbableSync : NetworkBehaviour, IStateAuthorityChanged
         _nt.SyncParent = false;
 
         if (forceNoThrowOnDetach) _grab.throwOnDetach = false;
+
+        // XRGrab 이 놓을 때 원래 부모로 되돌리지 못하게 한다(되돌리면 그래버만 부모가 생겨 어긋남).
+        _grab.retainTransformParent = false;
+    }
+
+    public override void Spawned()
+    {
+        // ── 좌표계 일치의 핵심 ──────────────────────────────────────────────
+        // XRGrab 은 "잡는 순간" 그래버 쪽 오브젝트의 부모를 null 로 바꾼다(프록시는 안 바뀜).
+        // NetworkTransform 은 localPosition(부모 기준)을 동기화하므로, 한쪽만 부모가 떨어지면
+        // 프록시는 부모 오프셋만큼 순간이동해 보인다(잡는 순간 -X 등으로 튐 → 놓으면 복귀).
+        //
+        // 해결: 모든 피어에서 처음부터 부모를 떼어 항상 root(월드 공간)에 둔다. 그러면
+        //   · 잡을 때 XRGrab 이 그래버 부모를 떼도 이미 양쪽 다 부모가 없어 어긋나지 않고,
+        //   · 놓을 때 부모 복원이 없어(위 retainTransformParent=false) 깜빡임도 없다.
+        // SetParent(null, worldPositionStays:true) 라 위치·회전·스케일이 모두 보존돼 시각 변화 없음.
+        if (transform.parent != null)
+            transform.parent = null;
     }
 
     void OnDestroy()
