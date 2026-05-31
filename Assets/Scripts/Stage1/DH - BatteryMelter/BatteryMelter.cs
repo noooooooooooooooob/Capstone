@@ -175,7 +175,15 @@ public class BatteryMelter : NetworkBehaviour
             }
             else
             {
-                ApplySnap(snappedBattery, batterySlot, batterySnapPositionOffset, batterySnapRotationOffset);
+                // 네트워크 핵심: 배터리 권한을 확보한 뒤에만 위치를 강제한다.
+                // 권한이 아직 다른 피어(마지막에 잡은 사람)에 있으면, 위치를 써도 그 피어의
+                // NetworkTransform 이 매 틱 되돌려 '줄다리기'가 생겨 스냅이 안 잡힌다.
+                // 그래서 권한이 없으면 요청만 하고(다음 프레임 재시도), 확보된 뒤 ApplySnap.
+                var no = snappedBattery.GetComponent<NetworkObject>();
+                if (no != null && no.IsValid && !no.HasStateAuthority)
+                    no.RequestStateAuthority();
+                else
+                    ApplySnap(snappedBattery, batterySlot, batterySnapPositionOffset, batterySnapRotationOffset);
             }
             return;
         }

@@ -186944,7 +186944,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3548512125633342485, guid: 0ebf8bfe79c536049920a7f64e7b2b7f, type: 3}
       propertyPath: snapDistance
-      value: 0.5
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3548512125633342485, guid: 0ebf8bfe79c536049920a7f64e7b2b7f, type: 3}
       propertyPath: lightBallHole

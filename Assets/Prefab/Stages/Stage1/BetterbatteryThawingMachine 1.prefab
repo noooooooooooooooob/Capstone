@@ -294,7 +294,7 @@ MonoBehaviour:
   batterySlot: {fileID: 7103775496935577730}
   frozenBatteryCore: {fileID: 2100000, guid: 556c377ac3f26df47a76ae33e4068947, type: 2}
   meltedBatteryCore: {fileID: 2100000, guid: a737c0712b8a8a849a37a6518684aad9, type: 2}
-  snapDistance: 0.5
+  snapDistance: 1
   glassOpenAngle: 90
   buttonPressDepth: 0.015
   animSpeed: 2.5
