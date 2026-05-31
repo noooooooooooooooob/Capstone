@@ -34,6 +34,10 @@ namespace Stage1
         [Tooltip("배터리가 이 거리 안에 들어오면 소멸시키고 카운트한다.")]
         public float snapDistance = 1f;
 
+        [Tooltip("BatterySlot 컴포넌트(BSlot_R/Y/B)가 트리거 방식으로 슬롯을 채울 때 true.\n" +
+                 "true면 이 스크립트의 거리-폴링 Update()는 건너뛴다.")]
+        public bool useSlotTriggers = false;
+
         bool[] slotFilled;
 
         void Awake()
@@ -48,8 +52,29 @@ namespace Stage1
             if (mainControl != null && n > 0) mainControl.requiredBatteries = n;
         }
 
+        // ── Called by BatterySlot when a battery snaps into a trigger slot ──────
+        /// <summary>
+        /// BatterySlot(BSlot_R/Y/B)이 배터리를 스냅했을 때 호출.
+        /// InstalledBatteries를 올리고 해당 색상의 Dispenser를 잠근다.
+        /// </summary>
+        public void NotifySlotFilled(LightBallColor color, GameObject battery = null)
+        {
+            if (mainControl == null) return;
+            if (mainControl.Object == null || !mainControl.Object.IsValid) return;
+            if (!mainControl.Object.HasStateAuthority) return;
+
+            mainControl.InstalledBatteries++;
+            LockDispenser(color);
+
+            Debug.Log($"[MultiBatterySlotPanel] NotifySlotFilled({color}) — " +
+                      $"{mainControl.InstalledBatteries}/{mainControl.requiredBatteries}");
+        }
+
+        // ── Legacy distance-polling Update (skipped when useSlotTriggers=true) ──
         void Update()
         {
+            if (useSlotTriggers) return;   // BatterySlot triggers handle it instead
+
             if (mainControl == null) return;
             if (slots == null || slots.Length == 0) return;
             if (slotFilled == null || slotFilled.Length != slots.Length)
