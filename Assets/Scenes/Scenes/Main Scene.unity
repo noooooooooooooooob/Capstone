@@ -93509,7 +93509,7 @@ MonoBehaviour:
   version: 2
   globalVolume: 0
   mode: 1
-  size: {x: 50.990673, y: 7, z: 88.10333}
+  size: {x: 50.99067, y: 7, z: 88.10333}
   overrideRendererFilters: 0
   minRendererVolumeSize: 0.1
   objectLayerMask:
@@ -93547,7 +93547,7 @@ Transform:
   m_GameObject: {fileID: 662307333}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -14.994661, y: 1.75, z: 21.45589}
+  m_LocalPosition: {x: -14.994663, y: 1.75, z: 21.45589}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -187099,31 +187099,31 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7103775496935577730, guid: 0ebf8bfe79c536049920a7f64e7b2b7f, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0.72
+      value: 0.16999929
       objectReference: {fileID: 0}
     - target: {fileID: 7103775496935577730, guid: 0ebf8bfe79c536049920a7f64e7b2b7f, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.55
+      value: 0.6
       objectReference: {fileID: 0}
     - target: {fileID: 7103775496935577730, guid: 0ebf8bfe79c536049920a7f64e7b2b7f, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0.15
+      value: 0.14999934
       objectReference: {fileID: 0}
     - target: {fileID: 7103775496935577730, guid: 0ebf8bfe79c536049920a7f64e7b2b7f, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.5
+      value: 0.7068558
       objectReference: {fileID: 0}
     - target: {fileID: 7103775496935577730, guid: 0ebf8bfe79c536049920a7f64e7b2b7f, type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.5
+      value: -0.7068557
       objectReference: {fileID: 0}
     - target: {fileID: 7103775496935577730, guid: 0ebf8bfe79c536049920a7f64e7b2b7f, type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.5
+      value: 0.018839892
       objectReference: {fileID: 0}
     - target: {fileID: 7103775496935577730, guid: 0ebf8bfe79c536049920a7f64e7b2b7f, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.5
+      value: 0.018839981
       objectReference: {fileID: 0}
     - target: {fileID: 7103775496935577730, guid: 0ebf8bfe79c536049920a7f64e7b2b7f, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -187131,7 +187131,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7103775496935577730, guid: 0ebf8bfe79c536049920a7f64e7b2b7f, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
-      value: 90
+      value: 3.054
       objectReference: {fileID: 0}
     - target: {fileID: 7785588819148392330, guid: 0ebf8bfe79c536049920a7f64e7b2b7f, type: 3}
       propertyPath: m_StaticEditorFlags
