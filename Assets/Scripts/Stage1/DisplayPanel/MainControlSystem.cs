@@ -123,21 +123,10 @@ public class MainControlSystem : NetworkBehaviour
 
     void OnPuzzleChanged(int index)
     {
-        // When the game advances to a new puzzle the previous one is considered solved.
-        // If this system is still in a non-Idle state (e.g. debug skip bypassed the
-        // normal battery-insert reboot path), force it back to Idle so lights restore.
-        if (Object != null && Object.IsValid && Object.HasStateAuthority)
-        {
-            if (CurrentState == SystemState.PowerOff ||
-                CurrentState == SystemState.BatteryLow ||
-                CurrentState == SystemState.Rebooting)
-            {
-                StopAlarm();
-                snappedBattery = null;
-                Stability = maxStability;
-                CurrentState = SystemState.Idle;
-            }
-        }
+        // 자동 복구 제거: 라이트 복구는 오직 CRT 버튼 안정화(배터리 3개 + 버튼) 경로로만 이뤄진다.
+        // 예전엔 퍼즐이 다음 단계로 넘어가거나 디버그 스킵 시 여기서 강제로 Idle로 되돌려
+        // 불을 켰지만, 이제는 PowerOff 상태를 그대로 유지한다.
+        // (복구는 OnStabilizeButtonPressed → RpcRequestRecovery → Reboot 경로가 전담)
         UpdateVisuals();
     }
 
@@ -389,18 +378,13 @@ public class MainControlSystem : NetworkBehaviour
     {
         if (!Object || !Object.IsValid) return;
         if (CurrentState != SystemState.PowerOff) return;
-        
-        StartCoroutine(RequestAuthorityAndReboot());
-    }
 
-    IEnumerator RequestAuthorityAndReboot()
-    {
-        if (!Object.HasStateAuthority)
-        {
-            Object.RequestStateAuthority();
-            while (!Object.HasStateAuthority) yield return null;
-        }
-        StartCoroutine(Reboot());
+        // 자동 복구 제거: 배터리가 스냅돼도 곧바로 리부트(불 복구)하지 않는다.
+        // 설치 요건만 충족시키고, 실제 안정화는 CRT 버튼 입력
+        // (OnStabilizeButtonPressed → RpcRequestRecovery)이 전담한다.
+        // 레거시 단일 스냅은 슬롯이 1개뿐이므로, 이 배터리를 복구 요건 충족으로 처리한다.
+        if (Object.HasStateAuthority)
+            InstalledBatteries = Mathf.Max(InstalledBatteries, requiredBatteries);
     }
 
     IEnumerator Reboot()
