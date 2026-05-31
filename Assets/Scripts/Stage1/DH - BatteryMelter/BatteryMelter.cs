@@ -101,6 +101,21 @@ public class BatteryMelter : NetworkBehaviour
         }
     }
 
+    // ── Held 판정 ──────────────────────────────────────────
+
+    // XRGrabInteractable.isSelected 는 "잡은 그 클라이언트"에서만 true 인 로컬 값이다.
+    // 스냅 로직은 melter 의 State Authority 피어에서만 도므로, 상대 플레이어가 들고 있을 때
+    // isSelected 로 판정하면 "안 잡힘"으로 오판 → 손에서 뺏어 스냅하거나, 박힌 걸 못 빼게 된다.
+    // NetworkGrabbableSync.IsGrabbed 는 [Networked] 라 모든 피어에서 일치한다.
+    static bool IsHeld(GameObject obj)
+    {
+        var ngs = obj.GetComponent<NetworkGrabbableSync>();
+        if (ngs != null) return ngs.IsGrabbed;
+
+        var grab = obj.GetComponent<XRGrabInteractable>();
+        return grab != null && grab.isSelected;
+    }
+
     // ── LightBall ──────────────────────────────────────────
 
     void HandleLightBall()
@@ -113,16 +128,14 @@ public class BatteryMelter : NetworkBehaviour
             foreach (var b in all)
             {
                 if (b == null) continue;
-                var bg = b.GetComponent<XRGrabInteractable>();
-                if (bg != null && bg.isSelected) continue;
+                if (IsHeld(b)) continue;
                 float d = Vector3.Distance(b.transform.position, lightBallHole.position);
                 if (d < bestD) { bestD = d; lb = b; }
             }
         }
         if (lb == null) return;
 
-        var grab = lb.GetComponent<XRGrabInteractable>();
-        bool isHeld = grab != null && grab.isSelected;
+        bool isHeld = IsHeld(lb);
 
         if (snappedLightBall != null)
         {
@@ -154,8 +167,7 @@ public class BatteryMelter : NetworkBehaviour
 
         if (snappedBattery != null)
         {
-            var grab = snappedBattery.GetComponent<XRGrabInteractable>();
-            bool isHeld = grab != null && grab.isSelected;
+            bool isHeld = IsHeld(snappedBattery);
 
             if (isHeld)
             {
@@ -171,8 +183,7 @@ public class BatteryMelter : NetworkBehaviour
         GameObject[] allBatteries = GameObject.FindGameObjectsWithTag("Battery");
         foreach (var bat in allBatteries)
         {
-            var grab = bat.GetComponent<XRGrabInteractable>();
-            if (grab != null && grab.isSelected) continue;
+            if (IsHeld(bat)) continue;
 
             if (Vector3.Distance(bat.transform.position, batterySlot.position) < snapDistance)
             {
