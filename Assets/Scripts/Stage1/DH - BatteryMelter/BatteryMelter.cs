@@ -26,8 +26,8 @@ public class BatteryMelter : NetworkBehaviour
     [Header("Battery Snap Alignment")]
     [Tooltip("batterySlot(BatterySnapLocation) 기준 추가 위치 오프셋(슬롯 로컬 방향, 미터). 0이면 슬롯 위치 그대로.")]
     public Vector3 batterySnapPositionOffset = Vector3.zero;
-    [Tooltip("batterySlot 회전 기준 추가 Euler 오프셋(도). 0이면 슬롯 회전 그대로.")]
-    public Vector3 batterySnapRotationOffset = Vector3.zero;
+    [Tooltip("batterySlot 회전 기준 추가 Euler 오프셋(도). 바닥 평면 기준 90° 더 눕히려고 Y축 90°.")]
+    public Vector3 batterySnapRotationOffset = new Vector3(0f, 90f, 0f);
 
     [Header("Light Ball Snap Alignment")]
     [Tooltip("Local position offset applied on top of lightBallHole so the ball sits snug.")]
@@ -109,8 +109,11 @@ public class BatteryMelter : NetworkBehaviour
     // NetworkGrabbableSync.IsGrabbed 는 [Networked] 라 모든 피어에서 일치한다.
     static bool IsHeld(GameObject obj)
     {
+        // [Networked] IsGrabbed 는 Spawned() 이후에만 접근 가능 — 스폰 전 접근 시 예외가 난다.
+        // 스폰됐을 때만 네트워크 값을 읽고, 아니면 로컬 isSelected 로 폴백.
         var ngs = obj.GetComponent<NetworkGrabbableSync>();
-        if (ngs != null) return ngs.IsGrabbed;
+        if (ngs != null && ngs.Object != null && ngs.Object.IsValid)
+            return ngs.IsGrabbed;
 
         var grab = obj.GetComponent<XRGrabInteractable>();
         return grab != null && grab.isSelected;
@@ -175,14 +178,12 @@ public class BatteryMelter : NetworkBehaviour
             }
             else
             {
-                // 네트워크 핵심: 배터리 권한을 확보한 뒤에만 위치를 강제한다.
-                // 권한이 아직 다른 피어(마지막에 잡은 사람)에 있으면, 위치를 써도 그 피어의
-                // NetworkTransform 이 매 틱 되돌려 '줄다리기'가 생겨 스냅이 안 잡힌다.
-                // 그래서 권한이 없으면 요청만 하고(다음 프레임 재시도), 확보된 뒤 ApplySnap.
+                // 권한을 '가지고 있을 때만' 위치를 고정한다. 권한을 매 프레임 재요청하지 않는다.
+                // (초기 권한 확보는 Snap()에서 1회 수행. 여기서 계속 재요청하면, P2가 설치된 배터리를
+                //  잡으려고 권한을 가져갈 때 멜터가 도로 뺏어 '줄다리기'가 되어 P2가 못 집는다.
+                //  권한을 잃으면 = 상대가 잡아간 것 → 위치를 건드리지 않으면 곧 isHeld 가 true 가 되어 unsnap.)
                 var no = snappedBattery.GetComponent<NetworkObject>();
-                if (no != null && no.IsValid && !no.HasStateAuthority)
-                    no.RequestStateAuthority();
-                else
+                if (no == null || !no.IsValid || no.HasStateAuthority)
                     ApplyBatterySnap(snappedBattery);
             }
             return;
@@ -297,14 +298,30 @@ public class BatteryMelter : NetworkBehaviour
 
     public void OnActivateButtonPressed()
     {
+        // 버튼 눌림 시각 피드백은 누른 쪽 로컬에서 즉시.
+        StartCoroutine(PressButtonVisual(activateButton, activateButtonOrigin));
+
+        // 실제 판정에 쓰는 snappedBattery/snappedLightBall 은 '권한자'에만 채워지는 로컬 값이다.
+        // 그래서 P2(비권한자)가 누르면 그 값들이 null 이라 항상 "No battery"로 끝났다.
+        // → 판정/해동은 반드시 권한자에서 실행한다(비권한자는 RPC 로 위임).
+        if (Object == null || !Object.IsValid) { DoActivate(); return; } // 에디터 단독
+        if (Object.HasStateAuthority) DoActivate();
+        else RpcRequestActivate();
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    void RpcRequestActivate() => DoActivate();
+
+    // 권한자에서만 실행 — 스냅된 배터리/라이트볼 검사 후 색 맞으면 해동, 틀리면 배출.
+    void DoActivate()
+    {
         if (IsOpen) { Debug.Log("Close glass first!"); return; }
         if (snappedBattery == null) { Debug.Log("No battery!"); return; }
         if (snappedLightBall == null) { Debug.Log("No light ball!"); return; }
 
-        // Color validation
         var bState = snappedBattery.GetComponent<BatteryState>();
         var lTag = snappedLightBall.GetComponent<LightBallColorTag>();
-        
+
         LightBallColor bColor = LightBallColor.Red;
         if (bState != null) bColor = bState.Color;
         else {
@@ -314,25 +331,12 @@ public class BatteryMelter : NetworkBehaviour
 
         if (lTag != null && bColor != lTag.color)
         {
-            Debug.Log($"[BatteryMelter] Color mismatch ({bColor} vs {lTag.color}) — opening lid and ejecting battery.");
-            if (Object.HasStateAuthority)
-                EjectBattery();
-            else
-                RpcRequestEject();
-            StartCoroutine(PressButtonVisual(activateButton, activateButtonOrigin));
+            Debug.Log($"[BatteryMelter] Color mismatch ({bColor} vs {lTag.color}) — ejecting battery.");
+            EjectBattery();
             return;
         }
 
-        if (Object.HasStateAuthority)
-        {
-            MeltBatteryLogic();
-        }
-        else
-        {
-            RpcRequestMelt();
-        }
-
-        StartCoroutine(PressButtonVisual(activateButton, activateButtonOrigin));
+        MeltBatteryLogic();
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
