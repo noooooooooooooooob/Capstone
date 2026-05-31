@@ -84,9 +84,9 @@ public class NetworkGrabbableSync : NetworkBehaviour, IStateAuthorityChanged
     {
         if (Object == null || !Object.IsValid) return;
 
-        // Grab 중에 parent 제거 (좌표 변환 방지)
-        if (transform.parent != null)
-            transform.parent = null;
+        // parent 분리/복원은 OnIsGrabbedChanged(네트워크 IsGrabbed 기반)에서 모든 피어가
+        // 동일하게 수행한다. 여기(잡는 피어)서만 떼면 프록시는 부모 밑에서 받은 로컬좌표를
+        // 적용해 부모 오프셋만큼 순간이동해 보였다.
 
         if (!Object.HasStateAuthority)
         {
@@ -99,9 +99,7 @@ public class NetworkGrabbableSync : NetworkBehaviour, IStateAuthorityChanged
 
     void OnSelectExit(SelectExitEventArgs _)
     {
-        // Ungrab 후 원래 parent로 복원
-        if (transform.parent == null && _originalParent != null)
-            transform.parent = _originalParent;
+        // parent 복원은 OnIsGrabbedChanged(네트워크 IsGrabbed 기반)에서 모든 피어 동일 처리.
     }
 
     void FixedUpdate()
@@ -153,6 +151,20 @@ public class NetworkGrabbableSync : NetworkBehaviour, IStateAuthorityChanged
 
     void OnIsGrabbedChanged()
     {
+        // 모든 피어(잡은 사람 + 프록시)가 네트워크로 공유된 IsGrabbed 에 맞춰 parent 상태를 통일한다.
+        //   · 잡는 동안: parent = null  → localPosition == worldPosition 이 양쪽 동일 →
+        //                NetworkTransform 의 local-space 동기화가 월드 기준으로 일치(순간이동 없음).
+        //   · 놓으면:   원래 parent 로 복원.
+        // transform.parent = null / =_originalParent 는 기본적으로 월드 위치를 보존(worldPositionStays=true).
+        if (IsGrabbed)
+        {
+            if (transform.parent != null) transform.parent = null;
+        }
+        else
+        {
+            if (transform.parent == null && _originalParent != null) transform.parent = _originalParent;
+        }
+
         if (IsGrabbed) onGrab?.Invoke();
         else onUngrab?.Invoke();
     }
