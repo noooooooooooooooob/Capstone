@@ -71,6 +71,24 @@ public class NetworkGrabbableSync : NetworkBehaviour, IStateAuthorityChanged
         _nt.SyncParent = false;
 
         if (forceNoThrowOnDetach) _grab.throwOnDetach = false;
+
+        // XRGrab 이 놓을 때 원래 부모로 되돌리지 못하게 한다(되돌리면 그래버만 부모가 생겨 어긋남).
+        _grab.retainTransformParent = false;
+    }
+
+    public override void Spawned()
+    {
+        // ── 좌표계 일치의 핵심 ──────────────────────────────────────────────
+        // XRGrab 은 "잡는 순간" 그래버 쪽 오브젝트의 부모를 null 로 바꾼다(프록시는 안 바뀜).
+        // NetworkTransform 은 localPosition(부모 기준)을 동기화하므로, 한쪽만 부모가 떨어지면
+        // 프록시는 부모 오프셋만큼 순간이동해 보인다(잡는 순간 -X 등으로 튐 → 놓으면 복귀).
+        //
+        // 해결: 모든 피어에서 처음부터 부모를 떼어 항상 root(월드 공간)에 둔다. 그러면
+        //   · 잡을 때 XRGrab 이 그래버 부모를 떼도 이미 양쪽 다 부모가 없어 어긋나지 않고,
+        //   · 놓을 때 부모 복원이 없어(위 retainTransformParent=false) 깜빡임도 없다.
+        // SetParent(null, worldPositionStays:true) 라 위치·회전·스케일이 모두 보존돼 시각 변화 없음.
+        if (transform.parent != null)
+            transform.parent = null;
     }
 
     void OnDestroy()
@@ -84,9 +102,9 @@ public class NetworkGrabbableSync : NetworkBehaviour, IStateAuthorityChanged
     {
         if (Object == null || !Object.IsValid) return;
 
-        // Grab 중에 parent 제거 (좌표 변환 방지)
-        if (transform.parent != null)
-            transform.parent = null;
+        // parent 분리/복원은 OnIsGrabbedChanged(네트워크 IsGrabbed 기반)에서 모든 피어가
+        // 동일하게 수행한다. 여기(잡는 피어)서만 떼면 프록시는 부모 밑에서 받은 로컬좌표를
+        // 적용해 부모 오프셋만큼 순간이동해 보였다.
 
         if (!Object.HasStateAuthority)
         {
@@ -99,9 +117,7 @@ public class NetworkGrabbableSync : NetworkBehaviour, IStateAuthorityChanged
 
     void OnSelectExit(SelectExitEventArgs _)
     {
-        // Ungrab 후 원래 parent로 복원
-        if (transform.parent == null && _originalParent != null)
-            transform.parent = _originalParent;
+        // parent 복원은 OnIsGrabbedChanged(네트워크 IsGrabbed 기반)에서 모든 피어 동일 처리.
     }
 
     void FixedUpdate()
@@ -153,6 +169,11 @@ public class NetworkGrabbableSync : NetworkBehaviour, IStateAuthorityChanged
 
     void OnIsGrabbedChanged()
     {
+        // parent 는 어느 피어에서도 절대 바꾸지 않는다(원래 씬 부모 유지).
+        //   · XRGrab 은 VelocityTracking/Kinematic 으로 Rigidbody 만 움직이고 부모를 안 건드린다.
+        //   · 양쪽 피어가 같은 부모를 유지하면 NetworkTransform 의 local-space 동기화가 항상 월드 기준
+        //     으로 일치한다 → 잡을 때 순간이동도, 놓을 때 한 프레임 깜빡임도 없다.
+        //   (예전엔 잡는 피어만 부모를 떼서 어긋났고, 부모 토글은 놓는 순간 1프레임 깜빡임을 만들었다.)
         if (IsGrabbed) onGrab?.Invoke();
         else onUngrab?.Invoke();
     }

@@ -165,6 +165,11 @@ namespace Stage1
                 var colorTag = obj.GetComponent<BatteryColorTag>();
                 if (colorTag != null) colorTag.color = batteryColor;
 
+                // 주의: 잡기 동기화(NetworkGrabbableSync)는 반드시 Battery 프리팹에 미리 있어야 한다.
+                // 런타임 AddComponent 는 스폰한 권한자 인스턴스에만 적용되고 프록시(상대)엔 안 생겨
+                // "상대가 못 움직이는" 문제가 났다. 프리팹 셋업은 에디터 도구
+                // (Tools/Stage 1/Battery/Setup Battery Grab Sync) 로 한 번 적용한다.
+
                 _currentBatteryId = obj.Id;
             });
 

@@ -51,6 +51,14 @@ public class MainControlSystem : NetworkBehaviour
     [Networked]
     public float Stability { get; set; }
 
+    // 슬롯에 소멸시켜 넣은 충전 배터리 개수 (네트워크 동기 — 양쪽 피어가 같은 카운트를 본다).
+    [Networked]
+    public int InstalledBatteries { get; set; }
+
+    [Header("Battery Recovery")]
+    [Tooltip("복구(안정화)에 필요한 충전 배터리 개수. 보통 슬롯 수와 동일(3).")]
+    public int requiredBatteries = 3;
+
     public static MainControlSystem Instance;
 
     public GameObject snappedBattery = null;
@@ -59,10 +67,11 @@ public class MainControlSystem : NetworkBehaviour
     // Initialised to an out-of-range sentinel so the first Render() always runs UpdateStateVisuals.
     private SystemState _lastState = (SystemState)(-1);
 
-    void Awake() 
-    { 
-        Instance = this; 
-        if (stabilityBar) 
+    void Awake()
+    {
+        Instance = this;
+        _multiSlotPanelPresent = FindFirstObjectByType<Stage1.MultiBatterySlotPanel>() != null;
+        if (stabilityBar)
         {
             stabilityBar.maxValue = maxStability;
             stabilityBar.value = 0f;
@@ -114,21 +123,10 @@ public class MainControlSystem : NetworkBehaviour
 
     void OnPuzzleChanged(int index)
     {
-        // When the game advances to a new puzzle the previous one is considered solved.
-        // If this system is still in a non-Idle state (e.g. debug skip bypassed the
-        // normal battery-insert reboot path), force it back to Idle so lights restore.
-        if (Object != null && Object.IsValid && Object.HasStateAuthority)
-        {
-            if (CurrentState == SystemState.PowerOff ||
-                CurrentState == SystemState.BatteryLow ||
-                CurrentState == SystemState.Rebooting)
-            {
-                StopAlarm();
-                snappedBattery = null;
-                Stability = maxStability;
-                CurrentState = SystemState.Idle;
-            }
-        }
+        // 자동 복구 제거: 라이트 복구는 오직 CRT 버튼 안정화(배터리 3개 + 버튼) 경로로만 이뤄진다.
+        // 예전엔 퍼즐이 다음 단계로 넘어가거나 디버그 스킵 시 여기서 강제로 Idle로 되돌려
+        // 불을 켰지만, 이제는 PowerOff 상태를 그대로 유지한다.
+        // (복구는 OnStabilizeButtonPressed → RpcRequestRecovery → Reboot 경로가 전담)
         UpdateVisuals();
     }
 
@@ -156,6 +154,10 @@ public class MainControlSystem : NetworkBehaviour
             UpdateStateVisuals(CurrentState);
             _lastState = CurrentState;
         }
+
+        // PowerOff 동안 배터리 설치 카운트를 매 프레임 갱신(네트워크 카운트라 양쪽 동일 표시).
+        if (CurrentState == SystemState.PowerOff && statusText != null)
+            statusText.text = $"INSERT BATTERY ({InstalledBatteries}/{requiredBatteries})";
     }
 
     void UpdateStateVisuals(SystemState state)
@@ -205,11 +207,16 @@ public class MainControlSystem : NetworkBehaviour
         }
     }
 
+    // 다중 슬롯 패널(MultiBatterySlotPanel)이 있으면 그쪽의 '소멸+카운트(3개)' 방식이 복구를
+    // 담당하므로, 배터리 1개로 즉시 복구하는 레거시 단일 스냅은 끈다(조기 복구 방지).
+    bool _multiSlotPanelPresent;
+
     void Update()
     {
         if (!Object || !Object.IsValid || !Object.HasStateAuthority) return;
 
-        if (CurrentState == SystemState.PowerOff && snappedBattery == null)
+        if (CurrentState == SystemState.PowerOff && snappedBattery == null
+            && !_multiSlotPanelPresent)
             CheckBatterySnap();
     }
 
@@ -267,17 +274,37 @@ public class MainControlSystem : NetworkBehaviour
             return;
         }
 
-        // 2. 상태 체크
-        if (CurrentState != SystemState.Idle)
+        // 2. 상태별 동작
+        //    Idle: 안정화 시퀀스 시작(기존 — 결국 정전 PowerOff 로 이어짐).
+        //    PowerOff: 충전 배터리 3개가 모였으면 버튼으로 복구(안정화).
+        if (CurrentState == SystemState.Idle)
         {
-            Debug.Log($"[MainControlSystem] Cannot start: Current state is {CurrentState}");
+            // 권한 이전 없이 현재 State Authority에게 시작 요청 (P1/P2 누구나 가능).
+            RpcStartStabilize();
             return;
         }
 
-        // 3. 권한 이전 없이 현재 State Authority에게 시작 요청 (P1/P2 누구나 가능).
-        //    RequestStateAuthority 방식은 AllowStateAuthorityOverride가 꺼져 있으면
-        //    비권한 피어(P2)에서 거부돼 "Failed to get State Authority"로 실패했음.
-        RpcStartStabilize();
+        if (CurrentState == SystemState.PowerOff)
+        {
+            RpcRequestRecovery();
+            return;
+        }
+
+        Debug.Log($"[MainControlSystem] Cannot act: Current state is {CurrentState}");
+    }
+
+    // PowerOff 에서 배터리 3개가 모였을 때 버튼으로 복구(안정화)를 요청.
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    void RpcRequestRecovery()
+    {
+        if (CurrentState != SystemState.PowerOff) return;
+        if (InstalledBatteries < requiredBatteries)
+        {
+            Debug.Log($"[MainControlSystem] 안정화 불가 — 배터리 {InstalledBatteries}/{requiredBatteries}.");
+            return;
+        }
+        Debug.Log("[MainControlSystem] 배터리 3개 + 버튼 → 복구(안정화) 시작.");
+        StartCoroutine(Reboot());
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
@@ -315,6 +342,7 @@ public class MainControlSystem : NetworkBehaviour
         yield return new WaitForSeconds(1.5f);
         CurrentState = SystemState.PowerOff;
         Stability = 0f;
+        InstalledBatteries = 0; // 배터리 설치 카운트 초기화 (이번 정전 복구 시작).
         // 불 점화는 UpdateStateVisuals(PowerOff)에서 네트워크 상태 기반으로 처리 → 모든 피어 동기화.
     }
 
@@ -350,18 +378,13 @@ public class MainControlSystem : NetworkBehaviour
     {
         if (!Object || !Object.IsValid) return;
         if (CurrentState != SystemState.PowerOff) return;
-        
-        StartCoroutine(RequestAuthorityAndReboot());
-    }
 
-    IEnumerator RequestAuthorityAndReboot()
-    {
-        if (!Object.HasStateAuthority)
-        {
-            Object.RequestStateAuthority();
-            while (!Object.HasStateAuthority) yield return null;
-        }
-        StartCoroutine(Reboot());
+        // 자동 복구 제거: 배터리가 스냅돼도 곧바로 리부트(불 복구)하지 않는다.
+        // 설치 요건만 충족시키고, 실제 안정화는 CRT 버튼 입력
+        // (OnStabilizeButtonPressed → RpcRequestRecovery)이 전담한다.
+        // 레거시 단일 스냅은 슬롯이 1개뿐이므로, 이 배터리를 복구 요건 충족으로 처리한다.
+        if (Object.HasStateAuthority)
+            InstalledBatteries = Mathf.Max(InstalledBatteries, requiredBatteries);
     }
 
     IEnumerator Reboot()

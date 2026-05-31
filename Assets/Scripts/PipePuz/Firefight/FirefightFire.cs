@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -17,6 +19,55 @@ namespace PipePuz.Firefight
     /// </summary>
     public class FirefightFire : MonoBehaviour
     {
+        // ── 네트워크 안정 ID 레지스트리 ───────────────────────────────────────
+        // 호스가 "지금 어느 불을 맞추는지"를 네트워크로 보낼 때, 양쪽 피어가 같은 불을
+        // 가리키도록 결정론적 ID 가 필요하다. 씬은 양쪽이 동일하므로, 모든 FirefightFire 를
+        // 계층경로(hierarchy path)로 정렬한 순서를 ID 로 쓰면 양쪽에서 동일하게 매겨진다.
+        static List<FirefightFire> _registry;
+        int _netId = -1;
+
+        static void BuildRegistry()
+        {
+            var all = FindObjectsByType<FirefightFire>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var list = new List<FirefightFire>(all);
+            list.Sort((x, y) => string.CompareOrdinal(PathOf(x.transform), PathOf(y.transform)));
+            _registry = list;
+            for (int i = 0; i < list.Count; i++) list[i]._netId = i;
+        }
+
+        /// <summary>이 불의 네트워크 안정 ID (양쪽 피어 동일).</summary>
+        public int NetId
+        {
+            get
+            {
+                if (_registry == null || _netId < 0) BuildRegistry();
+                return _netId;
+            }
+        }
+
+        /// <summary>ID 로 불 인스턴스를 찾는다. 없으면 null.</summary>
+        public static FirefightFire ById(int id)
+        {
+            if (_registry == null) BuildRegistry();
+            if (id < 0 || id >= _registry.Count) return null;
+            return _registry[id];
+        }
+
+        static string PathOf(Transform t)
+        {
+            // 정렬 키 = 루트부터의 형제 인덱스(sibling index) 체인.
+            // 이름이 중복돼도 오브젝트마다 고유하며, 씬 계층이 동일한 양쪽 피어에서 똑같이 나온다.
+            // (예전엔 이름 기반 경로라 동명 불들이 정렬 시 동률 → 피어마다 순서가 갈려 ID 가 어긋났고,
+            //  그 불들만 한쪽에서 안 꺼졌다.)
+            var sb = new StringBuilder();
+            while (t != null)
+            {
+                sb.Insert(0, "/" + t.GetSiblingIndex().ToString("D5"));
+                t = t.parent;
+            }
+            return sb.ToString();
+        }
+
         [Header("Refs")]
         public ParticleSystem FireParticles;
 
@@ -162,20 +213,34 @@ namespace PipePuz.Firefight
         {
             if (!IsActive) return;
             if (_strength <= 0f)
-            {
-                _strength = 0f;
-                IsActive = false;
-                ApplyVisual();
-                if (FireParticles != null)
-                    FireParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-                if (EmberParticles != null)
-                    EmberParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-                if (FireLight != null) FireLight.enabled = false;
-                StopFireSound();
-                OnExtinguished?.Invoke();
-                Debug.Log($"[FirefightFire {name}] EXTINGUISHED!");
-                gameObject.SetActive(false);
-            }
+                DoExtinguish();
+        }
+
+        /// <summary>
+        /// 네트워크 강제 소화 — 호스를 잡은 권위 피어가 이 불을 끄면, 모든 피어에서 즉시 끈다.
+        /// 양쪽 불의 strength 가 미세하게 달라(성장/데미지 타이밍 차) 한쪽만 안 꺼지는 일을 방지.
+        /// </summary>
+        public void ForceExtinguish()
+        {
+            if (!IsActive) return;
+            _strength = 0f;
+            DoExtinguish();
+        }
+
+        void DoExtinguish()
+        {
+            _strength = 0f;
+            IsActive = false;
+            ApplyVisual();
+            if (FireParticles != null)
+                FireParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            if (EmberParticles != null)
+                EmberParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            if (FireLight != null) FireLight.enabled = false;
+            StopFireSound();
+            OnExtinguished?.Invoke();
+            Debug.Log($"[FirefightFire {name}] EXTINGUISHED!");
+            gameObject.SetActive(false);
         }
 
         void ApplyVisual()

@@ -24,7 +24,7 @@ public class GrabAuthorityHandover : MonoBehaviour
     [SerializeField] bool releaseOnDeselect = false;
 
     [Tooltip("문제 진단용 로그를 콘솔에 출력. 문제 해결 후 끄세요.")]
-    [SerializeField] bool verboseLog = true;
+    [SerializeField] bool verboseLog = false;
 
     NetworkObject _no;
     XRBaseInteractable _interactable;
