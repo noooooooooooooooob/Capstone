@@ -127,6 +127,15 @@ namespace PipePuz.RoomCarpet
                     if (t != null && col.bounds.Contains(t.position)) return true;
                 }
             }
+
+            // 네트워크 동기화: 로컬·원격 플레이어 머리를 모두 감지 → 두 클라이언트가 동일하게 개폐 판단.
+            // (원격 머리는 NetworkTransform 으로 위치가 동기화되므로 결정론적으로 일치한다.)
+            var heads = Capstone.Network.Sync.PlayerHeadRegistry.Heads;
+            for (int i = 0; i < heads.Count; i++)
+            {
+                var h = heads[i];
+                if (h != null && col.bounds.Contains(h.position)) return true;
+            }
             return false;
         }
 

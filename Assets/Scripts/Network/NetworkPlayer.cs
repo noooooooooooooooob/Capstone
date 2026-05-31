@@ -44,6 +44,9 @@ namespace Capstone.Network
             // 모든 피어가 네트워크로 받은 스폰 포즈로 루트를 직접 배치 → 양쪽이 같은 공유 방 좌표에 정렬.
             transform.SetPositionAndRotation(SpawnPosition, SpawnRotation);
 
+            // 로컬·원격 모두 머리 앵커를 레지스트리에 등록 → 근접 자동문 등이 양쪽 머리를 결정론적으로 감지.
+            Capstone.Network.Sync.PlayerHeadRegistry.Register(headAnchor);
+
             Debug.Log($"[NetworkPlayer] Spawned slot={Slot} hasAuthority={HasStateAuthority} pos={transform.position} rot={transform.eulerAngles}");
 
             if (HasStateAuthority)
@@ -60,6 +63,8 @@ namespace Capstone.Network
 
         public override void Despawned(NetworkRunner runner, bool hasState)
         {
+            Capstone.Network.Sync.PlayerHeadRegistry.Unregister(headAnchor);
+
             if (HasStateAuthority)
                 LocalPlayerSide.Clear();
         }
