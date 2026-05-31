@@ -60,6 +60,12 @@ namespace PipePuz.Firefight
         [Networked] public NetworkBool NetSpraying { get; set; }
         [Networked] public float NetPressure { get; set; }
 
+        // 지금 조준해 맞추고 있는 불의 네트워크 ID. -1 = 아무것도 안 맞춤.
+        // 권위(잡은 사람)가 SphereCast 로 판정해 방송하고, 모든 피어는 "같은 불"에 데미지를 준다.
+        // (각 피어가 따로 레이캐스트하면 관측자 쪽은 원격 아바타/손 콜라이더에 막혀 빗나가
+        //  불이 안 꺼졌다 — 그래서 타겟을 방송해 통일한다.)
+        [Networked] public int NetTargetFireId { get; set; }
+
         // 러너 스폰 완료(네트워크 유효) 여부.
         bool NetReady => Object != null && Object.IsValid;
 
@@ -94,24 +100,31 @@ namespace PipePuz.Firefight
 
             NetSpraying = spraying;
             NetPressure = p;
+
+            // 권위가 직접 레이캐스트해서 "지금 맞추는 불"을 결정 → 모든 피어에 방송.
+            var fire = spraying ? RaycastFire(p) : null;
+            NetTargetFireId = fire != null ? fire.NetId : -1;
         }
 
         void Update()
         {
             if (Nozzle == null) return;
 
-            // 분사 여부/압력: 네트워크가 살아있으면 방송값을, 아니면 로컬값을 사용.
+            // 분사 여부/압력/타겟: 네트워크가 살아있으면 방송값을, 아니면 로컬 계산을 사용.
             bool spraying;
             float pressure;
+            FirefightFire target;
             if (NetReady)
             {
                 spraying = (bool)NetSpraying;
                 pressure = NetPressure;
+                target = (spraying && NetTargetFireId >= 0) ? FirefightFire.ById(NetTargetFireId) : null;
             }
             else
             {
                 pressure = Controller != null ? Controller.CurrentPressure : 0f;
                 spraying = _grab != null && _grab.isSelected && pressure > MinPressureToFire;
+                target = spraying ? RaycastFire(pressure) : null;
             }
 
             // (1) 물줄기 이펙트 — 모든 피어에서 재생/정지.
@@ -119,22 +132,24 @@ namespace PipePuz.Firefight
 
             if (!spraying) return;
 
-            // (2) 데미지 — 모든 피어에서 자기 로컬 불에 적용 → 양쪽에서 함께 꺼진다.
-            //     Nozzle 위치/방향은 호스 NetworkTransform 으로 동기화되므로 양쪽이 같은 불을 맞춘다.
+            // (2) 데미지 — 모든 피어가 "동일한 방송 타겟 불"에 같은 비율로 적용 → 양쪽에서 함께 꺼진다.
+            if (target != null)
+                target.ApplyDamage(DamagePerSecond * Time.deltaTime);
+        }
+
+        /// <summary>Nozzle 에서 SphereCast 해 맞은 FirefightFire 반환(없으면 null). 권위/단독 모드에서만 호출.</summary>
+        FirefightFire RaycastFire(float pressure)
+        {
+            if (Nozzle == null) return null;
             float range = MaxRange * Mathf.Clamp01(pressure);
-            if (range < 0.05f) return;
+            if (range < 0.05f) return null;
 
             Vector3 origin = Nozzle.position + Nozzle.forward * 0.05f;
             float castRange = Mathf.Max(0.05f, range - 0.05f);
             if (Physics.SphereCast(origin, HitRadius, Nozzle.forward, out var hit, castRange, FireMask, QueryTriggerInteraction.Collide))
-            {
-                var fire = hit.collider.GetComponent<FirefightFire>()
-                        ?? hit.collider.GetComponentInParent<FirefightFire>();
-                if (fire != null)
-                {
-                    fire.ApplyDamage(DamagePerSecond * Time.deltaTime);
-                }
-            }
+                return hit.collider.GetComponent<FirefightFire>()
+                    ?? hit.collider.GetComponentInParent<FirefightFire>();
+            return null;
         }
 
         void UpdateStreamVisual(bool active, float pressure)

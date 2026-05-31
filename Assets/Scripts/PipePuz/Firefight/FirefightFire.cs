@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Text;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -17,6 +19,48 @@ namespace PipePuz.Firefight
     /// </summary>
     public class FirefightFire : MonoBehaviour
     {
+        // ── 네트워크 안정 ID 레지스트리 ───────────────────────────────────────
+        // 호스가 "지금 어느 불을 맞추는지"를 네트워크로 보낼 때, 양쪽 피어가 같은 불을
+        // 가리키도록 결정론적 ID 가 필요하다. 씬은 양쪽이 동일하므로, 모든 FirefightFire 를
+        // 계층경로(hierarchy path)로 정렬한 순서를 ID 로 쓰면 양쪽에서 동일하게 매겨진다.
+        static List<FirefightFire> _registry;
+        int _netId = -1;
+
+        static void BuildRegistry()
+        {
+            var all = FindObjectsByType<FirefightFire>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var list = new List<FirefightFire>(all);
+            list.Sort((x, y) => string.CompareOrdinal(PathOf(x.transform), PathOf(y.transform)));
+            _registry = list;
+            for (int i = 0; i < list.Count; i++) list[i]._netId = i;
+        }
+
+        /// <summary>이 불의 네트워크 안정 ID (양쪽 피어 동일).</summary>
+        public int NetId
+        {
+            get
+            {
+                if (_registry == null || _netId < 0) BuildRegistry();
+                return _netId;
+            }
+        }
+
+        /// <summary>ID 로 불 인스턴스를 찾는다. 없으면 null.</summary>
+        public static FirefightFire ById(int id)
+        {
+            if (_registry == null) BuildRegistry();
+            if (id < 0 || id >= _registry.Count) return null;
+            return _registry[id];
+        }
+
+        static string PathOf(Transform t)
+        {
+            var sb = new StringBuilder(t.name);
+            var p = t.parent;
+            while (p != null) { sb.Insert(0, p.name + "/"); p = p.parent; }
+            return sb.ToString();
+        }
+
         [Header("Refs")]
         public ParticleSystem FireParticles;
 

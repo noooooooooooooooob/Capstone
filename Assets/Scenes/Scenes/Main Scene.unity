@@ -113510,6 +113510,7 @@ MonoBehaviour:
   _NetSpraying:
     _value: 0
   _NetPressure: 0
+  _NetTargetFireId: 0
 --- !u!4 &798446892
 Transform:
   m_ObjectHideFlags: 0
