@@ -32,10 +32,9 @@ namespace Stage1
 
         [Header("Settings")]
         [Tooltip("배터리가 이 거리 안에 들어오면 소멸시키고 카운트한다.")]
-        public float snapDistance = 0.35f;
+        public float snapDistance = 1f;
 
         bool[] slotFilled;
-        bool rebootTriggered;
 
         void Awake()
         {
@@ -65,12 +64,8 @@ namespace Stage1
 
             if (state != MainControlSystem.SystemState.PowerOff)
             {
-                // 복구 후 Idle 로 돌아오면 다음 정전을 위해 리셋.
-                if (rebootTriggered && state == MainControlSystem.SystemState.Idle)
-                {
-                    for (int i = 0; i < slotFilled.Length; i++) slotFilled[i] = false;
-                    rebootTriggered = false;
-                }
+                // PowerOff 가 아니면 다음 정전 대비 슬롯 채움 상태를 리셋.
+                for (int i = 0; i < slotFilled.Length; i++) slotFilled[i] = false;
                 return;
             }
 
@@ -124,14 +119,8 @@ namespace Stage1
                     TryConsume(closest, i, expectedColor);
             }
 
-            // 모든 슬롯이 채워졌으면 복구(안정화) 트리거.
-            if (rebootTriggered) return;
-            for (int i = 0; i < slotFilled.Length; i++)
-                if (!slotFilled[i]) return;
-
-            rebootTriggered = true;
-            Debug.Log("[MultiBatterySlotPanel] 모든 배터리 설치 완료 → 복구(안정화) 트리거.");
-            mainControl.OnBatteryInserted();
+            // 자동 복구하지 않는다 — 3개(모든 슬롯)가 채워진 뒤 CRT 버튼을 눌러야 안정화된다.
+            // (안정화 트리거는 MainControlSystem.OnStabilizeButtonPressed → 버튼이 담당)
         }
 
         /// <summary>

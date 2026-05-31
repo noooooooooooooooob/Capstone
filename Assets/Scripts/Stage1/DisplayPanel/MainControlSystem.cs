@@ -285,17 +285,37 @@ public class MainControlSystem : NetworkBehaviour
             return;
         }
 
-        // 2. 상태 체크
-        if (CurrentState != SystemState.Idle)
+        // 2. 상태별 동작
+        //    Idle: 안정화 시퀀스 시작(기존 — 결국 정전 PowerOff 로 이어짐).
+        //    PowerOff: 충전 배터리 3개가 모였으면 버튼으로 복구(안정화).
+        if (CurrentState == SystemState.Idle)
         {
-            Debug.Log($"[MainControlSystem] Cannot start: Current state is {CurrentState}");
+            // 권한 이전 없이 현재 State Authority에게 시작 요청 (P1/P2 누구나 가능).
+            RpcStartStabilize();
             return;
         }
 
-        // 3. 권한 이전 없이 현재 State Authority에게 시작 요청 (P1/P2 누구나 가능).
-        //    RequestStateAuthority 방식은 AllowStateAuthorityOverride가 꺼져 있으면
-        //    비권한 피어(P2)에서 거부돼 "Failed to get State Authority"로 실패했음.
-        RpcStartStabilize();
+        if (CurrentState == SystemState.PowerOff)
+        {
+            RpcRequestRecovery();
+            return;
+        }
+
+        Debug.Log($"[MainControlSystem] Cannot act: Current state is {CurrentState}");
+    }
+
+    // PowerOff 에서 배터리 3개가 모였을 때 버튼으로 복구(안정화)를 요청.
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    void RpcRequestRecovery()
+    {
+        if (CurrentState != SystemState.PowerOff) return;
+        if (InstalledBatteries < requiredBatteries)
+        {
+            Debug.Log($"[MainControlSystem] 안정화 불가 — 배터리 {InstalledBatteries}/{requiredBatteries}.");
+            return;
+        }
+        Debug.Log("[MainControlSystem] 배터리 3개 + 버튼 → 복구(안정화) 시작.");
+        StartCoroutine(Reboot());
     }
 
     [Rpc(RpcSources.All, RpcTargets.StateAuthority)]

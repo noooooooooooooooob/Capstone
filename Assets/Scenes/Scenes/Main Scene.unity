@@ -84531,7 +84531,7 @@ MonoBehaviour:
   - {fileID: 419134160}
   - {fileID: 1370378602}
   slotColors: 000000000100000002000000
-  snapDistance: 0.35
+  snapDistance: 1
 --- !u!114 &591561927
 MonoBehaviour:
   m_ObjectHideFlags: 0

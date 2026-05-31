@@ -24,9 +24,9 @@ public class BatteryMelter : NetworkBehaviour
     public float animSpeed = 2.5f;
 
     [Header("Battery Snap Alignment")]
-    [Tooltip("Local position offset applied on top of batterySlot so the battery sits flush inside the device.")]
-    public Vector3 batterySnapPositionOffset = Vector3.zero;
-    [Tooltip("Euler rotation offset applied on top of batterySlot so the battery lies horizontally.")]
+    [Tooltip("배터리 설치 위치를 batterySlot 기준 '월드' 오프셋으로 이동(x,y,z 미터).")]
+    public Vector3 batterySnapPositionOffset = new Vector3(-0.2f, 0.1f, 0f);
+    [Tooltip("배터리 설치 회전(월드 절대 Euler). 책상에 눕도록 90° 회전.")]
     public Vector3 batterySnapRotationOffset = new Vector3(0f, 0f, 90f);
 
     [Header("Light Ball Snap Alignment")]
@@ -183,7 +183,7 @@ public class BatteryMelter : NetworkBehaviour
                 if (no != null && no.IsValid && !no.HasStateAuthority)
                     no.RequestStateAuthority();
                 else
-                    ApplySnap(snappedBattery, batterySlot, batterySnapPositionOffset, batterySnapRotationOffset);
+                    ApplyBatterySnap(snappedBattery);
             }
             return;
         }
@@ -208,6 +208,15 @@ public class BatteryMelter : NetworkBehaviour
     {
         obj.transform.position = slot.TransformPoint(posOffset);
         obj.transform.rotation = slot.rotation * Quaternion.Euler(rotOffset);
+    }
+
+    // 배터리 전용 스냅 — 위치는 batterySlot 기준 '월드' 오프셋, 회전은 '월드 절대' Euler.
+    // (슬롯 자체의 회전/스케일에 휘둘리지 않고 책상에 눕는 자세를 예측 가능하게 고정.)
+    void ApplyBatterySnap(GameObject obj)
+    {
+        if (batterySlot == null) return;
+        obj.transform.position = batterySlot.position + batterySnapPositionOffset;
+        obj.transform.rotation = Quaternion.Euler(batterySnapRotationOffset);
     }
 
     void Snap(GameObject obj, Transform slot, Vector3 posOffset, Vector3 rotOffset, ref GameObject snapRef)
