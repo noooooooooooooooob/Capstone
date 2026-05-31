@@ -42,6 +42,7 @@ namespace PipePuz.Firefight
         public float MinPressureToFire = 0.05f;
 
         XRGrabInteractable _grab;
+        NetworkGrabbableSync _ngs;
 
         [Header("Debug — 네트워크 동기 진단 (확인 후 끄세요)")]
         [Tooltip("0.5초마다 각 피어에서 호스 위치/권한/이동 여부를 콘솔에 찍는다.")]
@@ -50,11 +51,29 @@ namespace PipePuz.Firefight
         float _netLogTimer;
         Vector3 _lastLoggedPos;
 
+        /// <summary>
+        /// "누군가 호스를 잡고 있는가" — 네트워크로 공유된 grab 상태.
+        /// 로컬 _grab.isSelected 는 잡은 피어에서만 true 라서, 그걸로 분사/데미지를 게이팅하면
+        /// 상대 화면에선 물도 안 보이고 불도 안 꺼진다. NetworkGrabbableSync.IsGrabbed 는
+        /// 잡은 사람이 누구든 모든 피어에 복제되므로, 이걸로 게이팅하면 분사 비주얼과
+        /// SphereCast 데미지가 양쪽에서 동일하게 실행된다.
+        /// 네트워크 미초기화(단독 에디터)면 로컬 select 로 폴백.
+        /// </summary>
+        bool HeldByAnyone
+        {
+            get
+            {
+                if (_ngs != null && _no != null && _no.IsValid)
+                    return (bool)_ngs.IsGrabbed;
+                return _grab != null && _grab.isSelected;
+            }
+        }
+
         public bool IsActive
         {
             get
             {
-                if (_grab == null || !_grab.isSelected) return false;
+                if (!HeldByAnyone) return false;
                 if (Controller == null) return false;
                 return Controller.CurrentPressure > MinPressureToFire;
             }
@@ -63,6 +82,7 @@ namespace PipePuz.Firefight
         void Awake()
         {
             _grab = GetComponent<XRGrabInteractable>();
+            _ngs = GetComponent<NetworkGrabbableSync>();
             _no = GetComponent<NetworkObject>();
             _lastLoggedPos = transform.position;
         }
