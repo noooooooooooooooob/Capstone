@@ -51,6 +51,14 @@ public class MainControlSystem : NetworkBehaviour
     [Networked]
     public float Stability { get; set; }
 
+    // 슬롯에 소멸시켜 넣은 충전 배터리 개수 (네트워크 동기 — 양쪽 피어가 같은 카운트를 본다).
+    [Networked]
+    public int InstalledBatteries { get; set; }
+
+    [Header("Battery Recovery")]
+    [Tooltip("복구(안정화)에 필요한 충전 배터리 개수. 보통 슬롯 수와 동일(3).")]
+    public int requiredBatteries = 3;
+
     public static MainControlSystem Instance;
 
     public GameObject snappedBattery = null;
@@ -59,10 +67,11 @@ public class MainControlSystem : NetworkBehaviour
     // Initialised to an out-of-range sentinel so the first Render() always runs UpdateStateVisuals.
     private SystemState _lastState = (SystemState)(-1);
 
-    void Awake() 
-    { 
-        Instance = this; 
-        if (stabilityBar) 
+    void Awake()
+    {
+        Instance = this;
+        _multiSlotPanelPresent = FindFirstObjectByType<Stage1.MultiBatterySlotPanel>() != null;
+        if (stabilityBar)
         {
             stabilityBar.maxValue = maxStability;
             stabilityBar.value = 0f;
@@ -156,6 +165,10 @@ public class MainControlSystem : NetworkBehaviour
             UpdateStateVisuals(CurrentState);
             _lastState = CurrentState;
         }
+
+        // PowerOff 동안 배터리 설치 카운트를 매 프레임 갱신(네트워크 카운트라 양쪽 동일 표시).
+        if (CurrentState == SystemState.PowerOff && statusText != null)
+            statusText.text = $"INSERT BATTERY ({InstalledBatteries}/{requiredBatteries})";
     }
 
     void UpdateStateVisuals(SystemState state)
@@ -205,11 +218,16 @@ public class MainControlSystem : NetworkBehaviour
         }
     }
 
+    // 다중 슬롯 패널(MultiBatterySlotPanel)이 있으면 그쪽의 '소멸+카운트(3개)' 방식이 복구를
+    // 담당하므로, 배터리 1개로 즉시 복구하는 레거시 단일 스냅은 끈다(조기 복구 방지).
+    bool _multiSlotPanelPresent;
+
     void Update()
     {
         if (!Object || !Object.IsValid || !Object.HasStateAuthority) return;
 
-        if (CurrentState == SystemState.PowerOff && snappedBattery == null)
+        if (CurrentState == SystemState.PowerOff && snappedBattery == null
+            && !_multiSlotPanelPresent)
             CheckBatterySnap();
     }
 
@@ -315,6 +333,7 @@ public class MainControlSystem : NetworkBehaviour
         yield return new WaitForSeconds(1.5f);
         CurrentState = SystemState.PowerOff;
         Stability = 0f;
+        InstalledBatteries = 0; // 배터리 설치 카운트 초기화 (이번 정전 복구 시작).
         // 불 점화는 UpdateStateVisuals(PowerOff)에서 네트워크 상태 기반으로 처리 → 모든 피어 동기화.
     }
 

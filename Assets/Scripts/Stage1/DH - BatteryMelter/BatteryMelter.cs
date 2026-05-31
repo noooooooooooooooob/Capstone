@@ -193,6 +193,13 @@ public class BatteryMelter : NetworkBehaviour
     {
         snapRef = obj;
 
+        // 스냅 로직은 '해동기의 권한자'에서 transform 을 움직이지만, 배터리/라이트볼의 권한은
+        // 마지막에 잡은 사람에게 있을 수 있다. 권한이 다르면 NetworkTransform 이 위치를 되돌려
+        // 스냅이 안 잡힌다. 그래서 대상의 권한을 끌어와 이 피어가 위치를 전파하게 만든다.
+        var no = obj.GetComponent<NetworkObject>();
+        if (no != null && no.IsValid && !no.HasStateAuthority)
+            no.RequestStateAuthority();
+
         var rb = obj.GetComponent<Rigidbody>();
         if (rb)
         {
