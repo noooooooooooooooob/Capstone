@@ -24,10 +24,10 @@ public class BatteryMelter : NetworkBehaviour
     public float animSpeed = 2.5f;
 
     [Header("Battery Snap Alignment")]
-    [Tooltip("배터리 설치 위치를 batterySlot 기준 '월드' 오프셋으로 이동(x,y,z 미터).")]
-    public Vector3 batterySnapPositionOffset = new Vector3(-0.2f, 0.1f, 0f);
-    [Tooltip("배터리 설치 회전(월드 절대 Euler). 책상에 눕도록 90° 회전.")]
-    public Vector3 batterySnapRotationOffset = new Vector3(0f, 0f, 90f);
+    [Tooltip("batterySlot(BatterySnapLocation) 기준 추가 위치 오프셋(슬롯 로컬 방향, 미터). 0이면 슬롯 위치 그대로.")]
+    public Vector3 batterySnapPositionOffset = Vector3.zero;
+    [Tooltip("batterySlot 회전 기준 추가 Euler 오프셋(도). 0이면 슬롯 회전 그대로.")]
+    public Vector3 batterySnapRotationOffset = Vector3.zero;
 
     [Header("Light Ball Snap Alignment")]
     [Tooltip("Local position offset applied on top of lightBallHole so the ball sits snug.")]
@@ -210,13 +210,14 @@ public class BatteryMelter : NetworkBehaviour
         obj.transform.rotation = slot.rotation * Quaternion.Euler(rotOffset);
     }
 
-    // 배터리 전용 스냅 — 위치는 batterySlot 기준 '월드' 오프셋, 회전은 '월드 절대' Euler.
-    // (슬롯 자체의 회전/스케일에 휘둘리지 않고 책상에 눕는 자세를 예측 가능하게 고정.)
+    // 배터리 전용 스냅 — 사용자가 씬에서 배치/회전한 batterySlot(BatterySnapLocation)에 '정확히' 맞춘다.
+    // 슬롯을 어디로 옮기거나 돌려도 그 위치·자세(=기계 안쪽)에 그대로 설치된다.
+    // 오프셋은 기본 0이라 슬롯 그대로. 필요 시 슬롯 로컬 방향으로 미세 조정 가능.
     void ApplyBatterySnap(GameObject obj)
     {
         if (batterySlot == null) return;
-        obj.transform.position = batterySlot.position + batterySnapPositionOffset;
-        obj.transform.rotation = Quaternion.Euler(batterySnapRotationOffset);
+        obj.transform.position = batterySlot.position + batterySlot.rotation * batterySnapPositionOffset;
+        obj.transform.rotation = batterySlot.rotation * Quaternion.Euler(batterySnapRotationOffset);
     }
 
     void Snap(GameObject obj, Transform slot, Vector3 posOffset, Vector3 rotOffset, ref GameObject snapRef)
