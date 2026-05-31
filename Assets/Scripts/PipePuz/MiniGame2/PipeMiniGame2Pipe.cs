@@ -34,6 +34,12 @@ namespace PipePuz.MiniGame2
         public PipeMiniGame2Slot CurrentSlot;
         public PipeMiniGame2Board Board;
 
+        /// <summary>
+        /// 있으면 회전을 네트워크로 동기화한다(상대 플레이어도 회전이 보임).
+        /// PipeRotationSync.Awake 에서 자동 주입. 없으면 로컬 단독 회전(싱글/오프라인).
+        /// </summary>
+        [System.NonSerialized] public PipeRotationSync RotationSync;
+
         public Direction CurrentMask => PipeShapeDef.GetMask(Shape, Rotation);
 
         /// <summary>손에 잡혀 있는지 — LightOrb.IsHeld 와 동일 의미. Slot 의 trigger 가 검사.</summary>
@@ -88,9 +94,26 @@ namespace PipePuz.MiniGame2
         void OnActivated(ActivateEventArgs args)
         {
             // 잡고 있는 상태에서 트리거 → 90° CW 회전.
-            Rotation = (Rotation + 1) % 4;
+            // 네트워크 동기화 컴포넌트가 있으면 그쪽에 위임 → 모든 피어가 같은 회전을 적용.
+            if (RotationSync != null)
+            {
+                RotationSync.RequestRotate();
+                return;
+            }
+
+            // 오프라인/싱글 경로 — 로컬 단독 회전.
+            SetRotationVisual((Rotation + 1) % 4);
+        }
+
+        /// <summary>
+        /// 회전값을 적용하고 메시 비주얼·흐름을 갱신한다.
+        /// 네트워크 동기화(PipeRotationSync)와 로컬 양쪽에서 호출되는 단일 진입점.
+        /// </summary>
+        public void SetRotationVisual(int rotation)
+        {
+            Rotation = ((rotation % 4) + 4) % 4;
             ApplyVisual();
-            // 잡힌 상태라 CurrentSlot 은 보통 null. release 시 BFS 재계산되니 여기서는 visual 만.
+            // 잡힌 상태라 CurrentSlot 은 보통 null. slot 에 들어있으면 흐름 재계산.
             if (CurrentSlot != null && Board != null) Board.OnFlowChanged();
         }
 

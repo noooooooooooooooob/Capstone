@@ -54,6 +54,16 @@ namespace PipePuz.SmokePuzzle
 
         bool _solvedFired;
 
+        /// <summary>이 클라이언트의 보드가 로컬 기준으로 풀렸는지.</summary>
+        public bool LocalBoardSolved => MiniGameBoard != null && MiniGameBoard.IsSolved;
+
+        /// <summary>
+        /// 네트워크로 전파된 "풀림" 래치. 다른 플레이어가 먼저 풀어서 RPC 가 들어오면 true 가 된다.
+        /// SmokeSolveNetworkSync 가 모든 피어에서 이 값을 세팅 → 누가 풀든 양쪽 다 연기가 사라진다.
+        /// (싱글/오프라인에서는 항상 false 이고 LocalBoardSolved 로만 판정.)
+        /// </summary>
+        [System.NonSerialized] public bool ExternalSolvedLatch;
+
         void Awake()
         {
             // SmokeController.Awake 가 Intensity=0(default)으로 Apply 하면서 ParticleSystem 을 Stop 시키는
@@ -74,7 +84,8 @@ namespace PipePuz.SmokePuzzle
         {
             float dt = Time.deltaTime;
 
-            bool solved = MiniGameBoard != null && MiniGameBoard.IsSolved;
+            // 로컬에서 풀렸거나, 다른 플레이어가 풀어 네트워크 래치가 켜졌으면 풀린 것으로 처리.
+            bool solved = LocalBoardSolved || ExternalSolvedLatch;
             if (solved)
             {
                 if (_smoke > 0f)

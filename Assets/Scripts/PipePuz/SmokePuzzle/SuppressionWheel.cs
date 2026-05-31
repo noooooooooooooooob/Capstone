@@ -46,6 +46,12 @@ namespace PipePuz.SmokePuzzle
         /// <summary>시각 회전을 위한 누적 닫힘 각도. 시각용 — 무한히 누적된다.</summary>
         public float AccumulatedCloseDeg { get; private set; }
 
+        /// <summary>
+        /// true 면 로컬 입력 처리를 멈추고 네트워크(SuppressionWheelNetworkSync)가
+        /// 회전/속도를 직접 주입한다. 권위가 없는(상대가 돌리고 있는) 피어에서 켜진다.
+        /// </summary>
+        [System.NonSerialized] public bool ExternallyDriven;
+
         IXRSelectInteractor _activeInteractor;
         float _lastAngle;
         Quaternion _wheelBaseRot;
@@ -87,6 +93,9 @@ namespace PipePuz.SmokePuzzle
             base.ProcessInteractable(updatePhase);
             if (updatePhase != XRInteractionUpdateOrder.UpdatePhase.Dynamic) return;
 
+            // 네트워크 권위가 없는 피어 — 회전/속도는 ApplyNetworkState 로 주입되므로 로컬 처리 생략.
+            if (ExternallyDriven) return;
+
             float dt = Time.deltaTime;
             if (dt < 1e-5f) return;
 
@@ -116,6 +125,18 @@ namespace PipePuz.SmokePuzzle
             }
 
             // 시각 회전 — 누적된 각도 그대로 회전 적용(끝없이 돌게 보임).
+            if (Wheel != null)
+                Wheel.localRotation = Quaternion.AngleAxis(AccumulatedCloseDeg, LocalAxis) * _wheelBaseRot;
+        }
+
+        /// <summary>
+        /// 네트워크(권위 피어)에서 받은 누적 회전각·닫힘 속도를 그대로 주입한다.
+        /// 비권위 피어에서 매 Render 마다 호출되어 휠이 상대와 동일하게 돌아간다.
+        /// </summary>
+        public void ApplyNetworkState(float accumulatedDeg, float closeDegPerSec)
+        {
+            AccumulatedCloseDeg = accumulatedDeg;
+            CurrentCloseDegPerSec = closeDegPerSec;
             if (Wheel != null)
                 Wheel.localRotation = Quaternion.AngleAxis(AccumulatedCloseDeg, LocalAxis) * _wheelBaseRot;
         }

@@ -29,8 +29,10 @@ namespace PipePuz.MiniGame2
         public List<Vector2Int> RequiredCells = new List<Vector2Int>();
 
         [Header("Random Path On Start (Runtime)")]
-        [Tooltip("Start() 에서 새 랜덤 path 를 생성해 RequiredCells / PathLine 을 덮어쓴다. Play 모드 진입 때마다 다른 path.")]
-        public bool RegeneratePathOnStart = true;
+        [Tooltip("Start() 에서 새 랜덤 path 를 생성해 RequiredCells / PathLine 을 덮어쓴다. " +
+                 "멀티플레이에서는 클라이언트마다 다른 path 가 생겨 퍼즐이 불일치하므로 기본 OFF. " +
+                 "OFF 면 인스펙터에 baked 된 RequiredCells(고정 경로)를 그대로 사용한다.")]
+        public bool RegeneratePathOnStart = false;
 
         [Tooltip("음수면 시간 기반 시드 (매번 다름). 양수면 고정 시드.")]
         public int RandomSeed = -1;
@@ -79,9 +81,15 @@ namespace PipePuz.MiniGame2
             }
 
             // Play 모드 진입 시 새 랜덤 path 생성 (Editor 박힌 값 덮어쓰기).
+            // 기본은 OFF — baked 된 고정 RequiredCells 를 그대로 쓰고, PathLine 만 좌표에 맞춘다.
+            // (멀티플레이 시 모든 클라이언트가 동일한 경로를 보게 하려면 고정 경로가 필수.)
             if (RegeneratePathOnStart)
             {
                 RegenerateRandomPath();
+            }
+            else
+            {
+                ApplyPathLine();
             }
 
             UpdateFlow();
