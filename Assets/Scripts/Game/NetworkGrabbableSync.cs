@@ -151,20 +151,11 @@ public class NetworkGrabbableSync : NetworkBehaviour, IStateAuthorityChanged
 
     void OnIsGrabbedChanged()
     {
-        // 모든 피어(잡은 사람 + 프록시)가 네트워크로 공유된 IsGrabbed 에 맞춰 parent 상태를 통일한다.
-        //   · 잡는 동안: parent = null  → localPosition == worldPosition 이 양쪽 동일 →
-        //                NetworkTransform 의 local-space 동기화가 월드 기준으로 일치(순간이동 없음).
-        //   · 놓으면:   원래 parent 로 복원.
-        // transform.parent = null / =_originalParent 는 기본적으로 월드 위치를 보존(worldPositionStays=true).
-        if (IsGrabbed)
-        {
-            if (transform.parent != null) transform.parent = null;
-        }
-        else
-        {
-            if (transform.parent == null && _originalParent != null) transform.parent = _originalParent;
-        }
-
+        // parent 는 어느 피어에서도 절대 바꾸지 않는다(원래 씬 부모 유지).
+        //   · XRGrab 은 VelocityTracking/Kinematic 으로 Rigidbody 만 움직이고 부모를 안 건드린다.
+        //   · 양쪽 피어가 같은 부모를 유지하면 NetworkTransform 의 local-space 동기화가 항상 월드 기준
+        //     으로 일치한다 → 잡을 때 순간이동도, 놓을 때 한 프레임 깜빡임도 없다.
+        //   (예전엔 잡는 피어만 부모를 떼서 어긋났고, 부모 토글은 놓는 순간 1프레임 깜빡임을 만들었다.)
         if (IsGrabbed) onGrab?.Invoke();
         else onUngrab?.Invoke();
     }

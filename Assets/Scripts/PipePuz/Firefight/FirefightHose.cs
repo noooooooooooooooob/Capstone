@@ -134,7 +134,21 @@ namespace PipePuz.Firefight
 
             // (2) 데미지 — 모든 피어가 "동일한 방송 타겟 불"에 같은 비율로 적용 → 양쪽에서 함께 꺼진다.
             if (target != null)
+            {
                 target.ApplyDamage(DamagePerSecond * Time.deltaTime);
+
+                // 권위(잡은 사람)가 불을 다 끄면 모든 피어에 강제 소화를 방송한다.
+                // 양쪽 불의 strength 가 성장/데미지 타이밍 차로 미세하게 달라도 확실히 같이 꺼지게.
+                if (NetReady && Object.HasStateAuthority && target.CurrentStrength <= 0f)
+                    RpcExtinguish(NetTargetFireId);
+            }
+        }
+
+        [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+        void RpcExtinguish(int fireId)
+        {
+            var f = FirefightFire.ById(fireId);
+            if (f != null) f.ForceExtinguish();
         }
 
         /// <summary>Nozzle 에서 SphereCast 해 맞은 FirefightFire 반환(없으면 null). 권위/단독 모드에서만 호출.</summary>

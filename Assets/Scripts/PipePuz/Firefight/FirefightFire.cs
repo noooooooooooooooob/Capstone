@@ -55,9 +55,16 @@ namespace PipePuz.Firefight
 
         static string PathOf(Transform t)
         {
-            var sb = new StringBuilder(t.name);
-            var p = t.parent;
-            while (p != null) { sb.Insert(0, p.name + "/"); p = p.parent; }
+            // 정렬 키 = 루트부터의 형제 인덱스(sibling index) 체인.
+            // 이름이 중복돼도 오브젝트마다 고유하며, 씬 계층이 동일한 양쪽 피어에서 똑같이 나온다.
+            // (예전엔 이름 기반 경로라 동명 불들이 정렬 시 동률 → 피어마다 순서가 갈려 ID 가 어긋났고,
+            //  그 불들만 한쪽에서 안 꺼졌다.)
+            var sb = new StringBuilder();
+            while (t != null)
+            {
+                sb.Insert(0, "/" + t.GetSiblingIndex().ToString("D5"));
+                t = t.parent;
+            }
             return sb.ToString();
         }
 
@@ -206,20 +213,34 @@ namespace PipePuz.Firefight
         {
             if (!IsActive) return;
             if (_strength <= 0f)
-            {
-                _strength = 0f;
-                IsActive = false;
-                ApplyVisual();
-                if (FireParticles != null)
-                    FireParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-                if (EmberParticles != null)
-                    EmberParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-                if (FireLight != null) FireLight.enabled = false;
-                StopFireSound();
-                OnExtinguished?.Invoke();
-                Debug.Log($"[FirefightFire {name}] EXTINGUISHED!");
-                gameObject.SetActive(false);
-            }
+                DoExtinguish();
+        }
+
+        /// <summary>
+        /// 네트워크 강제 소화 — 호스를 잡은 권위 피어가 이 불을 끄면, 모든 피어에서 즉시 끈다.
+        /// 양쪽 불의 strength 가 미세하게 달라(성장/데미지 타이밍 차) 한쪽만 안 꺼지는 일을 방지.
+        /// </summary>
+        public void ForceExtinguish()
+        {
+            if (!IsActive) return;
+            _strength = 0f;
+            DoExtinguish();
+        }
+
+        void DoExtinguish()
+        {
+            _strength = 0f;
+            IsActive = false;
+            ApplyVisual();
+            if (FireParticles != null)
+                FireParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            if (EmberParticles != null)
+                EmberParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            if (FireLight != null) FireLight.enabled = false;
+            StopFireSound();
+            OnExtinguished?.Invoke();
+            Debug.Log($"[FirefightFire {name}] EXTINGUISHED!");
+            gameObject.SetActive(false);
         }
 
         void ApplyVisual()
