@@ -88,6 +88,7 @@ namespace PipePuz.RoomCarpet
                 _matInstance = VisualRenderer.material; // 자동 instance
                 _baseColor = ReadColor(_matInstance);
             }
+            RefreshPhysics(); // 초기 대기 상태 물리 적용(비네트워크 씬 포함).
         }
 
         void OnEnable()
@@ -122,18 +123,40 @@ namespace PipePuz.RoomCarpet
         {
             if (_state == s) return;
             _state = s;
-            // 프록시는 NetworkTransform 이 위치를 구동하므로 로컬 물리를 끈다(권위와 충돌 방지).
-            if (_rb != null)
+            RefreshPhysics(); // SuspendSimulation(프록시)면 kinematic, 위치는 NetworkTransform 이 구동.
+            if (s == State.Anchored) _anchoredTime = 0f; // 깜빡임 타이머 로컬 시작(시각용).
+        }
+
+        /// <summary>
+        /// 현재 상태와 프록시 여부에 맞춰 Rigidbody 의 kinematic/gravity 를 설정한다.
+        ///   - 프록시(SuspendSimulation): 항상 kinematic — NetworkTransform 이 위치 구동.
+        ///   - Spawned(대기): kinematic — 디스펜서 위에 그대로 떠 있음(드리프트 없음).
+        ///   - Held: dynamic, 중력 OFF — 손을 따라 이동(VelocityTracking).
+        ///   - Flying: dynamic, 중력 ON — 던져져 날아감.
+        ///   - Anchored: kinematic — 바닥에 고정.
+        /// </summary>
+        public void RefreshPhysics()
+        {
+            if (_rb == null) return;
+            if (SuspendSimulation)
             {
                 _rb.isKinematic = true;
                 _rb.useGravity = false;
+                return;
             }
-            if (s == State.Anchored) _anchoredTime = 0f; // 깜빡임 타이머 로컬 시작(시각용).
+            switch (_state)
+            {
+                case State.Spawned:  _rb.isKinematic = true;  _rb.useGravity = false; break;
+                case State.Held:     _rb.isKinematic = false; _rb.useGravity = false; break;
+                case State.Flying:   _rb.isKinematic = false; _rb.useGravity = true;  break;
+                case State.Anchored: _rb.isKinematic = true;  _rb.useGravity = false; break;
+            }
         }
 
         void OnGrabbed(SelectEnterEventArgs args)
         {
             _state = State.Held;
+            RefreshPhysics();
             if (!_notifiedDispenser && Dispenser != null)
             {
                 _notifiedDispenser = true;
@@ -145,12 +168,8 @@ namespace PipePuz.RoomCarpet
         {
             if (_state != State.Held) return;
             _state = State.Flying;
-            // throwOnDetach 가 XR Grab 에서 자동 velocity 적용. 명시적으로 중력/물리 활성.
-            if (_rb != null)
-            {
-                _rb.isKinematic = false;
-                _rb.useGravity = true;
-            }
+            // throwOnDetach 가 XR Grab 에서 자동 velocity 적용. RefreshPhysics 가 dynamic + 중력 ON.
+            RefreshPhysics();
         }
 
         /// <summary>
@@ -165,10 +184,9 @@ namespace PipePuz.RoomCarpet
             _state = State.Flying;
             _flyingTime = 0f;
             _notifiedDispenser = true; // 런처 발사는 디스펜서 연쇄 spawn 없음.
+            RefreshPhysics(); // dynamic + 중력 ON.
             if (_rb != null)
             {
-                _rb.isKinematic = false;
-                _rb.useGravity = true;
                 _rb.linearVelocity = worldVelocity;
                 _rb.angularVelocity = worldAngularVelocity;
             }
@@ -211,9 +229,8 @@ namespace PipePuz.RoomCarpet
             {
                 _rb.linearVelocity = Vector3.zero;
                 _rb.angularVelocity = Vector3.zero;
-                _rb.isKinematic = true;
-                _rb.useGravity = false;
             }
+            RefreshPhysics(); // kinematic 고정.
             Vector3 pos = transform.position;
             pos.y = FloatingY;
             transform.position = pos;
@@ -233,9 +250,8 @@ namespace PipePuz.RoomCarpet
             {
                 _rb.linearVelocity = Vector3.zero;
                 _rb.angularVelocity = Vector3.zero;
-                _rb.isKinematic = true;
-                _rb.useGravity = false;
             }
+            RefreshPhysics(); // kinematic 고정.
 
             // 카펫을 표면 normal 에 맞춰 눕히기. 살짝 위로 떠서 z-fight 방지.
             Vector3 fwd = Vector3.ProjectOnPlane(transform.forward, normal);

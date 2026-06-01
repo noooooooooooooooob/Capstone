@@ -111,14 +111,15 @@ public static class Stage3SyncSetupTool
         var bcol = root.AddComponent<BoxCollider>();
         bcol.size = CarpetVisualScale;
 
-        // 배터리(검증된 그랩 경로)와 동일하게 dynamic + VelocityTracking 으로 둔다.
-        // 중력만 꺼서 디스펜서에서 떠 있고, 잡으면 손을 따라가며, 놓으면 OnReleased 가 중력을 켜 던져진다.
-        // (kinematic + Instantaneous 는 비권위 피어에서 NetworkTransform 과 충돌해 '그자리 고정' 버그를 냈음)
+        // 카펫은 NetworkGrabbableSync 를 쓰지 않는다(그건 던지기를 막고 비행 보간을 끔).
+        // 대기 상태는 kinematic 으로 디스펜서 위에 그대로 떠 있고(드리프트 없음),
+        // CarpetNetworkSync + DisappearingCarpet.RefreshPhysics 가 잡기/던지기 때 dynamic 으로 전환한다.
+        // damping 0 으로 둬 던진 거리가 죽지 않게 한다.
         var rb = root.AddComponent<Rigidbody>();
         rb.useGravity = false;
-        rb.isKinematic = false;
-        rb.linearDamping = 1f;
-        rb.angularDamping = 2f;
+        rb.isKinematic = true;
+        rb.linearDamping = 0f;
+        rb.angularDamping = 0.05f;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
 
@@ -129,16 +130,14 @@ public static class Stage3SyncSetupTool
         grab.smoothRotation = false;
 
         var no = root.AddComponent<NetworkObject>();
-        var nt = root.AddComponent<NetworkTransform>();
-
-        var ngs = root.AddComponent<NetworkGrabbableSync>();
-        ngs.forceNoThrowOnDetach = false; // 카펫은 던져서 날아가야 함.
+        root.AddComponent<NetworkTransform>();
 
         var carpet = root.AddComponent<DisappearingCarpet>();
         carpet.VisualRenderer = vis.GetComponent<Renderer>();
         carpet.Lifetime = 5f;
         carpet.WarningSeconds = 1.5f;
 
+        // 잡기/던지기/상태/삭제를 카펫 전용으로 처리(권위 이전 포함).
         root.AddComponent<CarpetNetworkSync>();
 
         SetAllowOverride(no);

@@ -33,7 +33,7 @@ namespace PipePuz.RoomCarpet
         public bool maintainDispensers = true;
 
         [Tooltip("대기 카펫을 집은 뒤 다음 카펫이 디스펜서에 다시 채워지기까지의 딜레이(초).")]
-        public float RespawnDelay = 1f;
+        public float RespawnDelay = 2f;
 
         readonly List<CarpetDispenser> _dispensers = new List<CarpetDispenser>();
         readonly Dictionary<CarpetDispenser, NetworkId> _idle = new Dictionary<CarpetDispenser, NetworkId>();
