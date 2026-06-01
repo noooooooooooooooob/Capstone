@@ -103,6 +103,21 @@ namespace PipePuz.RoomCarpet
 
             Transform origin = Muzzle != null ? Muzzle : transform;
 
+            // 네트워크 씬: 매니저에 발사를 위임 → Runner.Spawn 으로 전 피어에 카펫 복제.
+            var net = Stage3CarpetNetwork.Active;
+            if (net != null && net.IsReady)
+            {
+                Vector3 spawnPosNet = origin.position + origin.forward * SpawnAhead;
+                Vector3 velNet = origin.forward * MuzzleSpeed;
+                Vector3 spinNet = MuzzleSpin != 0f ? origin.up * MuzzleSpin : Vector3.zero;
+                Collider[] ignore = IgnoreSelfCollision
+                    ? GetComponentsInChildren<Collider>(includeInactive: true)
+                    : null;
+                net.SpawnLaunched(spawnPosNet, origin.rotation, velNet, spinNet,
+                                  UseFloatingMode, FloatingY, ignore);
+                return;
+            }
+
             var go = CarpetDispenser.BuildCarpetGameObject(
                 name: "Carpet (Launched)",
                 material: CarpetMaterial,

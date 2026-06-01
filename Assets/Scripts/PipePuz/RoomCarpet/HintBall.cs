@@ -48,6 +48,10 @@ namespace PipePuz.RoomCarpet
         public bool IsAvailableForCapture =>
             CurrentState == State.Idle || CurrentState == State.Flying;
 
+        /// <summary>프록시(비권위) 피어에서 true — 로컬 상태전이/정착 로직을 멈추고 네트워크 수신값만 따른다.
+        /// HintBallNetworkSync 가 설정. 비네트워크면 항상 false.</summary>
+        [System.NonSerialized] public bool NetworkProxy;
+
         XRGrabInteractable _grab;
         Rigidbody _rb;
         Transform _dockTarget;
@@ -100,6 +104,7 @@ namespace PipePuz.RoomCarpet
 
         void Update()
         {
+            if (NetworkProxy) return; // 프록시: 상태는 네트워크가, 위치는 NetworkTransform 이 구동.
             switch (CurrentState)
             {
                 case State.Flying:
@@ -108,6 +113,19 @@ namespace PipePuz.RoomCarpet
                 case State.Captured:
                     UpdateCaptured();
                     break;
+            }
+        }
+
+        /// <summary>프록시 피어에서 네트워크로 받은 상태를 반영(전이 로직은 돌리지 않음).
+        /// Slotted 는 슬롯 인덱스가 필요하므로 HintBallNetworkSync 가 슬롯 경유로 처리한다.</summary>
+        public void SetStateExternal(State s)
+        {
+            CurrentState = s;
+            if (_rb != null)
+            {
+                bool dynamic = (s == State.Idle || s == State.Flying);
+                _rb.isKinematic = !dynamic;
+                _rb.useGravity = false; // 프록시는 NetworkTransform 이 위치를 구동.
             }
         }
 

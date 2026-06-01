@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
@@ -53,6 +54,18 @@ namespace PipePuz.RoomCarpet
         [SerializeField] State _state = State.Spawned;
         public State CurrentState => _state;
 
+        // ── 네트워크 연동 (CarpetNetworkSync 가 채움; 비네트워크 씬에서는 모두 무시됨) ──────────────
+        /// <summary>모든 활성 카펫의 전역 레지스트리. 컨트롤러의 안전 검사가 부모 계층 대신 이걸 순회한다
+        /// (네트워크 카펫은 NetworkGrabbableSync 가 부모를 떼어 ActiveCarpetsRoot 자식이 아니게 되기 때문).</summary>
+        public static readonly List<DisappearingCarpet> Active = new List<DisappearingCarpet>();
+
+        /// <summary>프록시(비권위) 피어에서 true — 로컬 물리/상태전이/자동삭제를 멈추고 NetworkTransform 수신만 따른다.</summary>
+        [System.NonSerialized] public bool SuspendSimulation = false;
+
+        /// <summary>네트워크 제거 핸들러. 반환값 true 면 로컬 Destroy 를 하지 않는다(권위가 Runner.Despawn 으로 전 피어 제거).
+        /// CarpetNetworkSync 가 설정. 비네트워크면 null → 평소대로 Destroy.</summary>
+        [System.NonSerialized] public System.Func<bool> NetworkRemovalHandler;
+
         XRGrabInteractable _grab;
         Rigidbody _rb;
         Material _matInstance;
@@ -77,13 +90,45 @@ namespace PipePuz.RoomCarpet
             }
         }
 
+        void OnEnable()
+        {
+            if (!Active.Contains(this)) Active.Add(this);
+        }
+
+        void OnDisable()
+        {
+            Active.Remove(this);
+        }
+
         void OnDestroy()
         {
+            Active.Remove(this);
             if (_grab != null)
             {
                 _grab.selectEntered.RemoveListener(OnGrabbed);
                 _grab.selectExited.RemoveListener(OnReleased);
             }
+        }
+
+        /// <summary>삭제 요청. 네트워크 핸들러가 처리하면(권위 Despawn) 로컬 Destroy 하지 않는다.</summary>
+        void RequestRemoval()
+        {
+            if (NetworkRemovalHandler != null && NetworkRemovalHandler()) return;
+            Destroy(gameObject);
+        }
+
+        /// <summary>프록시 피어에서 네트워크로 받은 상태를 시각/물리에 반영한다(상태 전이 로직은 돌리지 않음).</summary>
+        public void ApplyNetworkState(State s)
+        {
+            if (_state == s) return;
+            _state = s;
+            // 프록시는 NetworkTransform 이 위치를 구동하므로 로컬 물리를 끈다(권위와 충돌 방지).
+            if (_rb != null)
+            {
+                _rb.isKinematic = true;
+                _rb.useGravity = false;
+            }
+            if (s == State.Anchored) _anchoredTime = 0f; // 깜빡임 타이머 로컬 시작(시각용).
         }
 
         void OnGrabbed(SelectEnterEventArgs args)
@@ -131,6 +176,7 @@ namespace PipePuz.RoomCarpet
 
         void FixedUpdate()
         {
+            if (SuspendSimulation) return; // 프록시: 물리 비구동.
             if (_state != State.Flying || _rb == null) return;
             // Flying 상태 동안 살짝 양력.
             if (LiftAcceleration > 0f)
@@ -146,6 +192,7 @@ namespace PipePuz.RoomCarpet
 
         void OnCollisionEnter(Collision collision)
         {
+            if (SuspendSimulation) return; // 프록시: 안착 판정은 권위만.
             if (_state != State.Flying) return;
             if (UseFloatingMode) return; // Floating 모드에선 CarpetFloor 충돌 대신 Y 기반 anchor.
             var floor = collision.gameObject.GetComponent<CarpetFloor>()
@@ -202,10 +249,11 @@ namespace PipePuz.RoomCarpet
             // Flying 상태로 너무 오래 머물면 (CarpetFloor 에 안착 못 함) 폐기.
             if (_state == State.Flying)
             {
+                if (SuspendSimulation) return; // 프록시: 폐기 판정은 권위만.
                 _flyingTime += Time.deltaTime;
                 if (_flyingTime > FlyingTimeout)
                 {
-                    Destroy(gameObject);
+                    RequestRemoval();
                 }
                 return;
             }
@@ -215,7 +263,7 @@ namespace PipePuz.RoomCarpet
             float remaining = Lifetime - _anchoredTime;
             if (remaining <= 0f)
             {
-                Destroy(gameObject);
+                if (!SuspendSimulation) RequestRemoval(); // 프록시는 권위의 Despawn 을 기다린다.
                 return;
             }
             if (remaining < WarningSeconds && _matInstance != null)

@@ -123,19 +123,18 @@ namespace PipePuz.RoomCarpet
                 }
             }
 
-            if (ActiveCarpetsRoot != null)
+            // 안착한 카펫 위에 걸쳐있는지 검사.
+            // 전역 레지스트리(DisappearingCarpet.Active)를 순회한다 — 네트워크 카펫은
+            // NetworkGrabbableSync 가 부모를 떼어내므로 ActiveCarpetsRoot 자식이 아니기 때문.
+            var carpets = DisappearingCarpet.Active;
+            for (int i = 0; i < carpets.Count; i++)
             {
-                int n = ActiveCarpetsRoot.childCount;
-                for (int i = 0; i < n; i++)
-                {
-                    var child = ActiveCarpetsRoot.GetChild(i);
-                    var carpet = child.GetComponent<DisappearingCarpet>();
-                    if (carpet == null) continue;
-                    if (carpet.CurrentState != DisappearingCarpet.State.Anchored) continue;
-                    var col = child.GetComponent<Collider>();
-                    if (col == null) continue;
-                    if (IsWithinXZ(head, col.bounds, OverlapRadius)) return true;
-                }
+                var carpet = carpets[i];
+                if (carpet == null) continue;
+                if (carpet.CurrentState != DisappearingCarpet.State.Anchored) continue;
+                var col = carpet.GetComponent<Collider>();
+                if (col == null) continue;
+                if (IsWithinXZ(head, col.bounds, OverlapRadius)) return true;
             }
             return false;
         }

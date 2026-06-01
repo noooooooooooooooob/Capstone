@@ -33,10 +33,16 @@ namespace PipePuz.RoomCarpet
 
         DisappearingCarpet _nextCarpet;
 
+        // 씬에 Stage3CarpetNetwork 가 존재하면(=네트워크 씬) 카펫 공급을 네트워크 매니저에 위임한다.
+        // 그러면 권위 측이 Runner.Spawn 으로 대기 카펫을 유지하므로 로컬 new GameObject 생성은 하지 않는다.
+        bool _networkManaged;
+
         void Start()
         {
             if (SpawnPoint == null) SpawnPoint = transform;
             if (ActiveCarpetsRoot == null) ActiveCarpetsRoot = transform;
+            _networkManaged = FindFirstObjectByType<Stage3CarpetNetwork>() != null;
+            if (_networkManaged) return; // 네트워크 매니저가 대기 카펫을 유지.
             SpawnNextCarpet();
         }
 
@@ -56,6 +62,7 @@ namespace PipePuz.RoomCarpet
 
         public void OnCarpetTaken(DisappearingCarpet taken)
         {
+            if (_networkManaged) return; // 네트워크 매니저가 보충하므로 로컬 보충 안 함.
             if (taken != _nextCarpet) return;
             SpawnNextCarpet();
         }

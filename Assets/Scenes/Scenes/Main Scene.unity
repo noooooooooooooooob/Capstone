@@ -3665,6 +3665,8 @@ GameObject:
   - component: {fileID: 64164677}
   - component: {fileID: 64164679}
   - component: {fileID: 64164678}
+  - component: {fileID: 64164681}
+  - component: {fileID: 64164680}
   m_Layer: 0
   m_Name: GoalZone
   m_TagString: Untagged
@@ -3702,7 +3704,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.RoomCarpet.CarpetGoalZone
   OnReached:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 64164680}
+        m_TargetAssemblyTypeName: Capstone.Network.Sync.NetworkEventRelay, Assembly-CSharp
+        m_MethodName: Relay
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: 
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!65 &64164679
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -3724,6 +3738,41 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1.4, y: 3, z: 1.4}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &64164680
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 64164676}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 58ca060be333adf47af00f1a05abc995, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Capstone.Network.Sync.NetworkEventRelay
+  onRelayed:
+    m_PersistentCalls:
+      m_Calls: []
+  verboseLog: 0
+--- !u!114 &64164681
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 64164676}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 125953285
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 64164680}
+  ForceRemoteRenderTimeframe: 0
 --- !u!1 &64968492
 GameObject:
   m_ObjectHideFlags: 0
@@ -8019,6 +8068,8 @@ MonoBehaviour:
   roomName: 
   connectOnStart: 0
   playerCount: 2
+  allowSpectators: 1
+  maxSpectators: 1
   connectionCriterias: 1
   additionalSessionProperties: []
   runner: {fileID: 110877630}
@@ -74886,6 +74937,8 @@ GameObject:
   - component: {fileID: 522942749}
   - component: {fileID: 522942754}
   - component: {fileID: 522942753}
+  - component: {fileID: 522942756}
+  - component: {fileID: 522942755}
   m_Layer: 0
   m_Name: HintBall_3
   m_TagString: Untagged
@@ -75140,7 +75193,46 @@ MonoBehaviour:
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 522942753}
+  - {fileID: 522942756}
+  - {fileID: 522942755}
   ForceRemoteRenderTimeframe: 0
+--- !u!114 &522942755
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 522942747}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bccf7353f2528574eba23a9213e1d01d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PipePuz.RoomCarpet.HintBallNetworkSync
+  _NetState: 0
+  _NetSlot: 0
+--- !u!114 &522942756
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 522942747}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7fda9926b6d55840bc89ebd330769b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbableSync
+  forceNoThrowOnDetach: 0
+  allowNonTransferableObject: 0
+  verboseLog: 0
+  onGrab:
+    m_PersistentCalls:
+      m_Calls: []
+  onUngrab:
+    m_PersistentCalls:
+      m_Calls: []
+  _IsGrabbed:
+    _value: 0
 --- !u!1 &523153959
 GameObject:
   m_ObjectHideFlags: 0
@@ -77149,6 +77241,7 @@ GameObject:
   - component: {fileID: 549707399}
   - component: {fileID: 549707404}
   - component: {fileID: 549707403}
+  - component: {fileID: 549707405}
   m_Layer: 0
   m_Name: CarpetLauncher
   m_TagString: Untagged
@@ -77418,7 +77511,31 @@ MonoBehaviour:
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 549707403}
+  - {fileID: 549707405}
   ForceRemoteRenderTimeframe: 0
+--- !u!114 &549707405
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 549707397}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7fda9926b6d55840bc89ebd330769b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbableSync
+  forceNoThrowOnDetach: 1
+  allowNonTransferableObject: 0
+  verboseLog: 0
+  onGrab:
+    m_PersistentCalls:
+      m_Calls: []
+  onUngrab:
+    m_PersistentCalls:
+      m_Calls: []
+  _IsGrabbed:
+    _value: 0
 --- !u!1001 &551921996
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -90869,6 +90986,72 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 409034, guid: a4c18952442944083b1fddc06ba477c2, type: 3}
   m_PrefabInstance: {fileID: 615091190}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &615116771
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 615116774}
+  - component: {fileID: 615116773}
+  - component: {fileID: 615116772}
+  m_Layer: 0
+  m_Name: Stage3CarpetNetwork
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &615116772
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 615116771}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f047324077f55aa42a47994664c63ebc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PipePuz.RoomCarpet.Stage3CarpetNetwork
+  carpetPrefab: {fileID: 6930366865252134226, guid: 51ded3bce7910a447a868b261564a4f9, type: 3}
+  maintainDispensers: 1
+--- !u!114 &615116773
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 615116771}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 1702177616
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 615116772}
+  ForceRemoteRenderTimeframe: 0
+--- !u!4 &615116774
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 615116771}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &617449275
 GameObject:
   m_ObjectHideFlags: 0
@@ -113363,6 +113546,7 @@ GameObject:
   - component: {fileID: 793886438}
   - component: {fileID: 793886443}
   - component: {fileID: 793886442}
+  - component: {fileID: 793886444}
   m_Layer: 0
   m_Name: CarpetLauncher
   m_TagString: Untagged
@@ -113634,7 +113818,31 @@ MonoBehaviour:
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 793886442}
+  - {fileID: 793886444}
   ForceRemoteRenderTimeframe: 0
+--- !u!114 &793886444
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 793886436}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7fda9926b6d55840bc89ebd330769b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbableSync
+  forceNoThrowOnDetach: 1
+  allowNonTransferableObject: 0
+  verboseLog: 0
+  onGrab:
+    m_PersistentCalls:
+      m_Calls: []
+  onUngrab:
+    m_PersistentCalls:
+      m_Calls: []
+  _IsGrabbed:
+    _value: 0
 --- !u!1 &798446890
 GameObject:
   m_ObjectHideFlags: 0
@@ -210097,6 +210305,8 @@ GameObject:
   - component: {fileID: 1786585087}
   - component: {fileID: 1786585092}
   - component: {fileID: 1786585091}
+  - component: {fileID: 1786585094}
+  - component: {fileID: 1786585093}
   m_Layer: 0
   m_Name: HintBall_2
   m_TagString: Untagged
@@ -210351,7 +210561,46 @@ MonoBehaviour:
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 1786585091}
+  - {fileID: 1786585094}
+  - {fileID: 1786585093}
   ForceRemoteRenderTimeframe: 0
+--- !u!114 &1786585093
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1786585085}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bccf7353f2528574eba23a9213e1d01d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PipePuz.RoomCarpet.HintBallNetworkSync
+  _NetState: 0
+  _NetSlot: 0
+--- !u!114 &1786585094
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1786585085}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7fda9926b6d55840bc89ebd330769b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbableSync
+  forceNoThrowOnDetach: 0
+  allowNonTransferableObject: 0
+  verboseLog: 0
+  onGrab:
+    m_PersistentCalls:
+      m_Calls: []
+  onUngrab:
+    m_PersistentCalls:
+      m_Calls: []
+  _IsGrabbed:
+    _value: 0
 --- !u!4 &1787911111 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 416390, guid: c76d2d3504ddb4847940a815cad04644, type: 3}
@@ -225357,6 +225606,8 @@ GameObject:
   - component: {fileID: 1868810979}
   - component: {fileID: 1868810984}
   - component: {fileID: 1868810983}
+  - component: {fileID: 1868810986}
+  - component: {fileID: 1868810985}
   m_Layer: 0
   m_Name: HintBall_4
   m_TagString: Untagged
@@ -225611,7 +225862,46 @@ MonoBehaviour:
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 1868810983}
+  - {fileID: 1868810986}
+  - {fileID: 1868810985}
   ForceRemoteRenderTimeframe: 0
+--- !u!114 &1868810985
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1868810977}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bccf7353f2528574eba23a9213e1d01d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PipePuz.RoomCarpet.HintBallNetworkSync
+  _NetState: 0
+  _NetSlot: 0
+--- !u!114 &1868810986
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1868810977}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7fda9926b6d55840bc89ebd330769b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbableSync
+  forceNoThrowOnDetach: 0
+  allowNonTransferableObject: 0
+  verboseLog: 0
+  onGrab:
+    m_PersistentCalls:
+      m_Calls: []
+  onUngrab:
+    m_PersistentCalls:
+      m_Calls: []
+  _IsGrabbed:
+    _value: 0
 --- !u!114 &1868828195
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -242455,6 +242745,8 @@ GameObject:
   - component: {fileID: 2048320601}
   - component: {fileID: 2048320606}
   - component: {fileID: 2048320605}
+  - component: {fileID: 2048320608}
+  - component: {fileID: 2048320607}
   m_Layer: 0
   m_Name: HintBall_1
   m_TagString: Untagged
@@ -242709,7 +243001,46 @@ MonoBehaviour:
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 2048320605}
+  - {fileID: 2048320608}
+  - {fileID: 2048320607}
   ForceRemoteRenderTimeframe: 0
+--- !u!114 &2048320607
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2048320599}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bccf7353f2528574eba23a9213e1d01d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PipePuz.RoomCarpet.HintBallNetworkSync
+  _NetState: 0
+  _NetSlot: 0
+--- !u!114 &2048320608
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2048320599}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7fda9926b6d55840bc89ebd330769b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbableSync
+  forceNoThrowOnDetach: 0
+  allowNonTransferableObject: 0
+  verboseLog: 0
+  onGrab:
+    m_PersistentCalls:
+      m_Calls: []
+  onUngrab:
+    m_PersistentCalls:
+      m_Calls: []
+  _IsGrabbed:
+    _value: 0
 --- !u!1 &2050154777
 GameObject:
   m_ObjectHideFlags: 0
@@ -251015,6 +251346,8 @@ GameObject:
   - component: {fileID: 2099765746}
   - component: {fileID: 2099765751}
   - component: {fileID: 2099765750}
+  - component: {fileID: 2099765753}
+  - component: {fileID: 2099765752}
   m_Layer: 0
   m_Name: HintBall_5
   m_TagString: Untagged
@@ -251269,7 +251602,46 @@ MonoBehaviour:
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 2099765750}
+  - {fileID: 2099765753}
+  - {fileID: 2099765752}
   ForceRemoteRenderTimeframe: 0
+--- !u!114 &2099765752
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2099765744}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bccf7353f2528574eba23a9213e1d01d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PipePuz.RoomCarpet.HintBallNetworkSync
+  _NetState: 0
+  _NetSlot: 0
+--- !u!114 &2099765753
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2099765744}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7fda9926b6d55840bc89ebd330769b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbableSync
+  forceNoThrowOnDetach: 0
+  allowNonTransferableObject: 0
+  verboseLog: 0
+  onGrab:
+    m_PersistentCalls:
+      m_Calls: []
+  onUngrab:
+    m_PersistentCalls:
+      m_Calls: []
+  _IsGrabbed:
+    _value: 0
 --- !u!1 &2101171924
 GameObject:
   m_ObjectHideFlags: 0
@@ -287829,3 +288201,4 @@ SceneRoots:
   - {fileID: 1757213835}
   - {fileID: 124187942}
   - {fileID: 2066567845}
+  - {fileID: 615116774}

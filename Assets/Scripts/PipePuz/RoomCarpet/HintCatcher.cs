@@ -49,6 +49,12 @@ namespace PipePuz.RoomCarpet
             var ball = other.GetComponent<HintBall>() ?? other.GetComponentInParent<HintBall>();
             if (ball == null) return;
             if (!ball.IsAvailableForCapture) return;
+
+            // 네트워크 씬: 그 공의 권위를 가진 피어만 캡처를 구동한다(양쪽이 동시에 예약/이동하는 것을 방지).
+            // 권위 측이 끌어당기면 NetworkTransform 으로 상대 화면에도 동일하게 보인다.
+            var no = ball.GetComponent<Fusion.NetworkObject>();
+            if (no != null && no.IsValid && !no.HasStateAuthority) return;
+
             if (_suppressUntil.TryGetValue(ball, out float until) && Time.time < until) return;
 
             var slot = Board.ReserveNextEmptySlot();
