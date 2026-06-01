@@ -32,8 +32,14 @@ namespace PipePuz.RoomCarpet
         [Tooltip("디스펜서마다 항상 1개의 대기 카펫을 유지한다(권위 측에서).")]
         public bool maintainDispensers = true;
 
+        [Tooltip("대기 카펫을 집은 뒤 다음 카펫이 디스펜서에 다시 채워지기까지의 딜레이(초).")]
+        public float RespawnDelay = 1f;
+
         readonly List<CarpetDispenser> _dispensers = new List<CarpetDispenser>();
         readonly Dictionary<CarpetDispenser, NetworkId> _idle = new Dictionary<CarpetDispenser, NetworkId>();
+        // 보충 딜레이 타이머(중복 생성 방지 겸용). 첫 카펫은 즉시 생성.
+        readonly Dictionary<CarpetDispenser, TickTimer> _respawnTimer = new Dictionary<CarpetDispenser, TickTimer>();
+        readonly HashSet<CarpetDispenser> _spawnedOnce = new HashSet<CarpetDispenser>();
 
         public bool IsReady => Object != null && Object.IsValid && carpetPrefab != null;
 
@@ -63,21 +69,52 @@ namespace PipePuz.RoomCarpet
 
         void EnsureIdleCarpet(CarpetDispenser d)
         {
-            // 기존 대기 카펫이 아직 'Spawned'(미파지) 상태면 유지.
+            // 1) 추적 중인 대기 카펫이 아직 'Spawned'(미파지) 상태면 유지하고 타이머 리셋.
             if (_idle.TryGetValue(d, out var id) &&
                 Runner.TryFindObject(id, out var existing) && existing != null)
             {
                 var c = existing.GetComponent<DisappearingCarpet>();
-                if (c != null && c.CurrentState == DisappearingCarpet.State.Spawned) return;
+                if (c != null && c.CurrentState == DisappearingCarpet.State.Spawned)
+                {
+                    _respawnTimer.Remove(d);
+                    return;
+                }
             }
 
+            // 2) 첫 카펫은 즉시 생성.
+            if (!_spawnedOnce.Contains(d))
+            {
+                SpawnIdle(d);
+                return;
+            }
+
+            // 3) 이후 보충은 RespawnDelay 만큼 기다린 뒤 1번만 생성.
+            //    (타이머가 가드 역할 → '딜레이 없이 매 틱 생성'으로 인한 중복 스폰을 막는다)
+            if (!_respawnTimer.TryGetValue(d, out var timer))
+            {
+                _respawnTimer[d] = TickTimer.CreateFromSeconds(Runner, RespawnDelay);
+                return;
+            }
+            if (timer.ExpiredOrNotRunning(Runner))
+            {
+                SpawnIdle(d);
+                _respawnTimer.Remove(d);
+            }
+        }
+
+        void SpawnIdle(CarpetDispenser d)
+        {
             Transform pt = d.SpawnPoint != null ? d.SpawnPoint : d.transform;
             var spawned = Runner.Spawn(carpetPrefab, pt.position, pt.rotation, Runner.LocalPlayer, (r, obj) =>
             {
                 var sync = obj.GetComponent<CarpetNetworkSync>();
                 if (sync != null) sync.ConfigureFloating(d.UseFloatingMode, d.FloatingY);
             });
-            if (spawned != null) _idle[d] = spawned.Id;
+            if (spawned != null)
+            {
+                _idle[d] = spawned.Id;
+                _spawnedOnce.Add(d);
+            }
         }
 
         /// <summary>런처가 호출. 발사하는 피어가 카펫을 띄우고(=권위) 발사 속도를 부여한다.</summary>
