@@ -116,37 +116,40 @@ public class Stage2SlidingDoor : MonoBehaviour
     {
         Collider vol = ResolveDetectionVolume();
 
-        // Camera.main (local player head) — 빠른 로컬 우선 검사.
+        // Camera.main (local player head)
         Camera cam = Camera.main;
-        if (cam != null && IsInside(cam.transform.position, vol)) return true;
+        if (cam != null)
+        {
+            if (vol != null)
+            {
+                if (vol.bounds.Contains(cam.transform.position)) return true;
+            }
+            else
+            {
+                if (Vector3.Distance(cam.transform.position, transform.position) <= DetectionRadius)
+                    return true;
+            }
+        }
 
-        // Additional targets (manually assigned transforms — AI, props, etc.)
+        // Additional targets (e.g. second player's tracked head)
         if (AdditionalTargets != null)
         {
             foreach (var t in AdditionalTargets)
             {
-                if (t != null && IsInside(t.position, vol)) return true;
+                if (t == null) continue;
+                if (vol != null)
+                {
+                    if (vol.bounds.Contains(t.position)) return true;
+                }
+                else
+                {
+                    if (Vector3.Distance(t.position, transform.position) <= DetectionRadius)
+                        return true;
+                }
             }
         }
 
-        // 네트워크 동기화: 로컬·원격 플레이어 머리를 모두 감지 → 두 클라이언트가 동일하게 개폐 판단.
-        // (원격 머리는 NetworkTransform 으로 위치가 동기화되므로 양쪽에서 결정론적으로 일치한다.)
-        var heads = Capstone.Network.Sync.PlayerHeadRegistry.Heads;
-        for (int i = 0; i < heads.Count; i++)
-        {
-            var h = heads[i];
-            if (h != null && IsInside(h.position, vol)) return true;
-        }
-
         return false;
-    }
-
-    // 트리거 볼륨이 있으면 bounds 포함 여부, 없으면 sphere 거리로 판정.
-    bool IsInside(Vector3 pos, Collider vol)
-    {
-        return vol != null
-            ? vol.bounds.Contains(pos)
-            : Vector3.Distance(pos, transform.position) <= DetectionRadius;
     }
 
     Collider ResolveDetectionVolume()
