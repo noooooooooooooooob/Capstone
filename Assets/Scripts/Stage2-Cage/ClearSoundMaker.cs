@@ -22,6 +22,13 @@ public class ClearSoundMaker : NetworkBehaviour
     [Networked] public int LockedMask { get; set; }
     [Networked, OnChangedRender(nameof(OnSolvedChanged))] public NetworkBool Solved { get; set; }
 
+    /// <summary>
+    /// 네트워크 동기화된 클리어 상태를 어느 피어(호스트/클라이언트)에서든 안전하게 폴링.
+    /// 스폰 전·파괴 후에는 false. Solved 가 동기화되면 양쪽에서 동일하게 true 가 된다.
+    /// </summary>
+    public static bool IsSolved =>
+        Instance != null && Instance.Object != null && Instance.Object.IsValid && Instance.Solved;
+
     void Awake()
     {
         Instance = this;

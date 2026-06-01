@@ -47,12 +47,19 @@ public class Stage2SlidingDoor : MonoBehaviour
     [Tooltip("Extra tracked transforms (e.g. second player's head). Optional.")]
     public Transform[] AdditionalTargets;
 
+    [Header("Clear Gate")]
+    [Tooltip("켜면 근접 감지 대신 Stage 2 케이지 퍼즐 클리어(ClearSoundMaker.Solved)에 반응해\n" +
+             "문이 열린 뒤 그대로 고정된다. 클리어 상태는 네트워크 동기화되므로\n" +
+             "호스트·클라이언트 양쪽에서 동일하게 열린다.")]
+    public bool OpenOnClear = true;
+
     // ── internals ──────────────────────────────────────────────────────────
     Vector3 _closedPos;
     Vector3 _openPos;
     bool    _initialized;
     bool    _shouldOpen;
     float   _lastInsideTime;
+    bool    _clearedLatched;
 
     void Awake()  => CachePositions();
     void OnValidate() { _initialized = false; CachePositions(); }
@@ -72,16 +79,30 @@ public class Stage2SlidingDoor : MonoBehaviour
     {
         if (!_initialized) CachePositions();
 
-        // ── detection ──
-        bool inside = IsAnyTargetInside();
-        if (inside)
+        if (OpenOnClear)
         {
-            _lastInsideTime = Time.time;
-            _shouldOpen = true;
+            // ── clear gate ──
+            // 네트워크 동기화된 클리어 플래그를 폴링 — 양쪽 피어가 동일하게 true 가 되면
+            // 열림 상태로 래치(이후 닫히지 않음). 근접 감지/Camera.main 에 의존하지 않으므로
+            // 호스트·클라이언트 모두 동일하게 열린다.
+            if (!_clearedLatched && ClearSoundMaker.IsSolved)
+                _clearedLatched = true;
+
+            _shouldOpen = _clearedLatched;
         }
-        else if (_shouldOpen && Time.time - _lastInsideTime >= CloseDelay)
+        else
         {
-            _shouldOpen = false;
+            // ── detection ──
+            bool inside = IsAnyTargetInside();
+            if (inside)
+            {
+                _lastInsideTime = Time.time;
+                _shouldOpen = true;
+            }
+            else if (_shouldOpen && Time.time - _lastInsideTime >= CloseDelay)
+            {
+                _shouldOpen = false;
+            }
         }
 
         // ── slide ──
@@ -95,40 +116,37 @@ public class Stage2SlidingDoor : MonoBehaviour
     {
         Collider vol = ResolveDetectionVolume();
 
-        // Camera.main (local player head)
+        // Camera.main (local player head) — 빠른 로컬 우선 검사.
         Camera cam = Camera.main;
-        if (cam != null)
-        {
-            if (vol != null)
-            {
-                if (vol.bounds.Contains(cam.transform.position)) return true;
-            }
-            else
-            {
-                if (Vector3.Distance(cam.transform.position, transform.position) <= DetectionRadius)
-                    return true;
-            }
-        }
+        if (cam != null && IsInside(cam.transform.position, vol)) return true;
 
-        // Additional targets (e.g. second player's tracked head)
+        // Additional targets (manually assigned transforms — AI, props, etc.)
         if (AdditionalTargets != null)
         {
             foreach (var t in AdditionalTargets)
             {
-                if (t == null) continue;
-                if (vol != null)
-                {
-                    if (vol.bounds.Contains(t.position)) return true;
-                }
-                else
-                {
-                    if (Vector3.Distance(t.position, transform.position) <= DetectionRadius)
-                        return true;
-                }
+                if (t != null && IsInside(t.position, vol)) return true;
             }
         }
 
+        // 네트워크 동기화: 로컬·원격 플레이어 머리를 모두 감지 → 두 클라이언트가 동일하게 개폐 판단.
+        // (원격 머리는 NetworkTransform 으로 위치가 동기화되므로 양쪽에서 결정론적으로 일치한다.)
+        var heads = Capstone.Network.Sync.PlayerHeadRegistry.Heads;
+        for (int i = 0; i < heads.Count; i++)
+        {
+            var h = heads[i];
+            if (h != null && IsInside(h.position, vol)) return true;
+        }
+
         return false;
+    }
+
+    // 트리거 볼륨이 있으면 bounds 포함 여부, 없으면 sphere 거리로 판정.
+    bool IsInside(Vector3 pos, Collider vol)
+    {
+        return vol != null
+            ? vol.bounds.Contains(pos)
+            : Vector3.Distance(pos, transform.position) <= DetectionRadius;
     }
 
     Collider ResolveDetectionVolume()
