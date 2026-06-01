@@ -86,6 +86,13 @@ public static class Stage3SyncSetupTool
             var col = new Color(0.70f, 0.45f, 0.25f);
             mat.color = col;
             if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", col);
+            // 살짝 빛나도록 emissive 켜기.
+            if (mat.HasProperty("_EmissionColor"))
+            {
+                mat.SetColor("_EmissionColor", new Color(0.6f, 0.36f, 0.16f));
+                mat.EnableKeyword("_EMISSION");
+                mat.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+            }
             AssetDatabase.CreateAsset(mat, MatPath);
         }
 
@@ -104,14 +111,20 @@ public static class Stage3SyncSetupTool
         var bcol = root.AddComponent<BoxCollider>();
         bcol.size = CarpetVisualScale;
 
+        // 배터리(검증된 그랩 경로)와 동일하게 dynamic + VelocityTracking 으로 둔다.
+        // 중력만 꺼서 디스펜서에서 떠 있고, 잡으면 손을 따라가며, 놓으면 OnReleased 가 중력을 켜 던져진다.
+        // (kinematic + Instantaneous 는 비권위 피어에서 NetworkTransform 과 충돌해 '그자리 고정' 버그를 냈음)
         var rb = root.AddComponent<Rigidbody>();
         rb.useGravity = false;
-        rb.isKinematic = true;
+        rb.isKinematic = false;
+        rb.linearDamping = 1f;
+        rb.angularDamping = 2f;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
 
         var grab = root.AddComponent<XRGrabInteractable>();
         grab.throwOnDetach = true;
+        grab.movementType = XRGrabInteractable.MovementType.VelocityTracking;
         grab.smoothPosition = false;
         grab.smoothRotation = false;
 
