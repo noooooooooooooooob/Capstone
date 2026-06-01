@@ -114,6 +114,38 @@ public static class LightBeamSyncSetupTool
         Debug.Log(sb.ToString());
     }
 
+    [MenuItem(Root + "3) Apply BeamGatedDoor Sync")]
+    public static void ApplyDoors()
+    {
+        if (!EditorUtility.DisplayDialog("BeamGatedDoor Apply",
+            "BeamGatedDoor 들에 열림 상태 네트워크 동기화(NetworkObject + BeamGatedDoorNetworkSync)를 적용합니다.\n" +
+            "호스트가 결정한 열림 상태가 모든 피어에 전파됩니다. Undo 가능. 적용 후 씬 저장 필요.\n\n계속할까요?",
+            "Apply", "Cancel"))
+            return;
+
+        Undo.IncrementCurrentGroup();
+        Undo.SetCurrentGroupName("BeamGatedDoor Network Sync Apply");
+        int group = Undo.GetCurrentGroup();
+
+        var sb = new StringBuilder();
+        sb.AppendLine("[LightBeam-Sync] BeamGatedDoor Apply 결과:");
+        int n = 0, skip = 0;
+        foreach (var d in Object.FindObjectsByType<BeamGatedDoor>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (IsNested(d.gameObject)) { skip++; sb.AppendLine($"  ! 중첩 건너뜀 [Door] {Path(d.gameObject)}"); continue; }
+            var no = d.GetComponent<NetworkObject>() ?? Undo.AddComponent<NetworkObject>(d.gameObject);
+            if (d.GetComponent<BeamGatedDoorNetworkSync>() == null) Undo.AddComponent<BeamGatedDoorNetworkSync>(d.gameObject);
+            SetFlags(no);
+            EditorUtility.SetDirty(d);
+            sb.AppendLine($"  · {Path(d.gameObject)}");
+            n++;
+        }
+        sb.AppendLine($"\nBeamGatedDoor 적용 {n} (중첩 {skip}). 반드시 씬을 저장하세요(Ctrl+S).");
+        Undo.CollapseUndoOperations(group);
+        EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+        Debug.Log(sb.ToString());
+    }
+
     // ── 유틸 ──────────────────────────────────────────────────────────────
     static void SetFlags(NetworkObject no)
     {

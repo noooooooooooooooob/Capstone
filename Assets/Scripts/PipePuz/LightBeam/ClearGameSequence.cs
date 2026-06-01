@@ -25,19 +25,9 @@ namespace PipePuz.LightBeam
             if (_fired) return;
             _fired = true;
             if (LogTrigger)
-                Debug.Log($"[ClearGameSequence:{name}] Trigger — Clear UI on, {QuitDelay}s 후 게임 종료.");
+                Debug.Log($"[ClearGameSequence:{name}] Trigger — Clear UI 표시 (게임 종료 안 함).");
             if (ClearText != null) ClearText.SetActive(true);
-            StartCoroutine(QuitAfter(QuitDelay));
-        }
-
-        IEnumerator QuitAfter(float seconds)
-        {
-            yield return new WaitForSeconds(seconds);
-#if UNITY_EDITOR
-            UnityEditor.EditorApplication.isPlaying = false;
-#else
-            Application.Quit();
-#endif
+            // 게임 자동 종료(Quit) 기능 제거 — 문이 열려도 게임이 꺼지지 않는다.
         }
     }
 }

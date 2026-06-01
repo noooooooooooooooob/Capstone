@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Events;
+using Capstone.Network.Sync;
 
 namespace PipePuz.LightBeam
 {
@@ -52,6 +53,11 @@ namespace PipePuz.LightBeam
         public float ProximityRadius = 2.5f;
         public Transform ProximityCenter;
 
+        [Tooltip("켜면 '두 플레이어(모든 플레이어)가 모두' 반경 안에 있어야 열린다. " +
+                 "PlayerHeadRegistry(로컬+원격 머리)를 보며, 아바타 머리는 NetworkTransform 으로 동기화돼 " +
+                 "양쪽 클라이언트가 동일하게 판정한다. 끄면 기존처럼 로컬 플레이어 1명 근접으로 열린다.")]
+        public bool RequireBothPlayers = false;
+
         [Header("Force Open (편의 버튼 등)")]
         public bool ForceOpenOverride = false;
 
@@ -61,6 +67,14 @@ namespace PipePuz.LightBeam
 
         [Header("Events")]
         public UnityEvent OnFirstOpen;
+
+        // ── 네트워크 동기화 연동 (BeamGatedDoorNetworkSync 가 채움) ─────────────────────────────
+        /// <summary>이번 프레임 문이 열려있어야 하는지(로컬 계산 결과). 권위 측 컴패니언이 읽어 전파한다.</summary>
+        public bool ShouldBeOpen { get; private set; }
+        /// <summary>true 면 로컬 계산 대신 <see cref="ExternalOpenValue"/>(네트워크로 받은 값)를 따른다. 프록시에서 설정.</summary>
+        [System.NonSerialized] public bool UseExternalOpen;
+        /// <summary>네트워크로 받은 열림 상태(권위가 결정).</summary>
+        [System.NonSerialized] public bool ExternalOpenValue;
 
         Quaternion _leftClosedRot;
         Quaternion _rightClosedRot;
@@ -151,14 +165,24 @@ namespace PipePuz.LightBeam
                 }
             }
 
-            bool signalActive = _signaled || (Time.time - _lastSignalTime < CloseDelay);
-            if (_signaled && LatchUnlock) _latched = true;
-            bool unlocked = LatchUnlock ? _latched : signalActive;
-            if (RequireProximity)
-                _playerNear = unlocked && IsPlayerNear();
+            bool shouldOpen;
+            if (UseExternalOpen)
+            {
+                // 네트워크 동기화: 권위(호스트)가 결정한 열림 상태를 그대로 따른다.
+                shouldOpen = ExternalOpenValue;
+            }
             else
-                _playerNear = unlocked;
-            bool shouldOpen = ForceOpenOverride || (unlocked && (!RequireProximity || _playerNear));
+            {
+                bool signalActive = _signaled || (Time.time - _lastSignalTime < CloseDelay);
+                if (_signaled && LatchUnlock) _latched = true;
+                bool unlocked = LatchUnlock ? _latched : signalActive;
+                if (RequireProximity)
+                    _playerNear = unlocked && IsPlayerNear();
+                else
+                    _playerNear = unlocked;
+                shouldOpen = ForceOpenOverride || (unlocked && (!RequireProximity || _playerNear));
+            }
+            ShouldBeOpen = shouldOpen; // 컴패니언(BeamGatedDoorNetworkSync)이 권위 측에서 읽어 전파.
             float speed = shouldOpen ? OpenSpeedDegPerSec : CloseSpeedDegPerSec;
 
             if (shouldOpen && !_firstOpenFired)
@@ -196,11 +220,30 @@ namespace PipePuz.LightBeam
 
         bool IsPlayerNear()
         {
+            Transform center = ProximityCenter != null ? ProximityCenter : transform;
+            Vector3 c = center.position;
+            float r2 = ProximityRadius * ProximityRadius;
+
+            if (RequireBothPlayers)
+            {
+                // 등록된 모든 플레이어(로컬+원격) 머리가 반경 안에 있어야 열림.
+                var heads = PlayerHeadRegistry.Heads;
+                if (heads != null && heads.Count > 0)
+                {
+                    for (int i = 0; i < heads.Count; i++)
+                    {
+                        var h = heads[i];
+                        if (h == null) continue;
+                        if ((h.position - c).sqrMagnitude > r2) return false; // 한 명이라도 멀면 안 열림
+                    }
+                    return true; // 모든 플레이어가 반경 안
+                }
+                // 머리 미등록(에디터 단독/비네트워크) → 아래 로컬 카메라 폴백.
+            }
+
             var cam = Camera.main;
             if (cam == null) return false;
-            Transform center = ProximityCenter != null ? ProximityCenter : transform;
-            float sqr = (cam.transform.position - center.position).sqrMagnitude;
-            return sqr <= ProximityRadius * ProximityRadius;
+            return (cam.transform.position - c).sqrMagnitude <= r2;
         }
 
         void OnDrawGizmosSelected()
