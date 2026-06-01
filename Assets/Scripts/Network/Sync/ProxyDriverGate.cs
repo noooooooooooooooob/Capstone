@@ -31,6 +31,11 @@ namespace Capstone.Network.Sync
         // Fusion: 이 오브젝트의 State Authority 가 바뀔 때 호출.
         public void StateAuthorityChanged() => Apply();
 
+        // 매 틱 권위를 재평가한다. 씬 오브젝트는 Spawned 시점에 권위가 아직 확정되지 않아
+        // 한 번 driver 를 꺼버린 뒤 StateAuthorityChanged 가 안 와서 영영 꺼져 있는 타이밍 버그가
+        // 있었다(예: 미러 회전이 호스트에서도 안 됨). 매 틱 Apply 로 자기 보정한다(변경 시에만 토글 → 저렴).
+        public override void FixedUpdateNetwork() => Apply();
+
         void Apply()
         {
             if (driversDisabledOnProxy == null) return;
