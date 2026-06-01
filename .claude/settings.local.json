@@ -4,7 +4,8 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:docs.readyplayer.me)",
       "Bash(grep *)",
-      "PowerShell(New-Item *)"
+      "PowerShell(New-Item *)",
+      "mcp__ide__getDiagnostics"
     ]
   }
 }
