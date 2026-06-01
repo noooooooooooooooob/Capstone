@@ -62,31 +62,32 @@ public static class LightBeamSyncSetupTool
         var sb = new StringBuilder();
         sb.AppendLine("[LightBeam-Sync] Apply 결과:");
 
-        // ── 거울 (Mover) ──────────────────────────────────────────────────
+        // ── 거울: yaw 각도 직접 동기화 (SuppressionWheel 패턴). NetworkTransform 은 쓰지 않는다. ──
         int mirrors = 0, mSkip = 0;
         foreach (var m in Object.FindObjectsByType<LightBeamMirror>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             if (IsNested(m.gameObject)) { mSkip++; sb.AppendLine($"  ! 중첩 건너뜀 [Mirror] {Path(m.gameObject)}"); continue; }
-            var no = m.GetComponent<NetworkObject>() ?? Undo.AddComponent<NetworkObject>(m.gameObject);
-            if (m.GetComponent<NetworkTransform>() == null) Undo.AddComponent<NetworkTransform>(m.gameObject);
+            var go = m.gameObject;
+            var no = go.GetComponent<NetworkObject>() ?? Undo.AddComponent<NetworkObject>(go);
 
-            var claim = m.GetComponent<NetworkAuthorityClaim>() ?? Undo.AddComponent<NetworkAuthorityClaim>(m.gameObject);
-            claim.claimOnSelect = true;
-            claim.claimOnActivate = true;
-            claim.claimOnLocalProximity = false;
-
-            // ProxyDriverGate 는 절대 쓰지 않는다 — 그리고 기존에 붙어 있으면 '제거'한다.
-            // ProxyDriverGate 는 NetworkBehaviour 라 네트워크 연결 시에만 Apply() 가 돌며 LightBeamMirror(회전
-            // 스크립트)를 꺼버린다 → "연결 전엔 회전되는데 연결 후 안 됨"의 정확한 원인. LightBeamMirror 는
-            // '잡고 있을 때만' 회전하므로 프록시에서 Update 가 no-op → 게이트가 애초에 불필요하다.
-            var oldGate = m.GetComponent<ProxyDriverGate>();
+            // NetworkTransform 제거 — 권위 측 회전을 보간으로 덮어써서 "연결 후 회전 안 됨"을 유발했다.
+            var nt = go.GetComponent<NetworkTransform>();
+            if (nt != null) Undo.DestroyObjectImmediate(nt);
+            // ProxyDriverGate 제거 — NetworkBehaviour 라 연결 시 회전 스크립트를 꺼버린다.
+            var oldGate = go.GetComponent<ProxyDriverGate>();
             if (oldGate != null) Undo.DestroyObjectImmediate(oldGate);
+            // NetworkAuthorityClaim 제거 — 컴패니언이 잡을 때 권위를 직접 요청한다(중복 불필요).
+            var oldClaim = go.GetComponent<NetworkAuthorityClaim>();
+            if (oldClaim != null) Undo.DestroyObjectImmediate(oldClaim);
+
+            // yaw 동기화 컴패니언.
+            if (go.GetComponent<LightBeamMirrorNetworkSync>() == null) Undo.AddComponent<LightBeamMirrorNetworkSync>(go);
 
             SetFlags(no);
-            EditorUtility.SetDirty(m);
+            EditorUtility.SetDirty(go);
             mirrors++;
         }
-        sb.AppendLine($"  · LightBeamMirror 적용 {mirrors} (중첩 {mSkip})");
+        sb.AppendLine($"  · LightBeamMirror(yaw 동기화) 적용 {mirrors} (중첩 {mSkip})");
 
         // ── 조준 노브 ─────────────────────────────────────────────────────
         int knobs = 0, kSkip = 0, kNull = 0;
