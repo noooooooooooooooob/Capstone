@@ -16222,6 +16222,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.LightBeam.LightBeamMirrorNetworkSync
   _NetYaw: 0
+  SmoothSpeed: 16
+  SendThreshold: 0.1
 --- !u!1 &155044968
 GameObject:
   m_ObjectHideFlags: 0
@@ -47217,6 +47219,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.LightBeam.LightBeamMirrorNetworkSync
   _NetYaw: 0
+  SmoothSpeed: 16
+  SendThreshold: 0.1
 --- !u!1 &400324940
 GameObject:
   m_ObjectHideFlags: 0
@@ -94695,6 +94699,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.LightBeam.LightBeamMirrorNetworkSync
   _NetYaw: 0
+  SmoothSpeed: 16
+  SendThreshold: 0.1
 --- !u!1 &671180169
 GameObject:
   m_ObjectHideFlags: 0
@@ -109919,6 +109925,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.LightBeam.LightBeamMirrorNetworkSync
   _NetYaw: 0
+  SmoothSpeed: 16
+  SendThreshold: 0.1
 --- !u!1 &743224699
 GameObject:
   m_ObjectHideFlags: 0
@@ -129798,6 +129806,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.LightBeam.LightBeamMirrorNetworkSync
   _NetYaw: 0
+  SmoothSpeed: 16
+  SendThreshold: 0.1
 --- !u!1 &1010965736
 GameObject:
   m_ObjectHideFlags: 0
@@ -193433,6 +193443,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.LightBeam.LightBeamMirrorNetworkSync
   _NetYaw: 0
+  SmoothSpeed: 16
+  SendThreshold: 0.1
 --- !u!1001 &1596779732
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -208531,6 +208543,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.LightBeam.LightBeamMirrorNetworkSync
   _NetYaw: 0
+  SmoothSpeed: 16
+  SendThreshold: 0.1
 --- !u!1 &1739976234
 GameObject:
   m_ObjectHideFlags: 0
@@ -230633,6 +230647,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.LightBeam.LightBeamMirrorNetworkSync
   _NetYaw: 0
+  SmoothSpeed: 16
+  SendThreshold: 0.1
 --- !u!134 &1934546033
 PhysicsMaterial:
   m_ObjectHideFlags: 0
