@@ -16047,6 +16047,10 @@ GameObject:
   - component: {fileID: 154662988}
   - component: {fileID: 154662987}
   - component: {fileID: 154662986}
+  - component: {fileID: 154662992}
+  - component: {fileID: 154662991}
+  - component: {fileID: 154662990}
+  - component: {fileID: 154662989}
   m_Layer: 0
   m_Name: Mirror1_Red
   m_TagString: Untagged
@@ -16188,6 +16192,74 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.7, y: 1, z: 0.05}
   m_Center: {x: 0, y: 0.49999994, z: 0}
+--- !u!114 &154662989
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 154662984}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f22a57e308842541a4aeeffb851da28, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Capstone.Network.Sync.ProxyDriverGate
+  driversDisabledOnProxy:
+  - {fileID: 154662986}
+  verboseLog: 0
+--- !u!114 &154662990
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 154662984}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0331bc232beaaaa4eb467da5658ccce5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Capstone.Network.Sync.NetworkAuthorityClaim
+  claimOnSelect: 1
+  claimOnActivate: 1
+  claimOnLocalProximity: 0
+  verboseLog: 0
+--- !u!114 &154662991
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 154662984}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &154662992
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 154662984}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 2276478053
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 154662991}
+  - {fileID: 154662989}
+  ForceRemoteRenderTimeframe: 0
 --- !u!1 &155044968
 GameObject:
   m_ObjectHideFlags: 0
@@ -47008,6 +47080,10 @@ GameObject:
   - component: {fileID: 400149165}
   - component: {fileID: 400149164}
   - component: {fileID: 400149163}
+  - component: {fileID: 400149169}
+  - component: {fileID: 400149168}
+  - component: {fileID: 400149167}
+  - component: {fileID: 400149166}
   m_Layer: 0
   m_Name: Mirror3_Blue
   m_TagString: Untagged
@@ -47149,6 +47225,74 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.7, y: 1, z: 0.05}
   m_Center: {x: 0, y: 0.49999994, z: 0}
+--- !u!114 &400149166
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 400149161}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f22a57e308842541a4aeeffb851da28, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Capstone.Network.Sync.ProxyDriverGate
+  driversDisabledOnProxy:
+  - {fileID: 400149163}
+  verboseLog: 0
+--- !u!114 &400149167
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 400149161}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0331bc232beaaaa4eb467da5658ccce5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Capstone.Network.Sync.NetworkAuthorityClaim
+  claimOnSelect: 1
+  claimOnActivate: 1
+  claimOnLocalProximity: 0
+  verboseLog: 0
+--- !u!114 &400149168
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 400149161}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &400149169
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 400149161}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 3557570530
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 400149168}
+  - {fileID: 400149166}
+  ForceRemoteRenderTimeframe: 0
 --- !u!1 &400324940
 GameObject:
   m_ObjectHideFlags: 0
@@ -93896,7 +94040,7 @@ MonoBehaviour:
   version: 2
   globalVolume: 0
   mode: 1
-  size: {x: 50.99067, y: 7, z: 88.10333}
+  size: {x: 50.990673, y: 7, z: 88.10333}
   overrideRendererFilters: 0
   minRendererVolumeSize: 0.1
   objectLayerMask:
@@ -93934,7 +94078,7 @@ Transform:
   m_GameObject: {fileID: 662307333}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -14.994663, y: 1.75, z: 21.45589}
+  m_LocalPosition: {x: -14.994661, y: 1.75, z: 21.45589}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -94452,6 +94596,10 @@ GameObject:
   - component: {fileID: 670836233}
   - component: {fileID: 670836232}
   - component: {fileID: 670836231}
+  - component: {fileID: 670836237}
+  - component: {fileID: 670836236}
+  - component: {fileID: 670836235}
+  - component: {fileID: 670836234}
   m_Layer: 0
   m_Name: Mirror4_Yellow
   m_TagString: Untagged
@@ -94593,6 +94741,74 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.7, y: 1, z: 0.05}
   m_Center: {x: 0, y: 0.49999994, z: 0}
+--- !u!114 &670836234
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 670836229}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f22a57e308842541a4aeeffb851da28, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Capstone.Network.Sync.ProxyDriverGate
+  driversDisabledOnProxy:
+  - {fileID: 670836231}
+  verboseLog: 0
+--- !u!114 &670836235
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 670836229}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0331bc232beaaaa4eb467da5658ccce5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Capstone.Network.Sync.NetworkAuthorityClaim
+  claimOnSelect: 1
+  claimOnActivate: 1
+  claimOnLocalProximity: 0
+  verboseLog: 0
+--- !u!114 &670836236
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 670836229}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &670836237
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 670836229}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 2341272623
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 670836236}
+  - {fileID: 670836234}
+  ForceRemoteRenderTimeframe: 0
 --- !u!1 &671180169
 GameObject:
   m_ObjectHideFlags: 0
@@ -109642,6 +109858,10 @@ GameObject:
   - component: {fileID: 742998210}
   - component: {fileID: 742998209}
   - component: {fileID: 742998208}
+  - component: {fileID: 742998214}
+  - component: {fileID: 742998213}
+  - component: {fileID: 742998212}
+  - component: {fileID: 742998211}
   m_Layer: 0
   m_Name: Mirror2_Green
   m_TagString: Untagged
@@ -109783,6 +110003,74 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.7, y: 1, z: 0.05}
   m_Center: {x: 0, y: 0.49999994, z: 0}
+--- !u!114 &742998211
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 742998206}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f22a57e308842541a4aeeffb851da28, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Capstone.Network.Sync.ProxyDriverGate
+  driversDisabledOnProxy:
+  - {fileID: 742998208}
+  verboseLog: 0
+--- !u!114 &742998212
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 742998206}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0331bc232beaaaa4eb467da5658ccce5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Capstone.Network.Sync.NetworkAuthorityClaim
+  claimOnSelect: 1
+  claimOnActivate: 1
+  claimOnLocalProximity: 0
+  verboseLog: 0
+--- !u!114 &742998213
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 742998206}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &742998214
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 742998206}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 1757037384
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 742998213}
+  - {fileID: 742998211}
+  ForceRemoteRenderTimeframe: 0
 --- !u!1 &743224699
 GameObject:
   m_ObjectHideFlags: 0
@@ -124645,6 +124933,9 @@ GameObject:
   - component: {fileID: 952145314}
   - component: {fileID: 952145313}
   - component: {fileID: 952145312}
+  - component: {fileID: 952145318}
+  - component: {fileID: 952145317}
+  - component: {fileID: 952145316}
   m_Layer: 0
   m_Name: Knob
   m_TagString: Untagged
@@ -124819,6 +125110,58 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 952145310}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &952145316
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 952145310}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0331bc232beaaaa4eb467da5658ccce5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Capstone.Network.Sync.NetworkAuthorityClaim
+  claimOnSelect: 1
+  claimOnActivate: 1
+  claimOnLocalProximity: 0
+  verboseLog: 0
+--- !u!114 &952145317
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 952145310}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &952145318
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 952145310}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 949343730
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 952145317}
+  ForceRemoteRenderTimeframe: 0
 --- !u!1 &953651081
 GameObject:
   m_ObjectHideFlags: 0
@@ -129432,6 +129775,10 @@ GameObject:
   - component: {fileID: 1010082099}
   - component: {fileID: 1010082098}
   - component: {fileID: 1010082097}
+  - component: {fileID: 1010082103}
+  - component: {fileID: 1010082102}
+  - component: {fileID: 1010082101}
+  - component: {fileID: 1010082100}
   m_Layer: 0
   m_Name: Mirror3_Blue
   m_TagString: Untagged
@@ -129573,6 +129920,74 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.7, y: 1, z: 0.05}
   m_Center: {x: 0, y: 0.49999994, z: 0}
+--- !u!114 &1010082100
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1010082095}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f22a57e308842541a4aeeffb851da28, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Capstone.Network.Sync.ProxyDriverGate
+  driversDisabledOnProxy:
+  - {fileID: 1010082097}
+  verboseLog: 0
+--- !u!114 &1010082101
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1010082095}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0331bc232beaaaa4eb467da5658ccce5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Capstone.Network.Sync.NetworkAuthorityClaim
+  claimOnSelect: 1
+  claimOnActivate: 1
+  claimOnLocalProximity: 0
+  verboseLog: 0
+--- !u!114 &1010082102
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1010082095}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1010082103
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1010082095}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 3579933789
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1010082102}
+  - {fileID: 1010082100}
+  ForceRemoteRenderTimeframe: 0
 --- !u!1 &1010965736
 GameObject:
   m_ObjectHideFlags: 0
@@ -193033,6 +193448,10 @@ GameObject:
   - component: {fileID: 1595680792}
   - component: {fileID: 1595680791}
   - component: {fileID: 1595680790}
+  - component: {fileID: 1595680796}
+  - component: {fileID: 1595680795}
+  - component: {fileID: 1595680794}
+  - component: {fileID: 1595680793}
   m_Layer: 0
   m_Name: Mirror1_Red
   m_TagString: Untagged
@@ -193174,6 +193593,74 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.7, y: 1, z: 0.05}
   m_Center: {x: 0, y: 0.49999994, z: 0}
+--- !u!114 &1595680793
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1595680788}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f22a57e308842541a4aeeffb851da28, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Capstone.Network.Sync.ProxyDriverGate
+  driversDisabledOnProxy:
+  - {fileID: 1595680790}
+  verboseLog: 0
+--- !u!114 &1595680794
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1595680788}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0331bc232beaaaa4eb467da5658ccce5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Capstone.Network.Sync.NetworkAuthorityClaim
+  claimOnSelect: 1
+  claimOnActivate: 1
+  claimOnLocalProximity: 0
+  verboseLog: 0
+--- !u!114 &1595680795
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1595680788}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1595680796
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1595680788}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 23646682
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1595680795}
+  - {fileID: 1595680793}
+  ForceRemoteRenderTimeframe: 0
 --- !u!1001 &1596779732
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -208097,6 +208584,10 @@ GameObject:
   - component: {fileID: 1739863264}
   - component: {fileID: 1739863263}
   - component: {fileID: 1739863262}
+  - component: {fileID: 1739863268}
+  - component: {fileID: 1739863267}
+  - component: {fileID: 1739863266}
+  - component: {fileID: 1739863265}
   m_Layer: 0
   m_Name: Mirror2_Green
   m_TagString: Untagged
@@ -208238,6 +208729,74 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.7, y: 1, z: 0.05}
   m_Center: {x: 0, y: 0.49999994, z: 0}
+--- !u!114 &1739863265
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1739863260}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f22a57e308842541a4aeeffb851da28, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Capstone.Network.Sync.ProxyDriverGate
+  driversDisabledOnProxy:
+  - {fileID: 1739863262}
+  verboseLog: 0
+--- !u!114 &1739863266
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1739863260}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0331bc232beaaaa4eb467da5658ccce5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Capstone.Network.Sync.NetworkAuthorityClaim
+  claimOnSelect: 1
+  claimOnActivate: 1
+  claimOnLocalProximity: 0
+  verboseLog: 0
+--- !u!114 &1739863267
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1739863260}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1739863268
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1739863260}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 24055182
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1739863267}
+  - {fileID: 1739863265}
+  ForceRemoteRenderTimeframe: 0
 --- !u!1 &1739976234
 GameObject:
   m_ObjectHideFlags: 0
@@ -218290,6 +218849,9 @@ GameObject:
   - component: {fileID: 1824483487}
   - component: {fileID: 1824483486}
   - component: {fileID: 1824483485}
+  - component: {fileID: 1824483491}
+  - component: {fileID: 1824483490}
+  - component: {fileID: 1824483489}
   m_Layer: 0
   m_Name: Knob
   m_TagString: Untagged
@@ -218464,6 +219026,58 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1824483483}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1824483489
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1824483483}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0331bc232beaaaa4eb467da5658ccce5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Capstone.Network.Sync.NetworkAuthorityClaim
+  claimOnSelect: 1
+  claimOnActivate: 1
+  claimOnLocalProximity: 0
+  verboseLog: 0
+--- !u!114 &1824483490
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1824483483}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1824483491
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1824483483}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 1494095741
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1824483490}
+  ForceRemoteRenderTimeframe: 0
 --- !u!1 &1825228928
 GameObject:
   m_ObjectHideFlags: 0
@@ -230110,6 +230724,10 @@ GameObject:
   - component: {fileID: 1934078303}
   - component: {fileID: 1934078302}
   - component: {fileID: 1934078301}
+  - component: {fileID: 1934078307}
+  - component: {fileID: 1934078306}
+  - component: {fileID: 1934078305}
+  - component: {fileID: 1934078304}
   m_Layer: 0
   m_Name: Mirror4_Yellow
   m_TagString: Untagged
@@ -230251,6 +230869,74 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.7, y: 1, z: 0.05}
   m_Center: {x: 0, y: 0.49999994, z: 0}
+--- !u!114 &1934078304
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1934078299}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f22a57e308842541a4aeeffb851da28, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Capstone.Network.Sync.ProxyDriverGate
+  driversDisabledOnProxy:
+  - {fileID: 1934078301}
+  verboseLog: 0
+--- !u!114 &1934078305
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1934078299}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0331bc232beaaaa4eb467da5658ccce5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Capstone.Network.Sync.NetworkAuthorityClaim
+  claimOnSelect: 1
+  claimOnActivate: 1
+  claimOnLocalProximity: 0
+  verboseLog: 0
+--- !u!114 &1934078306
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1934078299}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1934078307
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1934078299}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 969316165
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1934078306}
+  - {fileID: 1934078304}
+  ForceRemoteRenderTimeframe: 0
 --- !u!134 &1934546033
 PhysicsMaterial:
   m_ObjectHideFlags: 0
