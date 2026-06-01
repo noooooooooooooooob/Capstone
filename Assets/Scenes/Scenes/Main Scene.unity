@@ -91018,6 +91018,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.RoomCarpet.Stage3CarpetNetwork
   carpetPrefab: {fileID: 6930366865252134226, guid: 51ded3bce7910a447a868b261564a4f9, type: 3}
   maintainDispensers: 1
+  RespawnDelay: 1
 --- !u!114 &615116773
 MonoBehaviour:
   m_ObjectHideFlags: 0

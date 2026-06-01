@@ -277,20 +277,27 @@ public static class Stage3SyncSetupTool
     // ──────────────────────────────────────────────────────────────────────
     //  유틸 (MainSceneSyncSetupTool 과 동일 패턴)
     // ──────────────────────────────────────────────────────────────────────
+    // Fusion NetworkObjectFlags 의 "current version"(V1) 비트. 베이킹된 오브젝트(예: 정상 동작하는
+    // Battery 프리팹 = 786433)는 이 비트를 가진다. 이 비트가 없으면 Fusion 이 플래그를 '구버전'으로 보고
+    // AllowStateAuthorityOverride 를 무시해 → 게스트의 RequestStateAuthority 가 조용히 거부된다.
+    // (PrefabUtility.SaveAsPrefabAsset 로 만든 프리팹은 Fusion 베이커가 안 돌아 이 비트가 빠질 수 있음.)
+    const int VersionCurrentBit = 1 << 19; // 524288
+
     static bool HasAllowOverride(NetworkObject no) =>
         (no.Flags & NetworkObjectFlags.AllowStateAuthorityOverride) == NetworkObjectFlags.AllowStateAuthorityOverride;
 
     static void SetAllowOverride(NetworkObject no)
     {
-        if (no == null || HasAllowOverride(no)) return;
-        int needBit = (int)NetworkObjectFlags.AllowStateAuthorityOverride;
+        if (no == null) return;
+        int needBits = (int)NetworkObjectFlags.AllowStateAuthorityOverride | VersionCurrentBit;
         var so = new SerializedObject(no);
         foreach (var name in new[] { "Flags", "_flags", "m_Flags", "_objectFlags" })
         {
             var prop = so.FindProperty(name);
             if (prop != null && prop.propertyType == SerializedPropertyType.Integer)
             {
-                prop.intValue |= needBit;
+                if ((prop.intValue & needBits) == needBits) return; // 이미 둘 다 설정됨.
+                prop.intValue |= needBits;
                 so.ApplyModifiedProperties();
                 EditorUtility.SetDirty(no);
                 return;
