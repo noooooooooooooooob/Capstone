@@ -39,6 +39,11 @@ namespace PipePuz.LightBeam
             if (orb.IsHeld) return;                 // 잡혀 있으면 받지 않음
             if (orb.HostSocket != null) return;     // 이미 다른 socket 에 있음
 
+            // 네트워크 씬: 그 orb 의 권위를 가진 피어만 도킹을 구동(양쪽 중복 방지).
+            // 비권위 피어는 LightOrbNetworkSync 의 복제로 ForceInsert 가 호출되어 동일 상태가 된다.
+            var no = orb.GetComponent<Fusion.NetworkObject>();
+            if (no != null && no.IsValid && !no.HasStateAuthority) return;
+
             // 스냅 — orb 의 위치/물리 상태는 LightOrb.AttachToSocket 이 처리.
             InsertedOrb = orb;
             orb.AttachToSocket(this, DockPoint != null ? DockPoint : transform);
@@ -53,6 +58,26 @@ namespace PipePuz.LightBeam
             InsertedOrb = null;
             OnOrbRemoved?.Invoke();
             Debug.Log($"[LightOrbSocket] '{name}' 에서 orb 가 빠짐.");
+        }
+
+        // ── 프록시 미러링 (LightOrbNetworkSync 가 비권위 피어에서 호출) ─────────────────────────
+        /// <summary>권위 측 도킹 결과를 비권위 피어에서 동일하게 재현(이벤트 포함). 네트워크 쓰기 없음.</summary>
+        public void ForceInsert(LightOrb orb)
+        {
+            if (orb == null || InsertedOrb == orb) return;
+            InsertedOrb = orb;
+            orb.AttachToSocket(this, DockPoint != null ? DockPoint : transform);
+            OnOrbInserted?.Invoke();
+        }
+
+        /// <summary>권위 측 분리 결과를 비권위 피어에서 동일하게 재현(이벤트 포함).</summary>
+        public void ForceRemove(LightOrb orb)
+        {
+            if (InsertedOrb == null) return;
+            var removed = InsertedOrb;
+            InsertedOrb = null;
+            if (removed != null) removed.NetworkDetach();
+            OnOrbRemoved?.Invoke();
         }
     }
 }

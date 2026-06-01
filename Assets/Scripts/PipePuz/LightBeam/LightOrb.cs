@@ -28,6 +28,10 @@ namespace PipePuz.LightBeam
         public bool IsHeld { get; private set; }
         public LightOrbSocket HostSocket { get; private set; }
 
+        /// <summary>프록시(비권위) 피어에서 true — 로컬 낙하/리스폰 로직을 멈추고 NetworkTransform 수신만 따른다.
+        /// LightOrbNetworkSync 가 설정. 비네트워크면 항상 false.</summary>
+        [System.NonSerialized] public bool NetworkProxy;
+
         XRGrabInteractable _grab;
         Rigidbody _rb;
 
@@ -75,6 +79,7 @@ namespace PipePuz.LightBeam
         IEnumerator ForceFallingNextFrame()
         {
             yield return null;
+            if (NetworkProxy) yield break;    // 프록시: 낙하는 권위가 구동, NetworkTransform 수신.
             if (_rb == null) yield break;
             if (IsHeld) yield break;          // 이미 다시 잡혔으면 무시
             if (HostSocket != null) yield break; // socket 에 스냅됐으면 그대로
@@ -84,6 +89,7 @@ namespace PipePuz.LightBeam
 
         void Update()
         {
+            if (NetworkProxy) return; // 프록시: 위치는 NetworkTransform 이, 도킹은 네트워크가 구동.
             // 떨어졌으면 리스폰 (socket 에 박혀있지 않고 안 잡혀 있을 때만).
             if (IsHeld || HostSocket != null) return;
             if (transform.position.y < FallThresholdY)
@@ -95,6 +101,23 @@ namespace PipePuz.LightBeam
                     _rb.angularVelocity = Vector3.zero;
                 }
             }
+        }
+
+        /// <summary>LightOrbNetworkSync 가 권위/프록시 전환 시 호출. 프록시면 물리를 끄고 NetworkTransform 에 맡긴다.</summary>
+        public void SetNetworkProxy(bool proxy)
+        {
+            NetworkProxy = proxy;
+            if (proxy && _rb != null)
+            {
+                _rb.isKinematic = true;
+                _rb.useGravity = false;
+            }
+        }
+
+        /// <summary>프록시 미러링용 — socket 에서 빠졌음을 반영(HostSocket 해제).</summary>
+        public void NetworkDetach()
+        {
+            HostSocket = null;
         }
 
         /// <summary>Socket 이 orb 를 받았을 때 호출. orb 의 위치/물리를 socket 에 맞춤.</summary>

@@ -1729,6 +1729,7 @@ GameObject:
   - component: {fileID: 31580339}
   - component: {fileID: 31580337}
   - component: {fileID: 31580338}
+  - component: {fileID: 31580341}
   m_Layer: 0
   m_Name: LightOrbSocket
   m_TagString: Untagged
@@ -1819,6 +1820,24 @@ Transform:
   - {fileID: 1583738688}
   m_Father: {fileID: 97423965}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &31580341
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 31580336}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 2732232406
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours: []
+  ForceRemoteRenderTimeframe: 0
 --- !u!1001 &32368135
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -47325,6 +47344,10 @@ GameObject:
   - component: {fileID: 403183643}
   - component: {fileID: 403183642}
   - component: {fileID: 403183641}
+  - component: {fileID: 403183650}
+  - component: {fileID: 403183649}
+  - component: {fileID: 403183648}
+  - component: {fileID: 403183647}
   m_Layer: 0
   m_Name: LightOrb
   m_TagString: Untagged
@@ -47597,6 +47620,83 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 403183639}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &403183647
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 403183639}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d47458c32e52194faa309cf3e156cf6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PipePuz.LightBeam.LightOrbNetworkSync
+  _Docked:
+    _value: 0
+  _DockSocket:
+    Raw: 0
+--- !u!114 &403183648
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 403183639}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7fda9926b6d55840bc89ebd330769b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbableSync
+  forceNoThrowOnDetach: 1
+  allowNonTransferableObject: 0
+  verboseLog: 0
+  onGrab:
+    m_PersistentCalls:
+      m_Calls: []
+  onUngrab:
+    m_PersistentCalls:
+      m_Calls: []
+  _IsGrabbed:
+    _value: 0
+--- !u!114 &403183649
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 403183639}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &403183650
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 403183639}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 3782398673
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 403183649}
+  - {fileID: 403183648}
+  - {fileID: 403183647}
+  ForceRemoteRenderTimeframe: 0
 --- !u!1 &404059624
 GameObject:
   m_ObjectHideFlags: 0
@@ -102224,6 +102324,7 @@ GameObject:
   - component: {fileID: 712690571}
   - component: {fileID: 712690570}
   - component: {fileID: 712690569}
+  - component: {fileID: 712690572}
   m_Layer: 0
   m_Name: LightOrbSocket
   m_TagString: Untagged
@@ -102289,6 +102390,24 @@ Transform:
   - {fileID: 242035757}
   m_Father: {fileID: 608461230}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &712690572
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 712690568}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 1983789690
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours: []
+  ForceRemoteRenderTimeframe: 0
 --- !u!1001 &712854784
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -149141,6 +149260,10 @@ GameObject:
   - component: {fileID: 1137163482}
   - component: {fileID: 1137163481}
   - component: {fileID: 1137163480}
+  - component: {fileID: 1137163489}
+  - component: {fileID: 1137163488}
+  - component: {fileID: 1137163487}
+  - component: {fileID: 1137163486}
   m_Layer: 0
   m_Name: LightOrb
   m_TagString: Untagged
@@ -149413,6 +149536,83 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1137163478}
   m_Mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1137163486
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1137163478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d47458c32e52194faa309cf3e156cf6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PipePuz.LightBeam.LightOrbNetworkSync
+  _Docked:
+    _value: 0
+  _DockSocket:
+    Raw: 0
+--- !u!114 &1137163487
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1137163478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7fda9926b6d55840bc89ebd330769b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbableSync
+  forceNoThrowOnDetach: 1
+  allowNonTransferableObject: 0
+  verboseLog: 0
+  onGrab:
+    m_PersistentCalls:
+      m_Calls: []
+  onUngrab:
+    m_PersistentCalls:
+      m_Calls: []
+  _IsGrabbed:
+    _value: 0
+--- !u!114 &1137163488
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1137163478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkTransform
+  _stateAuthorityChangeErrorCorrectionDelta: 0
+  SyncScale: 0
+  SyncParent: 0
+  _autoAOIOverride: 1
+  DisableSharedModeInterpolation: 0
+--- !u!114 &1137163489
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1137163478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Fusion.Runtime.dll::Fusion.NetworkObject
+  SortKey: 1381167906
+  ObjectInterest: 1
+  Flags: 262145
+  NestedObjects: []
+  NetworkedBehaviours:
+  - {fileID: 1137163488}
+  - {fileID: 1137163487}
+  - {fileID: 1137163486}
+  ForceRemoteRenderTimeframe: 0
 --- !u!1001 &1137778371
 PrefabInstance:
   m_ObjectHideFlags: 0
