@@ -102,8 +102,10 @@ namespace PipePuz.LightBeam
             transform.localEulerAngles = new Vector3(e.x, y, e.z);
         }
 
-        // 프록시(게스트) → 권위(호스트). 권위가 NetYaw 에 실어 전 피어로 전파.
-        [Rpc(RpcSources.Proxies, RpcTargets.StateAuthority)]
+        // 잡고 있는 피어 → 권위(호스트). 권위가 NetYaw 에 실어 전 피어로 전파.
+        // RpcSources.All = 이 프로젝트에서 검증된 패턴(BatteryDispenser.RpcRequestSpawn 과 동일).
+        // (RpcSources.Proxies 는 Shared 모드에서 게스트가 소스로 인정 안 될 수 있어 RPC 가 안 닿았다.)
+        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
         void RpcPushYaw(float yaw)
         {
             NetYaw = yaw;
