@@ -93977,7 +93977,7 @@ MonoBehaviour:
   lowestSubdivLevelOverride: 0
   highestSubdivLevelOverride: 3
   overridesSubdivLevels: 0
-  mightNeedRebaking: 0
+  mightNeedRebaking: 1
   cachedTransform:
     e00: 1
     e01: 0
@@ -95000,7 +95000,7 @@ MonoBehaviour:
   typeInterval: 0.06
   pitchMin: 0.85
   pitchMax: 1.2
-  showOnStartForTest: 1
+  showOnStartForTest: 0
   testSpeaker: "\uC5F0\uAD6C\uC6D0 A"
   testText: "\uD14C\uC2A4\uD2B8 \uC790\uB9C9\uC785\uB2C8\uB2E4."
 --- !u!4 &673985255
