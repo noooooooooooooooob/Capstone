@@ -4,11 +4,14 @@ using System;
 /// 단일 공유 방 기획에서의 플레이어 사이드.
 /// NetworkPlayer.Slot (0/1)와 1:1 매핑된다.
 /// 인터랙션 권한 게이팅과 시각 단서 분기의 단일 키.
+/// Spectator(3번째 입장자)는 어느 오브젝트의 소유자와도 일치하지 않으므로
+/// 모든 select/activate가 자동 차단된다 — 관전 전용.
 /// </summary>
 public enum PlayerSide
 {
     P1 = 0,
     P2 = 1,
+    Spectator = 2,
 }
 
 /// <summary>

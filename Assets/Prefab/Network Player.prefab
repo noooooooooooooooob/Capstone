@@ -79,8 +79,15 @@ MonoBehaviour:
   - {fileID: 1353692269924937275}
   - {fileID: 2516920006002069739}
   - {fileID: 2062279084454680004}
+  hideWhenSpectator:
+  - {fileID: 1353692269924937275}
+  - {fileID: 2516920006002069739}
+  - {fileID: 2062279084454680004}
+  - {fileID: 5281459154084910940}
+  - {fileID: 2631952793392660863}
   spawnCameraOffset: {x: 0, y: 0, z: 0}
   _Slot: 0
+  _IsSpectator: 0
   _SpawnPosition: {x: 0, y: 0, z: 0}
   _SpawnRotation: {x: 0, y: 0, z: 0, w: 0}
 --- !u!114 &7054342359380194151
@@ -298,7 +305,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 98fbb947c07407d4db937da17af98cbf, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: PhotonVoice::Photon.Voice.Unity.UtilityScripts.MicrophonePermission
   autoStart: 1
 --- !u!1 &1353692269924937275

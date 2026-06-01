@@ -37,8 +37,18 @@ namespace Capstone.Network
         public GameMode gameMode = GameMode.Shared;
         public string roomName;
         public bool connectOnStart = false;
-        [Tooltip("0이면 NetworkProjectConfig.DefaultPlayers 사용")]
+        [Tooltip("플레이(조작) 가능한 메인 플레이어 수. 이 인원이 차면 OnRoomFull/UI 숨김이 발동한다. 0이면 NetworkProjectConfig.DefaultPlayers 사용")]
         public int playerCount = 2;
+
+        [Header("Spectators")]
+        [Tooltip("메인 인원이 찬 뒤 추가로 입장하는 인원을 관전자로 받는다. 관전자는 중력/벽 충돌 없이 카메라만 존재하며 인터랙션은 불가.")]
+        public bool allowSpectators = true;
+        [Tooltip("허용할 최대 관전자 수. 세션 정원 = playerCount + maxSpectators.")]
+        public int maxSpectators = 1;
+
+        // 슬롯 인덱스가 이 값 이상이면 관전자 (앞쪽 playerCount 슬롯은 메인 플레이어).
+        int SpectatorSlotThreshold => playerCount > 0 ? playerCount : int.MaxValue;
+        int TotalSessionCapacity => playerCount > 0 ? playerCount + (allowSpectators ? Mathf.Max(0, maxSpectators) : 0) : 0;
 
         [Header("Room selection criteria")]
         public ConnectionCriterias connectionCriterias = ConnectionCriterias.RoomName;
@@ -176,7 +186,7 @@ namespace Capstone.Network
                 };
                 if (ShouldConnectWithRoomName) args.SessionName = roomName;
                 if (ShouldConnectWithSessionProperties) args.SessionProperties = AllConnectionSessionProperties;
-                if (playerCount > 0) args.PlayerCount = playerCount;
+                if (TotalSessionCapacity > 0) args.PlayerCount = TotalSessionCapacity;
 
                 var result = await runner.StartGame(args);
                 if (result.Ok)
@@ -210,11 +220,12 @@ namespace Capstone.Network
             if (player != runner.LocalPlayer || userPrefab == null) return;
 
             int slot = ComputeSharedSlot(runner);
+            bool isSpectator = slot >= SpectatorSlotThreshold;
             var sp = GetSpawnPoint(slot);
 
             // 진단 로그 — NetworkTypeId가 invalid면 Fusion 프리팹 테이블에 미등록 상태.
             Debug.Log($"[RoomLauncher] Spawn userPrefab='{userPrefab.name}' " +
-                      $"localPlayer={runner.LocalPlayer} slot={slot} pos={sp.position} " +
+                      $"localPlayer={runner.LocalPlayer} slot={slot} spectator={isSpectator} pos={sp.position} " +
                       $"typeId={userPrefab.NetworkTypeId} valid={userPrefab.NetworkTypeId.IsValid}");
 
             // inputAuthority 인자는 Shared 모드에서 불필요 — 스폰 호출자가 자동으로 권한자.
@@ -225,6 +236,7 @@ namespace Capstone.Network
                 if (np != null)
                 {
                     np.Slot = slot;
+                    np.IsSpectator = isSpectator;
                     np.SpawnPosition = sp.position;
                     np.SpawnRotation = sp.rotation;
                 }
@@ -237,6 +249,7 @@ namespace Capstone.Network
             if (runner.IsServer && userPrefab != null)
             {
                 int slot = _spawnedUsers.Count;
+                bool isSpectator = slot >= SpectatorSlotThreshold;
                 var sp = GetSpawnPoint(slot);
 
                 var no = runner.Spawn(userPrefab, position: sp.position, rotation: sp.rotation, inputAuthority: player,
@@ -246,6 +259,7 @@ namespace Capstone.Network
                         if (np != null)
                         {
                             np.Slot = slot;
+                            np.IsSpectator = isSpectator;
                             np.SpawnPosition = sp.position;
                             np.SpawnRotation = sp.rotation;
                         }

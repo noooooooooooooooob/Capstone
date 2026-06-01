@@ -21,6 +21,9 @@ namespace Capstone.Network
         [Header("로컬(자기 자신) 시점에서 숨길 비주얼 — 머리·손 메시 등")]
         [SerializeField] GameObject[] hideOnLocal;
 
+        [Header("관전자(3번째 입장자)일 때 모든 피어에서 숨길 아바타 비주얼 — 머리·손·몸 메시 등")]
+        [SerializeField] GameObject[] hideWhenSpectator;
+
         [Header("스폰 시 로컬 카메라 미세 조정 — spawnPoint 로컬축 기준 (x=오른쪽, y=위, z=앞)")]
         [SerializeField] Vector3 spawnCameraOffset;
 
@@ -33,6 +36,7 @@ namespace Capstone.Network
         public PlayerRef Owner => Object.StateAuthority;
 
         [Networked] public int Slot { get; set; }
+        [Networked] public bool IsSpectator { get; set; }
         [Networked] public Vector3 SpawnPosition { get; set; }
         [Networked] public Quaternion SpawnRotation { get; set; }
 
@@ -45,16 +49,26 @@ namespace Capstone.Network
             transform.SetPositionAndRotation(SpawnPosition, SpawnRotation);
 
             // 로컬·원격 모두 머리 앵커를 레지스트리에 등록 → 근접 자동문 등이 양쪽 머리를 결정론적으로 감지.
-            Capstone.Network.Sync.PlayerHeadRegistry.Register(headAnchor);
+            // 관전자는 게임플레이에 영향을 주지 않도록 등록하지 않는다(근접 트리거 무시).
+            if (!IsSpectator)
+                Capstone.Network.Sync.PlayerHeadRegistry.Register(headAnchor);
 
-            Debug.Log($"[NetworkPlayer] Spawned slot={Slot} hasAuthority={HasStateAuthority} pos={transform.position} rot={transform.eulerAngles}");
+            Debug.Log($"[NetworkPlayer] Spawned slot={Slot} spectator={IsSpectator} hasAuthority={HasStateAuthority} pos={transform.position} rot={transform.eulerAngles}");
+
+            // 관전자 아바타는 모든 피어에서 숨긴다 — "그냥 카메라만" 존재.
+            if (IsSpectator)
+                HideSpectatorAvatar();
 
             if (HasStateAuthority)
             {
-                LocalPlayerSide.Set(LocalPlayerSide.FromSlot(Slot));
+                LocalPlayerSide.Set(IsSpectator ? PlayerSide.Spectator : LocalPlayerSide.FromSlot(Slot));
 
                 BindLocalRig();
                 AlignLocalCameraToSpawn();
+
+                // 관전자: 중력 제거 + 벽 통과 (이동/충돌만, 인터랙션은 사이드 불일치로 자동 차단).
+                if (IsSpectator)
+                    SpectatorRig.Apply(_xrOriginComp);
 
                 foreach (var go in hideOnLocal)
                     if (go != null) go.SetActive(false);
@@ -67,6 +81,34 @@ namespace Capstone.Network
 
             if (HasStateAuthority)
                 LocalPlayerSide.Clear();
+        }
+
+        /// <summary>
+        /// 관전자 아바타를 모든 피어에서 보이지 않게 한다.
+        /// hideWhenSpectator가 지정되면 그 오브젝트들을 비활성, 아니면 폴백으로
+        /// 머리·양손 앵커 아래의 Renderer를 끈다 (NetworkTransform 동기화는 유지).
+        /// </summary>
+        void HideSpectatorAvatar()
+        {
+            bool hidAny = false;
+            if (hideWhenSpectator != null)
+            {
+                foreach (var go in hideWhenSpectator)
+                    if (go != null) { go.SetActive(false); hidAny = true; }
+            }
+            if (hidAny) return;
+
+            // 폴백: 앵커 하위 메시만 끄기 — 앵커 GameObject 자체는 동기화를 위해 유지.
+            DisableRenderersUnder(headAnchor);
+            DisableRenderersUnder(leftHandAnchor);
+            DisableRenderersUnder(rightHandAnchor);
+        }
+
+        static void DisableRenderersUnder(Transform root)
+        {
+            if (root == null) return;
+            foreach (var r in root.GetComponentsInChildren<Renderer>(true))
+                r.enabled = false;
         }
 
         void BindLocalRig()
