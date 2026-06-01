@@ -75,8 +75,12 @@ public static class LightBeamSyncSetupTool
             claim.claimOnActivate = true;
             claim.claimOnLocalProximity = false;
 
-            var gate = m.GetComponent<ProxyDriverGate>() ?? Undo.AddComponent<ProxyDriverGate>(m.gameObject);
-            gate.driversDisabledOnProxy = new UnityEngine.Behaviour[] { m };
+            // ProxyDriverGate 는 절대 쓰지 않는다 — 그리고 기존에 붙어 있으면 '제거'한다.
+            // ProxyDriverGate 는 NetworkBehaviour 라 네트워크 연결 시에만 Apply() 가 돌며 LightBeamMirror(회전
+            // 스크립트)를 꺼버린다 → "연결 전엔 회전되는데 연결 후 안 됨"의 정확한 원인. LightBeamMirror 는
+            // '잡고 있을 때만' 회전하므로 프록시에서 Update 가 no-op → 게이트가 애초에 불필요하다.
+            var oldGate = m.GetComponent<ProxyDriverGate>();
+            if (oldGate != null) Undo.DestroyObjectImmediate(oldGate);
 
             SetFlags(no);
             EditorUtility.SetDirty(m);
