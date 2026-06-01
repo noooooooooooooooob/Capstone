@@ -128,28 +128,32 @@ namespace PipePuz.RoomCarpet
         }
 
         /// <summary>
-        /// 현재 상태와 프록시 여부에 맞춰 Rigidbody 의 kinematic/gravity 를 설정한다.
-        ///   - 프록시(SuspendSimulation): 항상 kinematic — NetworkTransform 이 위치 구동.
-        ///   - Spawned(대기): kinematic — 디스펜서 위에 그대로 떠 있음(드리프트 없음).
-        ///   - Held: dynamic, 중력 OFF — 손을 따라 이동(VelocityTracking).
-        ///   - Flying: dynamic, 중력 ON — 던져져 날아감.
-        ///   - Anchored: kinematic — 바닥에 고정.
+        /// 현재 상태와 프록시 여부에 맞춰 Rigidbody 의 gravity/constraints 를 설정한다.
+        ///
+        /// 중요: isKinematic 은 절대 바꾸지 않는다(항상 dynamic 유지). 배터리(검증된 그랩)와 동일하게
+        /// dynamic 이어야 NetworkGrabbableSync 의 권위 이전·양방향 이동과 XRGrab 의 던지기(throwOnDetach)가
+        /// 정상 동작한다. "디스펜서 위 고정"은 kinematic 대신 FreezeAll constraints 로 처리한다(드리프트 방지).
+        ///   - 프록시(SuspendSimulation): 중력 OFF, 제약 없음 — NetworkTransform 이 위치 구동.
+        ///   - Spawned(대기): 중력 OFF + FreezeAll — 디스펜서 위에 정확히 고정.
+        ///   - Held: 중력 OFF, 제약 없음 — 손을 따라 이동.
+        ///   - Flying: 중력 ON, 제약 없음 — 던져져 날아감.
+        ///   - Anchored: 중력 OFF + FreezeAll — 바닥 발판으로 고정.
         /// </summary>
         public void RefreshPhysics()
         {
             if (_rb == null) return;
             if (SuspendSimulation)
             {
-                _rb.isKinematic = true;
                 _rb.useGravity = false;
+                _rb.constraints = RigidbodyConstraints.None;
                 return;
             }
             switch (_state)
             {
-                case State.Spawned:  _rb.isKinematic = true;  _rb.useGravity = false; break;
-                case State.Held:     _rb.isKinematic = false; _rb.useGravity = false; break;
-                case State.Flying:   _rb.isKinematic = false; _rb.useGravity = true;  break;
-                case State.Anchored: _rb.isKinematic = true;  _rb.useGravity = false; break;
+                case State.Spawned:  _rb.useGravity = false; _rb.constraints = RigidbodyConstraints.FreezeAll; break;
+                case State.Held:     _rb.useGravity = false; _rb.constraints = RigidbodyConstraints.None;      break;
+                case State.Flying:   _rb.useGravity = true;  _rb.constraints = RigidbodyConstraints.None;      break;
+                case State.Anchored: _rb.useGravity = false; _rb.constraints = RigidbodyConstraints.FreezeAll; break;
             }
         }
 

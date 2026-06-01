@@ -111,13 +111,13 @@ public static class Stage3SyncSetupTool
         var bcol = root.AddComponent<BoxCollider>();
         bcol.size = CarpetVisualScale;
 
-        // 카펫은 NetworkGrabbableSync 를 쓰지 않는다(그건 던지기를 막고 비행 보간을 끔).
-        // 대기 상태는 kinematic 으로 디스펜서 위에 그대로 떠 있고(드리프트 없음),
-        // CarpetNetworkSync + DisappearingCarpet.RefreshPhysics 가 잡기/던지기 때 dynamic 으로 전환한다.
+        // 배터리(검증된 양방향 그랩)와 동일하게 dynamic Rigidbody + NetworkGrabbableSync 를 쓴다.
+        // dynamic 이어야 NGS 의 권위 이전·양방향 이동과 XRGrab 던지기(throwOnDetach)가 정상 동작한다.
+        // "디스펜서 위 고정"은 kinematic 이 아니라 RefreshPhysics 의 FreezeAll constraints 로 처리(드리프트 방지).
         // damping 0 으로 둬 던진 거리가 죽지 않게 한다.
         var rb = root.AddComponent<Rigidbody>();
         rb.useGravity = false;
-        rb.isKinematic = true;
+        rb.isKinematic = false;
         rb.linearDamping = 0f;
         rb.angularDamping = 0.05f;
         rb.interpolation = RigidbodyInterpolation.Interpolate;
@@ -132,12 +132,16 @@ public static class Stage3SyncSetupTool
         var no = root.AddComponent<NetworkObject>();
         root.AddComponent<NetworkTransform>();
 
+        // 잡기/이동/던지기/권위이전 — 배터리와 동일한 검증된 경로. 던지기 허용.
+        var ngs = root.AddComponent<NetworkGrabbableSync>();
+        ngs.forceNoThrowOnDetach = false;
+
         var carpet = root.AddComponent<DisappearingCarpet>();
         carpet.VisualRenderer = vis.GetComponent<Renderer>();
         carpet.Lifetime = 5f;
         carpet.WarningSeconds = 1.5f;
 
-        // 잡기/던지기/상태/삭제를 카펫 전용으로 처리(권위 이전 포함).
+        // 상태 전파 / 삭제(Despawn) / 발사 / 프록시 물리 게이팅.
         root.AddComponent<CarpetNetworkSync>();
 
         SetAllowOverride(no);

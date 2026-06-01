@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 2859544220051987886}
   - component: {fileID: 6930366865252134226}
   - component: {fileID: 2354981696450265078}
+  - component: {fileID: 2416211686610187748}
   - component: {fileID: 7380719494299012914}
   - component: {fileID: 2110744344443677588}
   m_Layer: 0
@@ -83,7 +84,7 @@ Rigidbody:
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
   m_UseGravity: 0
-  m_IsKinematic: 1
+  m_IsKinematic: 0
   m_Interpolate: 1
   m_Constraints: 0
   m_CollisionDetection: 2
@@ -234,6 +235,7 @@ MonoBehaviour:
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 2354981696450265078}
+  - {fileID: 2416211686610187748}
   - {fileID: 2110744344443677588}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &2354981696450265078
@@ -253,6 +255,29 @@ MonoBehaviour:
   SyncParent: 0
   _autoAOIOverride: 1
   DisableSharedModeInterpolation: 0
+--- !u!114 &2416211686610187748
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3954558347786346541}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7fda9926b6d55840bc89ebd330769b3, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbableSync
+  forceNoThrowOnDetach: 0
+  allowNonTransferableObject: 0
+  verboseLog: 0
+  onGrab:
+    m_PersistentCalls:
+      m_Calls: []
+  onUngrab:
+    m_PersistentCalls:
+      m_Calls: []
+  _IsGrabbed:
+    _value: 0
 --- !u!114 &7380719494299012914
 MonoBehaviour:
   m_ObjectHideFlags: 0
