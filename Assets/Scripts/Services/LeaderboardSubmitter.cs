@@ -29,6 +29,9 @@ public class LeaderboardSubmitter : MonoBehaviour
     [Tooltip("제출이 완료된 뒤 호출 (서버 반영 후). 결과 화면 전환 등에 연결")]
     public UnityEvent OnSubmitted;
 
+    [Tooltip("클리어 후 랭킹을 다시 불러오기까지 대기(초). 호스트 제출이 서버에 반영될 시간 확보용")]
+    public float refreshDelayAfterClear = 2f;
+
     bool _subscribed;
     bool _started;
     bool _submitted;
@@ -77,7 +80,18 @@ public class LeaderboardSubmitter : MonoBehaviour
         if (_displayed) return;
         _displayed = true;
         if (display == null) display = FindFirstObjectByType<LeaderboardDisplay>(FindObjectsInactive.Include);
-        if (display != null) display.SetMyTime(seconds);
+        if (display == null) return;
+
+        display.SetMyTime(seconds);                 // 내 시간 즉시 표시 + 1차 새로고침
+        StartCoroutine(DelayedRefresh());           // 호스트 제출이 서버에 반영된 뒤 2차 새로고침
+    }
+
+    System.Collections.IEnumerator DelayedRefresh()
+    {
+        // 호스트의 점수 제출이 서버에 반영될 시간을 준 뒤 랭킹을 다시 불러옴.
+        // (게스트는 ClearTime 도착 시점=제출 전이라, 이게 없으면 옛 랭킹이 뜸)
+        yield return new WaitForSeconds(refreshDelayAfterClear);
+        if (display != null) display.Refresh();
     }
 
     void TrySubscribe()
@@ -129,13 +143,12 @@ public class LeaderboardSubmitter : MonoBehaviour
 
         _submitted = true;
 
-        // 이번에 플레이한 클리어 타임을 화면에 표시
-        ShowTime((float)seconds);
-
-        // 제출은 호스트(StateAuthority)만 — 협동 클리어 1회당 한 기록
+        // 게스트는 자기 로컬 시간을 표시하지 않는다 — 호스트가 측정/브로드캐스트한 값만 사용해야
+        // 양쪽이 동일한 시간을 본다. 게스트는 Update()에서 네트워크 ClearTimeSeconds를 받아 표시한다.
         if (GmSpawned() && !GameManager.Instance.HasStateAuthority) return;
 
-        // 호스트가 측정한 시간을 네트워크로 브로드캐스트 → 게스트도 같은 시간 표시
+        // 호스트만: 자기 측정값을 표시 + 네트워크 브로드캐스트 + 제출
+        ShowTime((float)seconds);
         if (GmSpawned()) GameManager.Instance.SetClearTime((float)seconds);
 
         if (LeaderboardManager.Instance != null)
