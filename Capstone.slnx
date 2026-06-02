@@ -1,9 +1,9 @@
 ﻿<Solution>
   <Project Path="Unity.Timeline.csproj" />
-  <Project Path="Unity.Services.Core.Device.csproj" />
+  <Project Path="Unity.InputSystem.csproj" />
   <Project Path="Unity.Services.Authentication.PlayerAccounts.csproj" />
-  <Project Path="Unity.Services.Leaderboards.csproj" />
   <Project Path="Unity.Services.Core.Internal.csproj" />
+  <Project Path="Unity.Services.Leaderboards.csproj" />
   <Project Path="Unity.Mathematics.csproj" />
   <Project Path="Unity.Timeline.Editor.csproj" />
   <Project Path="Unity.Collections.csproj" />
@@ -23,11 +23,10 @@
   <Project Path="Unity.XR.Interaction.Toolkit.csproj" />
   <Project Path="Unity.Animation.Rigging.csproj" />
   <Project Path="Unity.VisualStudio.Editor.csproj" />
-  <Project Path="Unity.InputSystem.csproj" />
+  <Project Path="Unity.Services.Authentication.csproj" />
   <Project Path="Unity.Animation.Rigging.Editor.csproj" />
   <Project Path="Unity.XR.ARFoundation.csproj" />
   <Project Path="Unity.XR.Interaction.Toolkit.Editor.csproj" />
-  <Project Path="Unity.Services.Authentication.csproj" />
   <Project Path="Unity.XR.CoreUtils.csproj" />
   <Project Path="Unity.Services.Authentication.Editor.csproj" />
   <Project Path="Unity.XR.Simulation.Editor.csproj" />
@@ -100,6 +99,7 @@
   <Project Path="Unity.Settings.Editor.csproj" />
   <Project Path="Unity.InputSystem.TestFramework.csproj" />
   <Project Path="UnityEditor.XR.LegacyInputHelpers.csproj" />
+  <Project Path="Unity.Services.Core.Device.csproj" />
   <Project Path="PhotonChat.csproj" />
   <Project Path="Unity.Services.Core.Analytics.csproj" />
   <Project Path="Unity.XR.Interaction.Toolkit.Samples.SpatialKeyboard.Editor.csproj" />

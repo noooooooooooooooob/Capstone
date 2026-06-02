@@ -69,8 +69,9 @@ public class LeaderboardManager : MonoBehaviour
 #if UGS_LEADERBOARDS
         try
         {
-            if (UnityServices.State != ServicesInitializationState.Initialized)
-                await UnityServices.InitializeAsync();
+            // 항상 await — 이미 초기화됐으면 즉시 반환됨. (조건부 스킵 시,
+            // Leaderboards 패키지가 등록되기 전 완료된 초기화를 재사용해 버리는 문제 방지)
+            await UnityServices.InitializeAsync();
 
             // 이미 로그인됐거나 로그인 진행 중이면 SignIn을 다시 호출하지 않음
             if (!AuthenticationService.Instance.IsSignedIn &&
