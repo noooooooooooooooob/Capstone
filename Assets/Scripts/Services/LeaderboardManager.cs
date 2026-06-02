@@ -49,8 +49,22 @@ public class LeaderboardManager : MonoBehaviour
         if (Instance == this) Instance = null;
     }
 
-    /// <summary>UGS 초기화 + 익명 로그인. 여러 번 호출해도 안전(멱등).</summary>
-    public async Task InitializeAsync()
+    Task _initTask;
+
+    /// <summary>
+    /// UGS 초기화 + 익명 로그인. 동시/중복 호출에 안전 —
+    /// 진행 중인 초기화가 있으면 그 작업을 그대로 반환(single-flight).
+    /// </summary>
+    public Task InitializeAsync()
+    {
+        if (IsReady) return Task.CompletedTask;
+        // 진행 중인 작업이 없거나 이전 시도가 실패했을 때만 새로 시작
+        if (_initTask == null || _initTask.IsFaulted || _initTask.IsCanceled)
+            _initTask = InitializeInternalAsync();
+        return _initTask;
+    }
+
+    async Task InitializeInternalAsync()
     {
 #if UGS_LEADERBOARDS
         try
@@ -58,15 +72,20 @@ public class LeaderboardManager : MonoBehaviour
             if (UnityServices.State != ServicesInitializationState.Initialized)
                 await UnityServices.InitializeAsync();
 
-            if (!AuthenticationService.Instance.IsSignedIn)
+            // 이미 로그인됐거나 로그인 진행 중이면 SignIn을 다시 호출하지 않음
+            if (!AuthenticationService.Instance.IsSignedIn &&
+                !AuthenticationService.Instance.IsAuthorized)
+            {
                 await AuthenticationService.Instance.SignInAnonymouslyAsync();
+            }
 
-            IsReady = true;
+            IsReady = AuthenticationService.Instance.IsSignedIn;
             Debug.Log($"[LeaderboardManager] Ready. PlayerId={AuthenticationService.Instance.PlayerId}");
         }
         catch (System.Exception e)
         {
             IsReady = false;
+            _initTask = null; // 실패 시 다음 호출에서 재시도 가능하도록
             Debug.LogError($"[LeaderboardManager] 초기화 실패: {e}");
         }
 #else
