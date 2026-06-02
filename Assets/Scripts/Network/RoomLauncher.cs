@@ -197,6 +197,7 @@ namespace Capstone.Network
                 }
                 else
                 {
+                    Debug.LogError($"[RoomLauncher] StartGame 실패 — Reason={result.ShutdownReason}, Msg={result.ErrorMessage}");
                     OnFailed?.Invoke(result.ShutdownReason.ToString());
                 }
                 return result;
