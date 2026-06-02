@@ -22,6 +22,11 @@ namespace PipePuz.SmokePuzzle
         [Tooltip("LocalAxis 양의 방향에서 본 CCW = 열림이 되도록 부호를 뒤집어야 할 때 켠다.")]
         public bool InvertDirection = false;
 
+        [Tooltip("밸브의 총 가동 범위(°). 0°(시작)에서 이 각도까지만 돌아간다. " +
+                 "Normalized01 = AccumulatedCloseDeg / ValveRangeDeg 로 게이지 Pointer 위치에 매핑된다. " +
+                 "예: 360 이면 한 바퀴로 게이지를 끝에서 끝까지 훑는다.")]
+        public float ValveRangeDeg = 360f;
+
         [Tooltip("시각 회전이 적용될 자식 Transform. 비우면 자기 자신.")]
         public Transform Wheel;
 
@@ -43,8 +48,14 @@ namespace PipePuz.SmokePuzzle
         /// <summary>닫힘 방향(사용자 시야 기준 시계 방향) 회전 속도. 손을 놓거나 멈추면 0 으로 감쇠.</summary>
         public float CurrentCloseDegPerSec { get; private set; }
 
-        /// <summary>시각 회전을 위한 누적 닫힘 각도. 시각용 — 무한히 누적된다.</summary>
+        /// <summary>누적 회전 각도(°). 양방향으로 누적되며 [0, ValveRangeDeg] 로 클램프된다.
+        /// CW(시계) 로 돌리면 증가, CCW(반시계) 로 돌리면 감소.</summary>
         public float AccumulatedCloseDeg { get; private set; }
+
+        /// <summary>밸브 위치를 0~1 로 정규화한 값. 0=시작(완전 반시계), 1=ValveRangeDeg(완전 시계).
+        /// SmokeGauge 가 이 값을 읽어 Pointer 를 회전시킨다.</summary>
+        public float Normalized01 =>
+            ValveRangeDeg > 0.0001f ? Mathf.Clamp01(AccumulatedCloseDeg / ValveRangeDeg) : 0f;
 
         /// <summary>
         /// true 면 로컬 입력 처리를 멈추고 네트워크(SuppressionWheelNetworkSync)가
@@ -106,14 +117,14 @@ namespace PipePuz.SmokePuzzle
                 float delta = Mathf.DeltaAngle(_lastAngle, cur);
                 _lastAngle = cur;
                 if (InvertDirection) delta = -delta;
-                // Valve.ProcessInteractable 와 동일 규약: delta > 0 == 사용자 시야 기준 시계 방향(닫힘).
+                // 규약: delta > 0 == 사용자 시야 기준 시계 방향(CW). 양방향 모두 부호 그대로 누적.
                 closeDelta = delta;
-                // 무한 누적 — 양수만 더해 시계 방향만큼 휠이 돈 모양으로.
-                AccumulatedCloseDeg += Mathf.Max(0f, delta);
+                // [0, ValveRangeDeg] 로 클램프 — 밸브가 양끝에서 멈추고 게이지 sweep 과 1:1 매핑.
+                AccumulatedCloseDeg = Mathf.Clamp(AccumulatedCloseDeg + delta, 0f, ValveRangeDeg);
             }
 
-            // 손이 잡고 있는 동안엔 EMA 로 부드럽게, 놓으면 exponential 감쇠.
-            float instantDegPerSec = Mathf.Max(0f, closeDelta) / dt;
+            // 회전 속도(부호 포함). 손을 놓으면 0 으로 감쇠.
+            float instantDegPerSec = closeDelta / dt;
             if (_activeInteractor == null)
             {
                 float k = 1f - Mathf.Exp(-dt / Mathf.Max(0.01f, ReleaseDecayTime));
@@ -124,7 +135,7 @@ namespace PipePuz.SmokePuzzle
                 CurrentCloseDegPerSec = Mathf.Lerp(instantDegPerSec, CurrentCloseDegPerSec, SmoothingWeight);
             }
 
-            // 시각 회전 — 누적된 각도 그대로 회전 적용(끝없이 돌게 보임).
+            // 시각 회전 — 누적각(클램프됨)을 그대로 적용. 양방향으로 돌리면 휠도 양방향으로 회전.
             if (Wheel != null)
                 Wheel.localRotation = Quaternion.AngleAxis(AccumulatedCloseDeg, LocalAxis) * _wheelBaseRot;
         }

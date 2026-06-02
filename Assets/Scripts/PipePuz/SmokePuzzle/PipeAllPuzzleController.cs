@@ -8,31 +8,37 @@ namespace PipePuz.SmokePuzzle
     /// PipeAll 안의 "Radiator + PipeMiniGame2" 복합 퍼즐 매니저.
     ///
     /// 매 프레임 smoke (0~1) 를 갱신:
-    ///   if (MiniGameBoard.IsSolved):
-    ///       smoke → 0 (즉시), 더 이상 갱신 없음
+    ///   if (MiniGameBoard.IsSolved || ExternalSolvedLatch):
+    ///       smoke → 0 (즉시 영구), 더 이상 갱신 없음   (별도 해결 경로 — 유지)
+    ///   else if (Gauge.PointerInRedZone):
+    ///       smoke -= SuppressRate * dt    (밸브로 Pointer 를 빨간 영역에 맞추면 연기가 사라짐)
     ///   else:
-    ///       smoke += (RecoveryRate - SuppressionPerDegPerSec * Wheel.CurrentCloseDegPerSec) * dt
-    ///       clamp [0,1]
+    ///       smoke += RecoveryRate * dt    (영역을 벗어나면 다시 차오름 — "유지해야 멈춤")
     ///
-    /// 즉:
-    /// - 사용자가 휠을 안 잡고 있으면 RecoveryRate 만큼 매초 회복(연기 늘어남)
-    /// - 휠을 닫힘 방향으로 빠르게 돌리면 그 속도 × 계수 만큼 매초 감소(연기 줄어듦)
-    /// - 회전 속도와 회복률이 균형 → 어떤 속도 이상 돌리면 점차 줄어드는 형태
-    /// - MiniGame2 가 해결되면 0 으로 강제 + 매니저는 그 후 갱신 안 함
+    /// 즉 새 메커니즘:
+    /// - 사용자가 Valve 를 돌려 SmokeGauge 의 Pointer 를 특정 빨간 영역에 위치시키면 연기가 줄어든다.
+    /// - Pointer 가 영역을 벗어나면 연기가 다시 회복된다(영구 정지 아님).
+    /// - MiniGame2 board 해결은 독립적인 영구 해제 경로로 남아 있다(완료 이벤트용).
     /// </summary>
     public class PipeAllPuzzleController : MonoBehaviour
     {
         [Header("Refs")]
+        [Tooltip("Valve(SuppressionWheel). 회전은 SmokeGauge.Pointer 를 구동한다. (smoke 억제는 Gauge 가 판정)")]
         public SuppressionWheel Wheel;
         public PipePuz.SmokeController Smoke;
         public PipeMiniGame2Board MiniGameBoard;
 
+        [Tooltip("Pointer 가 빨간 영역에 있는지 판정하는 게이지. 비우면 자식에서 자동 검출.")]
+        public SmokeGauge Gauge;
+
         [Header("Tuning")]
-        [Tooltip("자연 회복률 (초당 smoke 증가). 휠을 안 돌리면 0→1까지 1/RecoveryRate 초가 걸린다.")]
+        [Tooltip("자연 회복률 (초당 smoke 증가). Pointer 가 빨간 영역 밖이면 이 속도로 차오른다.")]
         public float RecoveryRate = 0.18f;
 
-        [Tooltip("닫힘 회전 속도 1°/s 당 초당 smoke 감소량. " +
-                 "예: 0.0015 면 100°/s 돌리는 동안 0.15/s 감소.")]
+        [Tooltip("Pointer 가 빨간 영역 안에 있을 때 초당 smoke 감소량. 클수록 빨리 사라진다.")]
+        public float SuppressRate = 0.6f;
+
+        [Tooltip("[레거시] 예전 속도기반 억제 계수 — 새 메커니즘에서는 사용하지 않음(필드만 유지).")]
         public float SuppressionPerDegPerSec = 0.0015f;
 
         [Header("Initial / Limits")]
@@ -66,6 +72,9 @@ namespace PipePuz.SmokePuzzle
 
         void Awake()
         {
+            // Gauge 자동 연결 — 보통 자식에 SmokeGauge 가 하나 있다.
+            if (Gauge == null) Gauge = GetComponentInChildren<SmokeGauge>(true);
+
             // SmokeController.Awake 가 Intensity=0(default)으로 Apply 하면서 ParticleSystem 을 Stop 시키는
             // 1프레임 공백을 막기 위해 가능한 가장 일찍 InitialSmoke 적용한다.
             _smoke = Mathf.Clamp(InitialSmoke, 0f, MaxSmoke);
@@ -103,9 +112,10 @@ namespace PipePuz.SmokePuzzle
                 return;
             }
 
-            float closeRate = Wheel != null ? Wheel.CurrentCloseDegPerSec : 0f;
-            float delta = (RecoveryRate - SuppressionPerDegPerSec * closeRate) * dt;
-            // 자연 회복은 MaxSmoke 까지만, 감소는 0 까지.
+            // 새 메커니즘: Pointer 가 빨간 영역 안이면 감소, 밖이면 회복("유지해야 멈춤").
+            bool inRedZone = Gauge != null && Gauge.PointerInRedZone;
+            float delta = inRedZone ? (-SuppressRate * dt) : (RecoveryRate * dt);
+            // 회복은 MaxSmoke 까지만, 감소는 0 까지.
             float next = Mathf.Clamp(_smoke + delta, 0f, MaxSmoke);
 
             if (!Mathf.Approximately(next, _smoke))

@@ -3,48 +3,77 @@ using UnityEngine;
 namespace PipePuz.SmokePuzzle
 {
     /// <summary>
-    /// 반원 게이지. 좌측(-X) = 0, 우측(+X) = MaxSmoke 비율 1.
-    /// 흰색 반원 배경 위에 빨간 sector mesh 가 좌측에서부터 비율만큼 채워지고,
-    /// 화살표가 현재 비율 위치를 가리킨다.
+    /// 반원 게이지. 새 동작:
+    ///   · Pointer 는 더 이상 smoke 양으로 자동 이동하지 않는다.
+    ///     대신 Valve(SuppressionWheel)의 회전(Normalized01)을 그대로 따라간다.
+    ///     → 사용자가 밸브를 시계방향으로 돌리면 Pointer 도 시계방향, 반시계면 반시계.
+    ///   · 빨간 영역은 "고정된 작은 타깃 호" 다(예전처럼 차오르는 fill 아님).
+    ///     Pointer 가 이 영역 안에 들어오면 <see cref="PointerInRedZone"/> 가 true 가 되고,
+    ///     PipeAllPuzzleController 가 이를 읽어 smoke 를 멈춘다(영역을 벗어나면 다시 발생).
     ///
-    /// 빨간 fill mesh 는 매 프레임 verts 를 갱신한다. (segments=48 기준 가벼움)
+    /// Pointer 각도 매핑: t∈[0,1] → angle = Lerp(180°, 0°, t)
+    ///   t=0 → 180°(좌), t=0.5 → 90°(상), t=1 → 0°(우). t 가 커질수록 Pointer 는 시계방향.
+    /// 빨간 호도 같은 t 공간에서 [center±width/2] 로 그려 Pointer 와 정확히 겹친다.
     /// </summary>
     public class SmokeGauge : MonoBehaviour
     {
         [Header("Wiring")]
+        [Tooltip("연기 퍼즐 컨트롤러. 비워도 됨 — Valve 자동 연결과 디버그용으로만 참조.")]
         public PipeAllPuzzleController Controller;
+
+        [Tooltip("Pointer 를 구동할 Valve. 비우면 Controller.Wheel 또는 씬에서 자동 검출.")]
+        public SuppressionWheel Valve;
 
         [Tooltip("회전 포인터(화살표) 의 root. 자식 비주얼이 +X 방향으로 길게 뻗어 있어야 한다.")]
         public Transform Pointer;
 
-        [Tooltip("빨간 fill mesh 를 들고 있는 MeshFilter (정면 사본). Awake 에 동적 Mesh 가 할당된다.")]
+        [Tooltip("빨간 타깃 호 mesh 를 들고 있는 MeshFilter(정면 사본). Awake 에 동적 Mesh 가 할당된다.")]
         public MeshFilter RedFillFilter;
 
-        [Tooltip("빨간 fill mesh 의 뒷면 사본 MeshFilter. Background 보다 +Z 쪽에 두어 뒤에서도 보이게 한다. " +
-                 "RedFillFilter 와 같은 동적 Mesh 를 공유한다.")]
+        [Tooltip("빨간 타깃 호 mesh 의 뒷면 사본 MeshFilter. RedFillFilter 와 같은 동적 Mesh 를 공유한다.")]
         public MeshFilter RedFillFilterBack;
+
+        [Header("Red target zone (고정된 작은 영역)")]
+        [Range(0f, 1f)]
+        [Tooltip("빨간 타깃 영역의 중심 위치(0=좌끝, 0.5=상단, 1=우끝). '끝까지'가 아닌 특정 지점.")]
+        public float RedZoneCenter01 = 0.5f;
+
+        [Range(0.01f, 0.5f)]
+        [Tooltip("빨간 타깃 영역의 폭(전체 sweep 대비 비율). 작을수록 정밀 조준이 필요.")]
+        public float RedZoneWidth01 = 0.12f;
+
+        [Tooltip("켜면 밸브 회전과 Pointer 방향을 반대로 매핑. 실제 게이지가 뒤집혀 보이면 사용.")]
+        public bool InvertPointer = false;
 
         [Header("Geometry")]
         [Tooltip("반원 반지름(m).")]
         public float Radius = 0.18f;
 
-        [Tooltip("반원을 잘게 쪼개는 세그먼트 수. 클수록 부드럽다.")]
+        [Tooltip("반원/호를 잘게 쪼개는 세그먼트 수. 클수록 부드럽다.")]
         public int Segments = 48;
+
+        /// <summary>현재 Pointer 가 빨간 타깃 영역 안에 있는지. Controller 가 읽어 smoke 를 멈춘다.</summary>
+        public bool PointerInRedZone { get; private set; }
 
         Mesh _redMesh;
         Vector3[] _verts;
         int[] _tris;
+        float _builtCenter = -1f, _builtWidth = -1f;
 
         void Awake()
         {
-            _redMesh = new Mesh { name = "SmokeGauge_RedFill" };
+            _redMesh = new Mesh { name = "SmokeGauge_RedZone" };
             _redMesh.MarkDynamic();
             if (RedFillFilter != null) RedFillFilter.sharedMesh = _redMesh;
             if (RedFillFilterBack != null) RedFillFilterBack.sharedMesh = _redMesh;
             AllocBuffers();
-            // 시작 시점 시각화 한 번 갱신 (Controller 가 아직 Awake 전이라도 안전하게 0 으로).
-            UpdateMesh(0f);
-            UpdatePointer(0f);
+
+            // Valve 자동 연결: 명시 안 했으면 Controller.Wheel → 씬 검색 순으로.
+            if (Valve == null && Controller != null) Valve = Controller.Wheel;
+            if (Valve == null) Valve = FindFirstObjectByType<SuppressionWheel>();
+
+            BuildRedZoneMesh();
+            UpdatePointer(ReadPointerT());
         }
 
         void AllocBuffers()
@@ -62,56 +91,58 @@ namespace PipePuz.SmokePuzzle
 
         void Update()
         {
-            float t = 0f;
-            if (Controller != null && Controller.MaxSmoke > 0.0001f)
-            {
-                t = Mathf.Clamp01(Controller.CurrentSmoke / Controller.MaxSmoke);
-            }
-            UpdateMesh(t);
+            // 인스펙터에서 영역을 조정하면 다시 굽는다.
+            if (!Mathf.Approximately(_builtCenter, RedZoneCenter01) ||
+                !Mathf.Approximately(_builtWidth, RedZoneWidth01))
+                BuildRedZoneMesh();
+
+            float t = ReadPointerT();
             UpdatePointer(t);
+
+            float half = RedZoneWidth01 * 0.5f;
+            PointerInRedZone = Mathf.Abs(t - RedZoneCenter01) <= half;
         }
 
-        /// <summary>
-        /// 반원: 좌(180°) → 우(0°) — 각 verts[i+1] = (cos·R, sin·R, 0).
-        /// t=0 이면 빨간 영역 면적 0, t=1 이면 좌측 전체.
-        /// 시각 안내: 우측이 위험(빨간)이지만 사용자는 보통 시계방향을 "차오름" 으로 본다.
-        /// 여기서는 좌측부터 t 비율을 빨간색으로 칠하기로 결정 — 화살표가 좌측에서 우측으로 이동하면서 빨강 영역이 늘어남.
-        /// (좌측이 0 = 안전, 우측이 1 = 빨강 가득 = 위험)
-        /// Wait: 좌측 0 안전 이면 빨강은 우측에서 시작해서 좌측으로 채워져야 자연스럽다.
-        ///       → 좌측 0 = 흰색, 우측 1 = 빨강. fill 영역 = [0°, t*180°] (우측 → 위쪽 → 좌측 순으로 채워짐)
-        ///       → 화살표는 우측(0°) → 좌측(180°) 으로 이동.
-        /// 즉 t=0 → 화살표 우측(0°), t=1 → 화살표 좌측(180°).
-        /// 사용자 메시지: "연기가 나는 쪽은 빨간색" — 절댓값. 어느 쪽이 0인지는 명시 안 함.
-        /// 시각적 직관: 화살표는 시계방향(우→상→좌) 으로 차오를 때 빨강이 따라옴. → 좌측 0, 우측 1 + 화살표가 우측이 가득.
-        /// 둘 중 어느 게 더 자연스러운지 모호 — 일단 "좌측 0, 우측 1, fill 은 우측부터 t 만큼" 으로 간다.
-        /// 이는 시계 게이지에서 "압력이 차오를 때 시계방향" 직관과 일치.
-        /// fill 영역 = [180° - t*180°, 180°] (좌측이 0이고, 우측 가득 차면 t=1 → fill = [0°, 180°] = full)
-        /// 화살표 = (1 - t) * 180° (t=0 일 때 180°(좌), t=1 일 때 0°(우))
-        /// </summary>
-        void UpdateMesh(float t)
+        /// <summary>Valve 회전을 Pointer t(0~1) 로 변환. InvertPointer 면 방향 반전.</summary>
+        float ReadPointerT()
+        {
+            float raw = Valve != null ? Valve.Normalized01 : 0f;
+            return InvertPointer ? 1f - raw : raw;
+        }
+
+        /// <summary>고정된 빨간 타깃 호를 [center±width/2] t 범위에 굽는다(한 번만, 파라미터 변경 시 재생성).</summary>
+        void BuildRedZoneMesh()
         {
             if (_redMesh == null || _verts == null) return;
 
-            float startDeg = 180f - t * 180f; // 좌측 fill 경계
-            float endDeg = 180f;              // 좌측 끝
+            float half = RedZoneWidth01 * 0.5f;
+            float tStart = Mathf.Clamp01(RedZoneCenter01 - half);
+            float tEnd   = Mathf.Clamp01(RedZoneCenter01 + half);
+
+            // t → angle = Lerp(180°, 0°, t) (Pointer 와 동일 매핑).
+            float aStart = Mathf.Lerp(180f, 0f, tStart);
+            float aEnd   = Mathf.Lerp(180f, 0f, tEnd);
+
             for (int i = 0; i <= Segments; i++)
             {
                 float u = i / (float)Segments;
-                float ang = Mathf.Lerp(endDeg, startDeg, u) * Mathf.Deg2Rad;
+                float ang = Mathf.Lerp(aStart, aEnd, u) * Mathf.Deg2Rad;
                 _verts[i + 1] = new Vector3(Mathf.Cos(ang) * Radius, Mathf.Sin(ang) * Radius, 0f);
             }
+            _redMesh.Clear();
             _redMesh.vertices = _verts;
             _redMesh.triangles = _tris;
             _redMesh.RecalculateBounds();
+
+            _builtCenter = RedZoneCenter01;
+            _builtWidth = RedZoneWidth01;
         }
 
         void UpdatePointer(float t)
         {
             if (Pointer == null) return;
-            // t=0 → angle=180° (좌), t=1 → angle=0° (우)
-            // 사용자 직관 보정: t=0 일 때 우측, t=1 일 때 좌측을 원할 수도 있지만 위 주석의 결정을 따른다.
-            // 좌측이 0, fill 은 좌측부터 채워짐 — 사용자가 인스펙터에서 invertPointer 토글 원하면 추가 가능.
-            float angle = 180f - t * 180f;
+            // t=0 → 180°(좌), t=1 → 0°(우). t 증가 = 시계방향.
+            float angle = Mathf.Lerp(180f, 0f, Mathf.Clamp01(t));
             Pointer.localRotation = Quaternion.Euler(0f, 0f, angle);
         }
     }
