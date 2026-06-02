@@ -23799,7 +23799,9 @@ MonoBehaviour:
   Wheel: {fileID: 1030159081}
   Smoke: {fileID: 1461000034}
   MiniGameBoard: {fileID: 1647185867}
+  Gauge: {fileID: 0}
   RecoveryRate: 0.18
+  SuppressRate: 0.6
   SuppressionPerDegPerSec: 0.0015
   InitialSmoke: 0.85
   MaxSmoke: 0.85
@@ -75958,6 +75960,7 @@ GameObject:
   m_Component:
   - component: {fileID: 528639646}
   - component: {fileID: 528639647}
+  - component: {fileID: 528639648}
   m_Layer: 0
   m_Name: SmokeGauge
   m_TagString: Untagged
@@ -75999,11 +76002,30 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.SmokePuzzle.SmokeGauge
   Controller: {fileID: 287789904}
+  Valve: {fileID: 0}
   Pointer: {fileID: 586929185}
   RedFillFilter: {fileID: 1648191961}
   RedFillFilterBack: {fileID: 1307324822}
+  RedZoneCenter01: 0.5
+  RedZoneWidth01: 0.12
+  InvertPointer: 0
   Radius: 0.18
   Segments: 48
+--- !u!114 &528639648
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 528639645}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 40bf31ab99166d0428fcc0b3976b6f0b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideHide
+  hideForSide: 0
+  renderers: []
+  hideWhenUnknown: 0
 --- !u!1 &529765789
 GameObject:
   m_ObjectHideFlags: 0
@@ -136246,6 +136268,7 @@ GameObject:
   - component: {fileID: 1030159085}
   - component: {fileID: 1030159086}
   - component: {fileID: 1030159087}
+  - component: {fileID: 1030159088}
   m_Layer: 0
   m_Name: Valve
   m_TagString: Untagged
@@ -136337,6 +136360,7 @@ MonoBehaviour:
   m_ParentInteractableObject: {fileID: 0}
   LocalAxis: {x: 0, y: 0, z: 1}
   InvertDirection: 0
+  ValveRangeDeg: 360
   Wheel: {fileID: 285106958}
   MinGrabRadius: 0.07
   MaxGrabRadius: 0.4
@@ -136447,6 +136471,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.SmokePuzzle.SuppressionWheelNetworkSync
   _NetAngle: 0
   _NetRate: 0
+--- !u!114 &1030159088
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1030159080}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbae68dfb8388d469e6dd12425108bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideGrabLock
+  lockForSide: 1
 --- !u!1001 &1031023051
 PrefabInstance:
   m_ObjectHideFlags: 0
