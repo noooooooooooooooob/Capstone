@@ -37,6 +37,9 @@ public class GameManager : NetworkBehaviour
     [Networked] public int CurrentPuzzleIndex { get; set; }
     [Networked] public NetworkBool AllCompleted { get; set; }
 
+    /// <summary>클리어 타임(초). 호스트가 측정해 기록하면 모든 피어에 동기화 — 양쪽이 같은 시간 표시.</summary>
+    [Networked] public float ClearTimeSeconds { get; set; }
+
     bool _debugCompletingAll;
 
     /// <summary>(speaker, text, duration, voiceClip) — SubtitleHUD가 구독해 화면에 표시 + 보이스 재생.</summary>
@@ -63,12 +66,19 @@ public class GameManager : NetworkBehaviour
         if (Instance == this) Instance = null;
     }
 
+    /// <summary>호스트가 측정한 클리어 타임을 기록 — 네트워크로 모든 피어에 동기화됨.</summary>
+    public void SetClearTime(float seconds)
+    {
+        if (HasStateAuthority) ClearTimeSeconds = seconds;
+    }
+
     public override void Spawned()
     {
         if (HasStateAuthority)
         {
             CurrentPuzzleIndex = -1;
             AllCompleted = false;
+            ClearTimeSeconds = 0f;
         }
 
         AutoSetupPuzzles();

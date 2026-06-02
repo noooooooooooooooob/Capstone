@@ -32,6 +32,7 @@ public class LeaderboardSubmitter : MonoBehaviour
     bool _subscribed;
     bool _started;
     bool _submitted;
+    bool _displayed;
     float _startTime;
 
     /// <summary>
@@ -56,6 +57,19 @@ public class LeaderboardSubmitter : MonoBehaviour
     {
         // GameManager는 Fusion이 네트워크 스폰하므로 Start보다 늦을 수 있음 → 구독 보장
         if (!_subscribed) TrySubscribe();
+
+        // 호스트가 기록한 클리어 타임이 네트워크로 도착하면 표시 (호스트/게스트 공통).
+        // 게스트는 OnAllPuzzlesCompleted 이벤트가 안 오므로 이 경로로 시간이 뜬다.
+        if (!_displayed && GameManager.Instance != null && GameManager.Instance.ClearTimeSeconds > 0f)
+            ShowTime(GameManager.Instance.ClearTimeSeconds);
+    }
+
+    void ShowTime(float seconds)
+    {
+        if (_displayed) return;
+        _displayed = true;
+        if (display == null) display = FindFirstObjectByType<LeaderboardDisplay>(FindObjectsInactive.Include);
+        if (display != null) display.SetMyTime(seconds);
     }
 
     void TrySubscribe()
@@ -98,17 +112,23 @@ public class LeaderboardSubmitter : MonoBehaviour
     {
         if (_submitted || !_started) return;
 
-        // 호스트(StateAuthority)만 제출 — 협동 클리어 1회당 한 기록
-        if (GameManager.Instance != null && !GameManager.Instance.HasStateAuthority) return;
-
         double seconds = Time.time - _startTime;
         if (seconds <= 0.0)
         {
-            Debug.LogWarning("[LeaderboardSubmitter] 측정된 클리어 타임이 0 이하 — 제출 생략.");
+            Debug.LogWarning("[LeaderboardSubmitter] 측정된 클리어 타임이 0 이하 — 생략.");
             return;
         }
 
         _submitted = true;
+
+        // 이번에 플레이한 클리어 타임을 화면에 표시
+        ShowTime((float)seconds);
+
+        // 제출은 호스트(StateAuthority)만 — 협동 클리어 1회당 한 기록
+        if (GameManager.Instance != null && !GameManager.Instance.HasStateAuthority) return;
+
+        // 호스트가 측정한 시간을 네트워크로 브로드캐스트 → 게스트도 같은 시간 표시
+        if (GameManager.Instance != null) GameManager.Instance.SetClearTime((float)seconds);
 
         if (LeaderboardManager.Instance != null)
             _ = SubmitAndRefresh(seconds);

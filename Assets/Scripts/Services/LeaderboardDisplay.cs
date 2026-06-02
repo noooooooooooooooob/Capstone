@@ -32,9 +32,20 @@ public class LeaderboardDisplay : MonoBehaviour
     [Tooltip("활성화될 때 자동으로 새로고침")]
     public bool refreshOnEnable = true;
 
+    double _myTime = -1.0;
+    bool _hasMyTime;
+
     void OnEnable()
     {
         if (refreshOnEnable) Refresh();
+    }
+
+    /// <summary>이번에 플레이한 클리어 타임(초)을 내 기록 칸에 표시. LeaderboardSubmitter가 호출.</summary>
+    public void SetMyTime(double seconds)
+    {
+        _myTime = seconds;
+        _hasMyTime = true;
+        Refresh();
     }
 
     /// <summary>리더보드를 다시 불러와 UI 갱신. 버튼 onClick 등에 연결 가능.</summary>
@@ -61,38 +72,40 @@ public class LeaderboardDisplay : MonoBehaviour
             if (rankRows[i] == null) continue;
 
             if (top != null && i < top.Count)
-            {
-                var e = top[i];
-                rankRows[i].text = $"{e.Rank + 1,2}.  {DisplayName(e.PlayerName)}   {FormatTime(e.Score)}";
-            }
+                rankRows[i].text = $"{FormatTime(top[i].Score)}   #{DisplayName(top[i].PlayerName)}";
             else
-            {
-                rankRows[i].text = $"{i + 1,2}.  -";
-            }
+                rankRows[i].text = "-";
         }
 
-        // 내 기록
-        LeaderboardEntry me = await mgr.GetMyScoreAsync();
+        // 내 기록 — 이번에 플레이한 클리어 타임을 표시
         if (myScoreText != null)
         {
-            if (me != null)
+            if (_hasMyTime)
             {
-                myScoreText.text = $"내 기록   {FormatTime(me.Score)}   ({me.Rank + 1}위)";
-                // Rank는 0-기반 → 상위 topCount 안에 들면 (Rank < topCount) 강조
-                myScoreText.color = (me.Rank < topCount) ? highlightColor : normalColor;
+                myScoreText.text = FormatTime(_myTime);
+                // 이번 기록이 상위권(topCount 이내)에 들면 강조색
+                myScoreText.color = IsWithinTop(_myTime, top, topCount) ? highlightColor : normalColor;
             }
             else
             {
-                myScoreText.text = "내 기록   없음";
+                myScoreText.text = "-";
                 myScoreText.color = normalColor;
             }
         }
     }
 
+    /// <summary>현재 기록이 상위 topCount 안에 드는지. (top은 오름차순, 낮을수록 상위)</summary>
+    static bool IsWithinTop(double myTime, List<LeaderboardEntry> top, int topCount)
+    {
+        if (top == null || topCount <= 0) return false;
+        if (top.Count < topCount) return true;               // 빈 자리가 있으면 진입
+        return myTime <= top[top.Count - 1].Score;           // 꽉 찼으면 꼴찌보다 빠르면 진입
+    }
+
     static string DisplayName(string raw)
     {
         if (string.IsNullOrEmpty(raw)) return "익명";
-        // UGS 익명 계정은 "이름#1234" 형태 → 태그(#뒤) 제거해 보기 좋게
+        // UGS 계정 이름은 "이름#1234" 형태 → 태그(#뒤) 제거
         int hash = raw.IndexOf('#');
         return hash > 0 ? raw.Substring(0, hash) : raw;
     }
