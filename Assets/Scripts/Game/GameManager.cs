@@ -37,8 +37,8 @@ public class GameManager : NetworkBehaviour
     [Networked] public int CurrentPuzzleIndex { get; set; }
     [Networked] public NetworkBool AllCompleted { get; set; }
 
-    /// <summary>클리어 타임(초). 호스트가 측정해 기록하면 모든 피어에 동기화 — 양쪽이 같은 시간 표시.</summary>
-    [Networked] public float ClearTimeSeconds { get; set; }
+    /// <summary>클리어 타임(초)을 모든 피어에 브로드캐스트 — 누가 트리거했든 동일 값 표시. LeaderboardSubmitter가 구독.</summary>
+    public event Action<float> OnClearTimeBroadcast;
 
     bool _debugCompletingAll;
 
@@ -66,10 +66,16 @@ public class GameManager : NetworkBehaviour
         if (Instance == this) Instance = null;
     }
 
-    /// <summary>호스트가 측정한 클리어 타임을 기록 — 네트워크로 모든 피어에 동기화됨.</summary>
-    public void SetClearTime(float seconds)
+    /// <summary>측정한 클리어 타임을 모든 피어에 브로드캐스트(RPC). 어느 클라가 호출해도 됨 — 권한 무관.</summary>
+    public void BroadcastClearTime(float seconds)
     {
-        if (HasStateAuthority) ClearTimeSeconds = seconds;
+        if (Object != null && Object.IsValid) RpcBroadcastClearTime(seconds);
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.All)]
+    void RpcBroadcastClearTime(float seconds)
+    {
+        OnClearTimeBroadcast?.Invoke(seconds);
     }
 
     public override void Spawned()
@@ -78,7 +84,6 @@ public class GameManager : NetworkBehaviour
         {
             CurrentPuzzleIndex = -1;
             AllCompleted = false;
-            ClearTimeSeconds = 0f;
         }
 
         AutoSetupPuzzles();

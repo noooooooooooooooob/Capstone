@@ -34,6 +34,7 @@ public class LeaderboardSubmitter : MonoBehaviour
 
     bool _subscribed;
     bool _started;
+    bool _finished;
     bool _submitted;
     bool _displayed;
     float _startTime;
@@ -60,19 +61,27 @@ public class LeaderboardSubmitter : MonoBehaviour
     {
         // GameManager는 Fusion이 네트워크 스폰하므로 Start보다 늦을 수 있음 → 구독 보장
         if (!_subscribed) TrySubscribe();
-
-        // 호스트가 기록한 클리어 타임이 네트워크로 도착하면 표시 (호스트/게스트 공통).
-        // 게스트는 OnAllPuzzlesCompleted 이벤트가 안 오므로 이 경로로 시간이 뜬다.
-        // [Networked] 프로퍼티는 Spawned 이후에만 접근 가능 → GmSpawned()로 가드.
-        if (!_displayed && GmSpawned() && GameManager.Instance.ClearTimeSeconds > 0f)
-            ShowTime(GameManager.Instance.ClearTimeSeconds);
     }
 
-    /// <summary>GameManager가 네트워크 스폰돼 [Networked] 프로퍼티 접근이 안전한 상태인지.</summary>
+    /// <summary>GameManager가 네트워크 스폰돼 RPC/권한 접근이 안전한 상태인지.</summary>
     static bool GmSpawned()
     {
         var gm = GameManager.Instance;
         return gm != null && gm.Object != null && gm.Object.IsValid;
+    }
+
+    /// <summary>RPC로 모든 피어에 도착한 클리어 타임 — 양쪽이 동일 값 표시 + StateAuthority가 제출.</summary>
+    void HandleClearTimeBroadcast(float seconds)
+    {
+        ShowTime(seconds);
+
+        // 제출은 StateAuthority 한 명만 (중복 방지). 누가 트리거했든 권한자가 제출.
+        if (!_submitted && GmSpawned() && GameManager.Instance.HasStateAuthority
+            && LeaderboardManager.Instance != null)
+        {
+            _submitted = true;
+            _ = SubmitAndRefresh(seconds);
+        }
     }
 
     void ShowTime(float seconds)
@@ -100,6 +109,7 @@ public class LeaderboardSubmitter : MonoBehaviour
 
         GameManager.Instance.OnPuzzleActivated += HandlePuzzleActivated;
         GameManager.Instance.OnAllPuzzlesCompleted += HandleAllCompleted;
+        GameManager.Instance.OnClearTimeBroadcast += HandleClearTimeBroadcast;
         _subscribed = true;
 
         // GameReady 모드: 구독되는 순간(=GameManager 준비됨)을 시작으로
@@ -111,6 +121,7 @@ public class LeaderboardSubmitter : MonoBehaviour
         if (!_subscribed || GameManager.Instance == null) return;
         GameManager.Instance.OnPuzzleActivated -= HandlePuzzleActivated;
         GameManager.Instance.OnAllPuzzlesCompleted -= HandleAllCompleted;
+        GameManager.Instance.OnClearTimeBroadcast -= HandleClearTimeBroadcast;
     }
 
     void HandlePuzzleActivated(int index)
@@ -132,7 +143,7 @@ public class LeaderboardSubmitter : MonoBehaviour
 
     void Finish()
     {
-        if (_submitted || !_started) return;
+        if (_finished || !_started) return;
 
         double seconds = Time.time - _startTime;
         if (seconds <= 0.0)
@@ -141,20 +152,24 @@ public class LeaderboardSubmitter : MonoBehaviour
             return;
         }
 
-        _submitted = true;
+        _finished = true;
 
-        // 게스트는 자기 로컬 시간을 표시하지 않는다 — 호스트가 측정/브로드캐스트한 값만 사용해야
-        // 양쪽이 동일한 시간을 본다. 게스트는 Update()에서 네트워크 ClearTimeSeconds를 받아 표시한다.
-        if (GmSpawned() && !GameManager.Instance.HasStateAuthority) return;
-
-        // 호스트만: 자기 측정값을 표시 + 네트워크 브로드캐스트 + 제출
-        ShowTime((float)seconds);
-        if (GmSpawned()) GameManager.Instance.SetClearTime((float)seconds);
-
-        if (LeaderboardManager.Instance != null)
-            _ = SubmitAndRefresh(seconds);
+        if (GmSpawned())
+        {
+            // 네트워크: 측정값을 RPC로 모두에게 뿌림 → 누가 트리거했든 양쪽 동일 시간 표시.
+            // 표시/제출은 HandleClearTimeBroadcast에서 (제출은 StateAuthority만).
+            GameManager.Instance.BroadcastClearTime((float)seconds);
+        }
         else
-            Debug.LogWarning("[LeaderboardSubmitter] LeaderboardManager.Instance 없음 — 씬에 매니저를 배치했는지 확인하세요.");
+        {
+            // 솔로/네트워크 없음: 로컬에서 바로 표시 + 제출
+            ShowTime((float)seconds);
+            if (!_submitted && LeaderboardManager.Instance != null)
+            {
+                _submitted = true;
+                _ = SubmitAndRefresh(seconds);
+            }
+        }
     }
 
     async Task SubmitAndRefresh(double seconds)
