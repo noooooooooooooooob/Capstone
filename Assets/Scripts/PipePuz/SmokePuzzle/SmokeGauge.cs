@@ -69,8 +69,7 @@ namespace PipePuz.SmokePuzzle
             AllocBuffers();
 
             // Valve 자동 연결: 명시 안 했으면 Controller.Wheel → 씬 검색 순으로.
-            if (Valve == null && Controller != null) Valve = Controller.Wheel;
-            if (Valve == null) Valve = FindFirstObjectByType<SuppressionWheel>();
+            ResolveValve();
 
             BuildRedZoneMesh();
             UpdatePointer(ReadPointerT());
@@ -89,8 +88,21 @@ namespace PipePuz.SmokePuzzle
             }
         }
 
-        void Update()
+        // 로컬(싱글/권위) 경로: 매 프레임 Valve 를 읽어 갱신.
+        // 네트워크 프록시 경로: SuppressionWheelNetworkSync 가 휠 각도를 주입한 직후
+        //   Render() 에서 RefreshFromValve() 를 호출 → 휠과 정확히 같은 타이밍에 Pointer 갱신
+        //   (Update 타이밍에 의존하지 않으므로 "휠은 도는데 Pointer 안 움직임" 문제 해소).
+        void Update() => RefreshFromValve();
+
+        /// <summary>
+        /// 현재 Valve(SuppressionWheel) 회전값으로 Pointer 와 빨간영역 판정을 갱신한다.
+        /// SmokeGauge.Update 와 SuppressionWheelNetworkSync.Render 양쪽에서 호출된다.
+        /// </summary>
+        public void RefreshFromValve()
         {
+            // Valve 가 아직 없으면(스폰/초기화 순서) 지연 해석.
+            if (Valve == null) ResolveValve();
+
             // 인스펙터에서 영역을 조정하면 다시 굽는다.
             if (!Mathf.Approximately(_builtCenter, RedZoneCenter01) ||
                 !Mathf.Approximately(_builtWidth, RedZoneWidth01))
@@ -101,6 +113,12 @@ namespace PipePuz.SmokePuzzle
 
             float half = RedZoneWidth01 * 0.5f;
             PointerInRedZone = Mathf.Abs(t - RedZoneCenter01) <= half;
+        }
+
+        void ResolveValve()
+        {
+            if (Valve == null && Controller != null) Valve = Controller.Wheel;
+            if (Valve == null) Valve = FindFirstObjectByType<SuppressionWheel>();
         }
 
         /// <summary>Valve 회전을 Pointer t(0~1) 로 변환. InvertPointer 면 방향 반전.</summary>

@@ -27,11 +27,14 @@ namespace PipePuz.SmokePuzzle
         [Networked] public float NetRate { get; set; }
 
         SuppressionWheel _wheel;
+        SmokeGauge _gauge;
 
         void Awake()
         {
             _wheel = GetComponent<SuppressionWheel>();
             if (_wheel != null) _wheel.selectEntered.AddListener(OnSelectEnter);
+            // 이 휠을 읽는 게이지. 프록시에서 휠 각도를 주입한 직후 Pointer 를 같이 갱신하기 위해 참조.
+            _gauge = FindFirstObjectByType<SmokeGauge>();
         }
 
         void OnDestroy()
@@ -73,6 +76,11 @@ namespace PipePuz.SmokePuzzle
             _wheel.ExternallyDriven = proxy;
             if (proxy)
                 _wheel.ApplyNetworkState(NetAngle, NetRate);
+
+            // 휠 각도가 (권위=로컬 입력, 프록시=네트워크 주입) 확정된 직후 같은 프레임에 Pointer 도 갱신.
+            // → 휠이 도는 모든 피어에서 Pointer 가 휠과 정확히 같이 움직인다.
+            if (_gauge == null) _gauge = FindFirstObjectByType<SmokeGauge>();
+            if (_gauge != null) _gauge.RefreshFromValve();
         }
     }
 }
