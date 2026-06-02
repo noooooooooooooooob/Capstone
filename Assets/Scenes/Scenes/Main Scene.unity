@@ -6909,6 +6909,21 @@ MonoBehaviour:
   Door: {fileID: 1470012164}
   OneShot: 1
   LogPress: 1
+  OnPressed:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 628568937}
+        m_TargetAssemblyTypeName: 
+        m_MethodName: 
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: 
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &88001006
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -92761,6 +92776,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LeaderboardSubmitter
   startMode: 0
+  display: {fileID: 1446126511}
+  OnSubmitted:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1001 &628599755
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -265843,7 +265862,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 44.7, y: -23}
-  m_SizeDelta: {x: 0, y: 18}
+  m_SizeDelta: {x: 61.4, y: 18}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &2439010977994060220
 GameObject:
@@ -266049,7 +266068,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 40, y: -23}
-  m_SizeDelta: {x: 0, y: 18}
+  m_SizeDelta: {x: 35.73, y: 18}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &2439010978256373829
 MonoBehaviour:
@@ -290573,7 +290592,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 40, y: -23}
-  m_SizeDelta: {x: 0, y: 18}
+  m_SizeDelta: {x: 32.34, y: 18}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &9157282635560276986
 CanvasRenderer:
@@ -291194,7 +291213,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 44.7, y: -23}
-  m_SizeDelta: {x: 0, y: 18}
+  m_SizeDelta: {x: 61.4, y: 18}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &9157282636840138610
 CanvasRenderer:

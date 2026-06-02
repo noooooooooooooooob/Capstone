@@ -1,4 +1,6 @@
+using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Events;
 
 /// <summary>
 /// 게임 클리어 시점에 전체 클리어 타임을 LeaderboardManager로 제출하는 연결 컴포넌트.
@@ -20,6 +22,13 @@ public class LeaderboardSubmitter : MonoBehaviour
     [Tooltip("타이머 시작 방식. Manual이면 StartTimer()를 버튼 onClick 등에서 직접 호출")]
     public StartMode startMode = StartMode.Manual;
 
+    [Header("제출 후")]
+    [Tooltip("제출 완료 후 자동 새로고침할 랭킹 표시. 비워두면 씬에서 자동 탐색")]
+    public LeaderboardDisplay display;
+
+    [Tooltip("제출이 완료된 뒤 호출 (서버 반영 후). 결과 화면 전환 등에 연결")]
+    public UnityEvent OnSubmitted;
+
     bool _subscribed;
     bool _started;
     bool _submitted;
@@ -32,6 +41,15 @@ public class LeaderboardSubmitter : MonoBehaviour
     public void StartTimer()
     {
         StartClock();
+    }
+
+    /// <summary>
+    /// 측정을 끝내고 클리어 타임을 제출. Button.onClick(UnityEvent)에 직접 연결 가능.
+    /// 호스트(StateAuthority)만 제출하며, 시작 전이거나 이미 제출했으면 무시(중복 호출 안전).
+    /// </summary>
+    public void StopTimer()
+    {
+        Finish();
     }
 
     void Update()
@@ -73,9 +91,14 @@ public class LeaderboardSubmitter : MonoBehaviour
 
     void HandleAllCompleted()
     {
+        Finish();
+    }
+
+    void Finish()
+    {
         if (_submitted || !_started) return;
 
-        // 이벤트는 권한자에서만 오지만 이중 안전장치로 한 번 더 확인
+        // 호스트(StateAuthority)만 제출 — 협동 클리어 1회당 한 기록
         if (GameManager.Instance != null && !GameManager.Instance.HasStateAuthority) return;
 
         double seconds = Time.time - _startTime;
@@ -88,8 +111,19 @@ public class LeaderboardSubmitter : MonoBehaviour
         _submitted = true;
 
         if (LeaderboardManager.Instance != null)
-            LeaderboardManager.Instance.SubmitClearTime(seconds);
+            _ = SubmitAndRefresh(seconds);
         else
             Debug.LogWarning("[LeaderboardSubmitter] LeaderboardManager.Instance 없음 — 씬에 매니저를 배치했는지 확인하세요.");
+    }
+
+    async Task SubmitAndRefresh(double seconds)
+    {
+        // 제출이 서버에 반영될 때까지 기다린 뒤 표시를 갱신해야 새 기록이 보임
+        await LeaderboardManager.Instance.SubmitClearTimeAsync(seconds);
+
+        if (display == null) display = FindFirstObjectByType<LeaderboardDisplay>(FindObjectsInactive.Include);
+        if (display != null) display.Refresh();
+
+        OnSubmitted?.Invoke();
     }
 }
