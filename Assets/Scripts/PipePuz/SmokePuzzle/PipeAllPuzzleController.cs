@@ -75,6 +75,9 @@ namespace PipePuz.SmokePuzzle
             // Gauge 자동 연결 — 보통 자식에 SmokeGauge 가 하나 있다.
             if (Gauge == null) Gauge = GetComponentInChildren<SmokeGauge>(true);
 
+            // PathLine 힌트는 시작 시 숨김 — Pointer 가 빨간 영역에 들어와야 보인다.
+            ApplyPathLineVisible(false);
+
             // SmokeController.Awake 가 Intensity=0(default)으로 Apply 하면서 ParticleSystem 을 Stop 시키는
             // 1프레임 공백을 막기 위해 가능한 가장 일찍 InitialSmoke 적용한다.
             _smoke = Mathf.Clamp(InitialSmoke, 0f, MaxSmoke);
@@ -92,6 +95,15 @@ namespace PipePuz.SmokePuzzle
         void Update()
         {
             float dt = Time.deltaTime;
+
+            // Pointer 가 빨간 영역 안에 있는지 — "연기 억제 + PathLine 힌트 표시" 의 공통 트리거.
+            // 네트워크: 밸브 각도가 SuppressionWheelNetworkSync 로 동기화되고, 그 직후 Render 에서
+            //   SmokeGauge.RefreshFromValve 가 호출돼 PointerInRedZone 이 모든 피어에서 갱신된다.
+            //   → 각 피어가 같은 값을 로컬 판정하므로 PathLine 가시성도 네트워크에서 일관된다.
+            bool inRedZone = Gauge != null && Gauge.PointerInRedZone;
+
+            // PathLine 힌트: 빨간 영역에 Pointer 있을 때만 보이게. (풀림 상태와 무관하게 매 프레임 반영)
+            ApplyPathLineVisible(inRedZone);
 
             // 로컬에서 풀렸거나, 다른 플레이어가 풀어 네트워크 래치가 켜졌으면 풀린 것으로 처리.
             bool solved = LocalBoardSolved || ExternalSolvedLatch;
@@ -113,7 +125,6 @@ namespace PipePuz.SmokePuzzle
             }
 
             // 새 메커니즘: Pointer 가 빨간 영역 안이면 감소, 밖이면 회복("유지해야 멈춤").
-            bool inRedZone = Gauge != null && Gauge.PointerInRedZone;
             float delta = inRedZone ? (-SuppressRate * dt) : (RecoveryRate * dt);
             // 회복은 MaxSmoke 까지만, 감소는 0 까지.
             float next = Mathf.Clamp(_smoke + delta, 0f, MaxSmoke);
@@ -129,6 +140,17 @@ namespace PipePuz.SmokePuzzle
         void ApplySmoke()
         {
             if (Smoke != null) Smoke.SetIntensity(_smoke);
+        }
+
+        bool _pathLineVisible = true; // 시작값을 true 로 두어 Awake 의 첫 false 적용이 반드시 반영되게.
+
+        /// <summary>MiniGame2 보드의 PathLine(LineRenderer) 표시/숨김. 값이 바뀔 때만 적용.</summary>
+        void ApplyPathLineVisible(bool visible)
+        {
+            if (_pathLineVisible == visible) return;
+            _pathLineVisible = visible;
+            if (MiniGameBoard != null && MiniGameBoard.PathLine != null)
+                MiniGameBoard.PathLine.enabled = visible;
         }
     }
 }
