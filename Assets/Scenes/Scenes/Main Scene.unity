@@ -14393,6 +14393,7 @@ GameObject:
   - component: {fileID: 130139398}
   - component: {fileID: 130139400}
   - component: {fileID: 130139401}
+  - component: {fileID: 130139402}
   m_Layer: 0
   m_Name: Pipe_Elbow_9
   m_TagString: Untagged
@@ -14687,6 +14688,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.MiniGame2.PipeRotationSync
   _NetRotation: 0
+--- !u!114 &130139402
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 130139392}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbae68dfb8388d469e6dd12425108bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideGrabLock
+  lockForSide: 1
 --- !u!1 &130426289
 GameObject:
   m_ObjectHideFlags: 0
@@ -23799,10 +23813,14 @@ MonoBehaviour:
   Wheel: {fileID: 1030159081}
   Smoke: {fileID: 1461000034}
   MiniGameBoard: {fileID: 1647185867}
+  Gauge: {fileID: 0}
   RecoveryRate: 0.18
+  SuppressRate: 0.6
   SuppressionPerDegPerSec: 0.0015
   InitialSmoke: 0.85
   MaxSmoke: 0.85
+  HidePathLineForSide: 1
+  PathLineHiddenForSide: 0
   OnSmokeChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -32434,6 +32452,7 @@ GameObject:
   - component: {fileID: 339692595}
   - component: {fileID: 339692597}
   - component: {fileID: 339692598}
+  - component: {fileID: 339692599}
   m_Layer: 0
   m_Name: Pipe_Straight_1
   m_TagString: Untagged
@@ -32728,6 +32747,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.MiniGame2.PipeRotationSync
   _NetRotation: 0
+--- !u!114 &339692599
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 339692589}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbae68dfb8388d469e6dd12425108bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideGrabLock
+  lockForSide: 1
 --- !u!1 &340268162
 GameObject:
   m_ObjectHideFlags: 0
@@ -38348,6 +38380,7 @@ GameObject:
   - component: {fileID: 354620730}
   - component: {fileID: 354620732}
   - component: {fileID: 354620733}
+  - component: {fileID: 354620734}
   m_Layer: 0
   m_Name: Pipe_Straight_2
   m_TagString: Untagged
@@ -38642,6 +38675,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.MiniGame2.PipeRotationSync
   _NetRotation: 0
+--- !u!114 &354620734
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 354620724}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbae68dfb8388d469e6dd12425108bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideGrabLock
+  lockForSide: 1
 --- !u!4 &355386753 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 433114, guid: b9038ed84a1fe4aecb34086f7f42d1bf, type: 3}
@@ -48650,6 +48696,7 @@ GameObject:
   - component: {fileID: 413714065}
   - component: {fileID: 413714067}
   - component: {fileID: 413714068}
+  - component: {fileID: 413714069}
   m_Layer: 0
   m_Name: Pipe_Elbow_7
   m_TagString: Untagged
@@ -48944,6 +48991,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.MiniGame2.PipeRotationSync
   _NetRotation: 0
+--- !u!114 &413714069
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 413714059}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbae68dfb8388d469e6dd12425108bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideGrabLock
+  lockForSide: 1
 --- !u!1 &413996857
 GameObject:
   m_ObjectHideFlags: 0
@@ -75958,6 +76018,7 @@ GameObject:
   m_Component:
   - component: {fileID: 528639646}
   - component: {fileID: 528639647}
+  - component: {fileID: 528639648}
   m_Layer: 0
   m_Name: SmokeGauge
   m_TagString: Untagged
@@ -75973,7 +76034,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 528639645}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
   m_LocalPosition: {x: 0.938, y: 1.4, z: -0.369}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -75985,7 +76046,7 @@ Transform:
   - {fileID: 586929185}
   - {fileID: 637282826}
   m_Father: {fileID: 1761621623}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
 --- !u!114 &528639647
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -75999,11 +76060,30 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.SmokePuzzle.SmokeGauge
   Controller: {fileID: 287789904}
+  Valve: {fileID: 0}
   Pointer: {fileID: 586929185}
   RedFillFilter: {fileID: 1648191961}
   RedFillFilterBack: {fileID: 1307324822}
+  RedZoneCenter01: 0.5
+  RedZoneWidth01: 0.12
+  InvertPointer: 0
   Radius: 0.18
   Segments: 48
+--- !u!114 &528639648
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 528639645}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 40bf31ab99166d0428fcc0b3976b6f0b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideHide
+  hideForSide: 0
+  renderers: []
+  hideWhenUnknown: 0
 --- !u!1 &529765789
 GameObject:
   m_ObjectHideFlags: 0
@@ -95105,6 +95185,7 @@ GameObject:
   - component: {fileID: 675294903}
   - component: {fileID: 675294905}
   - component: {fileID: 675294906}
+  - component: {fileID: 675294907}
   m_Layer: 0
   m_Name: Pipe_Tee_10
   m_TagString: Untagged
@@ -95399,6 +95480,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.MiniGame2.PipeRotationSync
   _NetRotation: 0
+--- !u!114 &675294907
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 675294897}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbae68dfb8388d469e6dd12425108bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideGrabLock
+  lockForSide: 1
 --- !u!1001 &677117504
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -102601,6 +102695,7 @@ GameObject:
   - component: {fileID: 715326491}
   - component: {fileID: 715326493}
   - component: {fileID: 715326494}
+  - component: {fileID: 715326495}
   m_Layer: 0
   m_Name: Pipe_Straight_0
   m_TagString: Untagged
@@ -102895,6 +102990,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.MiniGame2.PipeRotationSync
   _NetRotation: 0
+--- !u!114 &715326495
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 715326485}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbae68dfb8388d469e6dd12425108bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideGrabLock
+  lockForSide: 1
 --- !u!1 &715612011
 GameObject:
   m_ObjectHideFlags: 0
@@ -112958,6 +113066,8 @@ GameObject:
   - component: {fileID: 780639068}
   - component: {fileID: 780639067}
   - component: {fileID: 780639069}
+  - component: {fileID: 780639071}
+  - component: {fileID: 780639070}
   m_Layer: 0
   m_Name: LightBall Yellow
   m_TagString: LightBall
@@ -113321,6 +113431,36 @@ MonoBehaviour:
       m_Calls: []
   _IsGrabbed:
     _value: 0
+--- !u!114 &780639070
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 780639057}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbae68dfb8388d469e6dd12425108bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideGrabLock
+  lockForSide: 1
+--- !u!114 &780639071
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 780639057}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30b2a2901a3acf64194a1a33cd470b55, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideColorMask
+  maskForSide: 0
+  renderers: []
+  lights: []
+  neutralColor: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+  maskWhenUnknown: 0
 --- !u!1 &782463155
 GameObject:
   m_ObjectHideFlags: 0
@@ -125682,6 +125822,7 @@ GameObject:
   - component: {fileID: 959892971}
   - component: {fileID: 959892973}
   - component: {fileID: 959892974}
+  - component: {fileID: 959892975}
   m_Layer: 0
   m_Name: Pipe_Elbow_8
   m_TagString: Untagged
@@ -125976,6 +126117,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.MiniGame2.PipeRotationSync
   _NetRotation: 0
+--- !u!114 &959892975
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 959892965}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbae68dfb8388d469e6dd12425108bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideGrabLock
+  lockForSide: 1
 --- !u!1001 &959905109
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -127903,6 +128057,7 @@ GameObject:
   - component: {fileID: 984696388}
   - component: {fileID: 984696390}
   - component: {fileID: 984696391}
+  - component: {fileID: 984696392}
   m_Layer: 0
   m_Name: Pipe_Elbow_5
   m_TagString: Untagged
@@ -128197,6 +128352,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.MiniGame2.PipeRotationSync
   _NetRotation: 0
+--- !u!114 &984696392
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 984696382}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbae68dfb8388d469e6dd12425108bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideGrabLock
+  lockForSide: 1
 --- !u!1 &984758484
 GameObject:
   m_ObjectHideFlags: 0
@@ -136214,6 +136382,7 @@ GameObject:
   - component: {fileID: 1030159085}
   - component: {fileID: 1030159086}
   - component: {fileID: 1030159087}
+  - component: {fileID: 1030159088}
   m_Layer: 0
   m_Name: Valve
   m_TagString: Untagged
@@ -136305,6 +136474,7 @@ MonoBehaviour:
   m_ParentInteractableObject: {fileID: 0}
   LocalAxis: {x: 0, y: 0, z: 1}
   InvertDirection: 0
+  ValveRangeDeg: 360
   Wheel: {fileID: 285106958}
   MinGrabRadius: 0.07
   MaxGrabRadius: 0.4
@@ -136415,6 +136585,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.SmokePuzzle.SuppressionWheelNetworkSync
   _NetAngle: 0
   _NetRate: 0
+--- !u!114 &1030159088
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1030159080}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbae68dfb8388d469e6dd12425108bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideGrabLock
+  lockForSide: 1
 --- !u!1001 &1031023051
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -143115,6 +143298,7 @@ GameObject:
   - component: {fileID: 1057080248}
   - component: {fileID: 1057080250}
   - component: {fileID: 1057080251}
+  - component: {fileID: 1057080252}
   m_Layer: 0
   m_Name: Pipe_Cross_12
   m_TagString: Untagged
@@ -143409,6 +143593,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.MiniGame2.PipeRotationSync
   _NetRotation: 0
+--- !u!114 &1057080252
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1057080242}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbae68dfb8388d469e6dd12425108bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideGrabLock
+  lockForSide: 1
 --- !u!1001 &1059895926
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -144705,6 +144902,7 @@ GameObject:
   - component: {fileID: 1071664799}
   - component: {fileID: 1071664801}
   - component: {fileID: 1071664802}
+  - component: {fileID: 1071664803}
   m_Layer: 0
   m_Name: Pipe_Straight_3
   m_TagString: Untagged
@@ -144999,6 +145197,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.MiniGame2.PipeRotationSync
   _NetRotation: 0
+--- !u!114 &1071664803
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1071664793}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbae68dfb8388d469e6dd12425108bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideGrabLock
+  lockForSide: 1
 --- !u!1 &1072284958
 GameObject:
   m_ObjectHideFlags: 0
@@ -145088,6 +145299,7 @@ GameObject:
   - component: {fileID: 1073239531}
   - component: {fileID: 1073239533}
   - component: {fileID: 1073239534}
+  - component: {fileID: 1073239535}
   m_Layer: 0
   m_Name: Pipe_Elbow_4
   m_TagString: Untagged
@@ -145382,6 +145594,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.MiniGame2.PipeRotationSync
   _NetRotation: 0
+--- !u!114 &1073239535
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1073239525}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbae68dfb8388d469e6dd12425108bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideGrabLock
+  lockForSide: 1
 --- !u!1 &1074279164
 GameObject:
   m_ObjectHideFlags: 0
@@ -162441,6 +162666,8 @@ GameObject:
   - component: {fileID: 1250392829}
   - component: {fileID: 1250392828}
   - component: {fileID: 1250392830}
+  - component: {fileID: 1250392832}
+  - component: {fileID: 1250392831}
   m_Layer: 0
   m_Name: LightBall Red
   m_TagString: LightBall
@@ -162804,6 +163031,36 @@ MonoBehaviour:
       m_Calls: []
   _IsGrabbed:
     _value: 0
+--- !u!114 &1250392831
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1250392818}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbae68dfb8388d469e6dd12425108bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideGrabLock
+  lockForSide: 1
+--- !u!114 &1250392832
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1250392818}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30b2a2901a3acf64194a1a33cd470b55, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideColorMask
+  maskForSide: 0
+  renderers: []
+  lights: []
+  neutralColor: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+  maskWhenUnknown: 0
 --- !u!1001 &1253163941
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -162883,6 +163140,7 @@ GameObject:
   - component: {fileID: 1257666983}
   - component: {fileID: 1257666985}
   - component: {fileID: 1257666986}
+  - component: {fileID: 1257666987}
   m_Layer: 0
   m_Name: Pipe_Tee_11
   m_TagString: Untagged
@@ -163177,6 +163435,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.MiniGame2.PipeRotationSync
   _NetRotation: 0
+--- !u!114 &1257666987
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1257666977}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbae68dfb8388d469e6dd12425108bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideGrabLock
+  lockForSide: 1
 --- !u!1001 &1258987134
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -173338,6 +173609,8 @@ GameObject:
   - component: {fileID: 1431553598}
   - component: {fileID: 1431553597}
   - component: {fileID: 1431553599}
+  - component: {fileID: 1431553601}
+  - component: {fileID: 1431553600}
   m_Layer: 0
   m_Name: LightBall Blue
   m_TagString: LightBall
@@ -173701,6 +173974,36 @@ MonoBehaviour:
       m_Calls: []
   _IsGrabbed:
     _value: 0
+--- !u!114 &1431553600
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1431553587}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbae68dfb8388d469e6dd12425108bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideGrabLock
+  lockForSide: 1
+--- !u!114 &1431553601
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1431553587}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30b2a2901a3acf64194a1a33cd470b55, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideColorMask
+  maskForSide: 0
+  renderers: []
+  lights: []
+  neutralColor: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+  maskWhenUnknown: 0
 --- !u!1001 &1433069764
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -236443,6 +236746,7 @@ GameObject:
   - component: {fileID: 1945358336}
   - component: {fileID: 1945358338}
   - component: {fileID: 1945358339}
+  - component: {fileID: 1945358340}
   m_Layer: 0
   m_Name: Pipe_Elbow_6
   m_TagString: Untagged
@@ -236737,6 +237041,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.MiniGame2.PipeRotationSync
   _NetRotation: 0
+--- !u!114 &1945358340
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1945358330}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbae68dfb8388d469e6dd12425108bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideGrabLock
+  lockForSide: 1
 --- !u!1001 &1946727099
 PrefabInstance:
   m_ObjectHideFlags: 0
