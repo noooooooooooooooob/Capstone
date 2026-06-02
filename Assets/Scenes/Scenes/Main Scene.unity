@@ -112958,6 +112958,8 @@ GameObject:
   - component: {fileID: 780639068}
   - component: {fileID: 780639067}
   - component: {fileID: 780639069}
+  - component: {fileID: 780639071}
+  - component: {fileID: 780639070}
   m_Layer: 0
   m_Name: LightBall Yellow
   m_TagString: LightBall
@@ -113321,6 +113323,36 @@ MonoBehaviour:
       m_Calls: []
   _IsGrabbed:
     _value: 0
+--- !u!114 &780639070
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 780639057}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbae68dfb8388d469e6dd12425108bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideGrabLock
+  lockForSide: 1
+--- !u!114 &780639071
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 780639057}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30b2a2901a3acf64194a1a33cd470b55, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideColorMask
+  maskForSide: 0
+  renderers: []
+  lights: []
+  neutralColor: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+  maskWhenUnknown: 0
 --- !u!1 &782463155
 GameObject:
   m_ObjectHideFlags: 0
@@ -162441,6 +162473,8 @@ GameObject:
   - component: {fileID: 1250392829}
   - component: {fileID: 1250392828}
   - component: {fileID: 1250392830}
+  - component: {fileID: 1250392832}
+  - component: {fileID: 1250392831}
   m_Layer: 0
   m_Name: LightBall Red
   m_TagString: LightBall
@@ -162804,6 +162838,36 @@ MonoBehaviour:
       m_Calls: []
   _IsGrabbed:
     _value: 0
+--- !u!114 &1250392831
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1250392818}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbae68dfb8388d469e6dd12425108bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideGrabLock
+  lockForSide: 1
+--- !u!114 &1250392832
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1250392818}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30b2a2901a3acf64194a1a33cd470b55, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideColorMask
+  maskForSide: 0
+  renderers: []
+  lights: []
+  neutralColor: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+  maskWhenUnknown: 0
 --- !u!1001 &1253163941
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -173338,6 +173402,8 @@ GameObject:
   - component: {fileID: 1431553598}
   - component: {fileID: 1431553597}
   - component: {fileID: 1431553599}
+  - component: {fileID: 1431553601}
+  - component: {fileID: 1431553600}
   m_Layer: 0
   m_Name: LightBall Blue
   m_TagString: LightBall
@@ -173701,6 +173767,36 @@ MonoBehaviour:
       m_Calls: []
   _IsGrabbed:
     _value: 0
+--- !u!114 &1431553600
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1431553587}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bbae68dfb8388d469e6dd12425108bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideGrabLock
+  lockForSide: 1
+--- !u!114 &1431553601
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1431553587}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30b2a2901a3acf64194a1a33cd470b55, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalSideColorMask
+  maskForSide: 0
+  renderers: []
+  lights: []
+  neutralColor: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+  maskWhenUnknown: 0
 --- !u!1001 &1433069764
 PrefabInstance:
   m_ObjectHideFlags: 0
