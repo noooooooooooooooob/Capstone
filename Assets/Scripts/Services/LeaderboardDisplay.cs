@@ -1,10 +1,8 @@
-using TMPro;
-using UnityEngine;
-#if UGS_LEADERBOARDS
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using TMPro;
+using UnityEngine;
 using Unity.Services.Leaderboards.Models;
-#endif
 
 /// <summary>
 /// 리더보드 UI 표시 컴포넌트.
@@ -42,15 +40,9 @@ public class LeaderboardDisplay : MonoBehaviour
     /// <summary>리더보드를 다시 불러와 UI 갱신. 버튼 onClick 등에 연결 가능.</summary>
     public void Refresh()
     {
-#if UGS_LEADERBOARDS
         _ = RefreshAsync();
-#else
-        Debug.LogWarning("[LeaderboardDisplay] UGS 미설치 — 표시할 데이터 없음. " +
-                         "패키지 설치 후 'UGS_LEADERBOARDS' 정의 심볼을 추가하세요.");
-#endif
     }
 
-#if UGS_LEADERBOARDS
     async Task RefreshAsync()
     {
         var mgr = LeaderboardManager.Instance;
@@ -104,7 +96,6 @@ public class LeaderboardDisplay : MonoBehaviour
         int hash = raw.IndexOf('#');
         return hash > 0 ? raw.Substring(0, hash) : raw;
     }
-#endif
 
     /// <summary>초(double) → "mm:ss.cc" 포맷. Stage1Timer 표기와 동일.</summary>
     static string FormatTime(double seconds)

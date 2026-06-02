@@ -5,7 +5,8 @@
       "WebFetch(domain:docs.readyplayer.me)",
       "Bash(grep *)",
       "PowerShell(New-Item *)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "PowerShell($lib = \"C:\\\\Users\\\\User\\\\Desktop\\\\Unity\\\\Capstone\\\\Library\"; if \\(Test-Path $lib\\) { $size = \"{0:N0} MB\" -f \\(\\(Get-ChildItem $lib -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum\\).Sum/1MB\\); \"Deleting Library \\($size\\)...\"; Remove-Item $lib -Recurse -Force -ErrorAction Stop; \"Done. Library exists now: $\\(Test-Path $lib\\)\" } else { \"Library folder not found at $lib\" })"
     ]
   }
 }
