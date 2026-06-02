@@ -60,8 +60,16 @@ public class LeaderboardSubmitter : MonoBehaviour
 
         // 호스트가 기록한 클리어 타임이 네트워크로 도착하면 표시 (호스트/게스트 공통).
         // 게스트는 OnAllPuzzlesCompleted 이벤트가 안 오므로 이 경로로 시간이 뜬다.
-        if (!_displayed && GameManager.Instance != null && GameManager.Instance.ClearTimeSeconds > 0f)
+        // [Networked] 프로퍼티는 Spawned 이후에만 접근 가능 → GmSpawned()로 가드.
+        if (!_displayed && GmSpawned() && GameManager.Instance.ClearTimeSeconds > 0f)
             ShowTime(GameManager.Instance.ClearTimeSeconds);
+    }
+
+    /// <summary>GameManager가 네트워크 스폰돼 [Networked] 프로퍼티 접근이 안전한 상태인지.</summary>
+    static bool GmSpawned()
+    {
+        var gm = GameManager.Instance;
+        return gm != null && gm.Object != null && gm.Object.IsValid;
     }
 
     void ShowTime(float seconds)
@@ -125,10 +133,10 @@ public class LeaderboardSubmitter : MonoBehaviour
         ShowTime((float)seconds);
 
         // 제출은 호스트(StateAuthority)만 — 협동 클리어 1회당 한 기록
-        if (GameManager.Instance != null && !GameManager.Instance.HasStateAuthority) return;
+        if (GmSpawned() && !GameManager.Instance.HasStateAuthority) return;
 
         // 호스트가 측정한 시간을 네트워크로 브로드캐스트 → 게스트도 같은 시간 표시
-        if (GameManager.Instance != null) GameManager.Instance.SetClearTime((float)seconds);
+        if (GmSpawned()) GameManager.Instance.SetClearTime((float)seconds);
 
         if (LeaderboardManager.Instance != null)
             _ = SubmitAndRefresh(seconds);
