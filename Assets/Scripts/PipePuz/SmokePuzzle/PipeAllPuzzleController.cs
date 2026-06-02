@@ -50,6 +50,14 @@ namespace PipePuz.SmokePuzzle
         [Tooltip("연기 강도의 최대 캡. 자연 회복으로도 이 값을 넘지 않는다 (시야가 완전히 가려지는 것 방지).")]
         public float MaxSmoke = 0.85f;
 
+        [Header("PathLine 사이드 규칙 (로컬 전용)")]
+        [Tooltip("켜면, 아래 사이드인 로컬 플레이어에게는 PathLine 을 절대 보이지 않게 한다 " +
+                 "(빨간 영역에 Pointer 가 들어와도 숨김 유지). 네트워크: 각 피어가 자기 LocalPlayerSide 로 판정.")]
+        public bool HidePathLineForSide = true;
+
+        [Tooltip("PathLine 을 숨길 로컬 사이드. 기본 P1(Host).")]
+        public PlayerSide PathLineHiddenForSide = PlayerSide.P1;
+
         [Header("Events")]
         public UnityEvent<float> OnSmokeChanged;
         public UnityEvent OnSolved;
@@ -147,6 +155,15 @@ namespace PipePuz.SmokePuzzle
         /// <summary>MiniGame2 보드의 PathLine(LineRenderer) 표시/숨김. 값이 바뀔 때만 적용.</summary>
         void ApplyPathLineVisible(bool visible)
         {
+            // 사이드 규칙: 지정 사이드(기본 P1/Host) 인 로컬 플레이어에게는 PathLine 을 절대 보이지 않게.
+            // (빨간 영역 표시 규칙보다 우선 — P1 은 어떤 경우에도 PathLine 을 못 본다.)
+            if (visible && HidePathLineForSide &&
+                LocalPlayerSide.Current.HasValue &&
+                LocalPlayerSide.Current.Value == PathLineHiddenForSide)
+            {
+                visible = false;
+            }
+
             if (_pathLineVisible == visible) return;
             _pathLineVisible = visible;
             if (MiniGameBoard != null && MiniGameBoard.PathLine != null)
