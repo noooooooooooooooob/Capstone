@@ -25,6 +25,12 @@ public class BatterySlot : MonoBehaviour
     [Tooltip("Auto-found if empty (searches parents then scene).")]
     public MultiBatterySlotPanel panel;
 
+    [Header("Snap 위치")]
+    [Tooltip("켜면 배터리의 (메시 렌더러/콜라이더 기준) 중앙이 슬롯 중앙에 정확히 오도록 보정한다.\n" +
+             "배터리 피벗이 중앙이 아니어도 시각적으로 슬롯 한가운데에 들어간다.\n" +
+             "끄면 기존처럼 배터리 피벗을 슬롯 피벗(transform.position)에 맞춘다.")]
+    public bool centerBatteryOnSlot = true;
+
     // ── State ──────────────────────────────────────────────
     public bool IsFilled { get; private set; }
 
@@ -116,8 +122,21 @@ public class BatterySlot : MonoBehaviour
             rb.constraints     = RigidbodyConstraints.FreezeAll;
         }
 
-        // Snap transform
-        bat.transform.SetPositionAndRotation(transform.position, transform.rotation);
+        // Snap transform — 회전을 먼저 슬롯에 맞춘 뒤 위치 정렬.
+        bat.transform.rotation = transform.rotation;
+
+        if (centerBatteryOnSlot)
+        {
+            // 배터리의 '중앙'(메시/콜라이더 기준)이 슬롯 '중앙'에 오도록 피벗 보정.
+            // center = pivot + (center-pivot) 이므로, pivot = slotCenter - (center-pivot).
+            Vector3 slotCenter = SlotCenter();
+            Vector3 pivotToCenter = WorldCenter(bat) - bat.transform.position;
+            bat.transform.position = slotCenter - pivotToCenter;
+        }
+        else
+        {
+            bat.transform.position = transform.position;
+        }
 
         IsFilled = true;
         _inTrigger.Clear();
@@ -129,6 +148,43 @@ public class BatterySlot : MonoBehaviour
     }
 
     // ── Helpers ────────────────────────────────────────────
+
+    /// <summary>슬롯 중앙(트리거 콜라이더 bounds 중심). 콜라이더가 없으면 transform.position.</summary>
+    Vector3 SlotCenter()
+    {
+        var col = GetComponent<Collider>();
+        return col != null ? col.bounds.center : transform.position;
+    }
+
+    /// <summary>오브젝트의 시각적 중앙(자식 MeshRenderer 들의 합산 bounds 중심). 없으면 콜라이더, 그것도 없으면 피벗.</summary>
+    static Vector3 WorldCenter(GameObject go)
+    {
+        var rends = go.GetComponentsInChildren<MeshRenderer>();
+        if (rends != null && rends.Length > 0)
+        {
+            Bounds b = rends[0].bounds;
+            for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+            return b.center;
+        }
+
+        var skinned = go.GetComponentsInChildren<SkinnedMeshRenderer>();
+        if (skinned != null && skinned.Length > 0)
+        {
+            Bounds b = skinned[0].bounds;
+            for (int i = 1; i < skinned.Length; i++) b.Encapsulate(skinned[i].bounds);
+            return b.center;
+        }
+
+        var cols = go.GetComponentsInChildren<Collider>();
+        if (cols != null && cols.Length > 0)
+        {
+            Bounds b = cols[0].bounds;
+            for (int i = 1; i < cols.Length; i++) b.Encapsulate(cols[i].bounds);
+            return b.center;
+        }
+
+        return go.transform.position;
+    }
 
     static GameObject GetBatteryRoot(Collider col)
     {
