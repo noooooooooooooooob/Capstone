@@ -37,6 +37,11 @@ public class GameManager : NetworkBehaviour
     [Networked] public int CurrentPuzzleIndex { get; set; }
     [Networked] public NetworkBool AllCompleted { get; set; }
 
+    /// <summary>Spawned() 가 호출되어 [Networked] 프로퍼티 접근이 안전한지 여부.
+    /// Spawn 전에 CurrentPuzzleIndex 등을 읽으면 Fusion 이 InvalidOperationException 을 던지므로,
+    /// 외부(Stage3OrbGate 등)에서 네트워크 상태를 폴링할 때 이 값으로 먼저 가드한다.</summary>
+    public bool IsSpawnedAndReady => Object != null && Object.IsValid;
+
     /// <summary>클리어 타임(초)을 모든 피어에 브로드캐스트 — 누가 트리거했든 동일 값 표시. LeaderboardSubmitter가 구독.</summary>
     public event Action<float> OnClearTimeBroadcast;
 
