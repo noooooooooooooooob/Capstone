@@ -1,7 +1,10 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using Capstone.Network;
 using Fusion;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 /// <summary>
 /// 스테이지 전체 진행을 관리하는 네트워크 싱글톤.
@@ -34,8 +37,22 @@ public class GameManager : NetworkBehaviour
     [Tooltip("보이스 클립 종료 후 자막이 남아있는 여유 시간(초). SubtitleHUD.voiceTail과 일치시킬 것.")]
     public float dialogueTail = 0.3f;
 
+    [Header("관전자 대사 진행")]
+    [Tooltip("켜면 관전자(3번째 입장자)가 R 키를 누를 때마다 대사가 한 줄씩(오디오+자막) 진행됨. " +
+             "관전자가 접속해 있지 않으면 보이스 클립 길이에 맞춰 자동 진행(게임이 멈추지 않도록).")]
+    public bool spectatorDrivenDialogue = true;
+
+    [Tooltip("Editor에서 관전자 없이도 키보드 R 키로 대사 진행을 테스트 (빌드/실기에선 컨트롤러 A 버튼 + 관전자 사이드에서만 동작).")]
+    public bool editorKeyboardAdvanceForTest = true;
+
+    /// <summary>관전자 대사 진행 입력 = 오른손 컨트롤러 A 버튼(primaryButton). 코드에서 생성/활성.</summary>
+    InputAction _advanceButtonAction;
+
     [Networked] public int CurrentPuzzleIndex { get; set; }
     [Networked] public NetworkBool AllCompleted { get; set; }
+
+    /// <summary>관전자가 R 키로 "다음 대사" 를 요청했는지 (StateAuthority 측에서만 소비).</summary>
+    bool _dialogueAdvanceRequested;
 
     /// <summary>Spawned() 가 호출되어 [Networked] 프로퍼티 접근이 안전한지 여부.
     /// Spawn 전에 CurrentPuzzleIndex 등을 읽으면 Fusion 이 InvalidOperationException 을 던지므로,
@@ -69,6 +86,74 @@ public class GameManager : NetworkBehaviour
     void OnDestroy()
     {
         if (Instance == this) Instance = null;
+    }
+
+    void OnEnable()
+    {
+        // 오른손 컨트롤러 A 버튼(Quest Touch = primaryButton)에 바인딩.
+        _advanceButtonAction = new InputAction("AdvanceDialogue", InputActionType.Button,
+                                               "<XRController>{RightHand}/primaryButton");
+        _advanceButtonAction.Enable();
+    }
+
+    void OnDisable()
+    {
+        if (_advanceButtonAction != null)
+        {
+            _advanceButtonAction.Disable();
+            _advanceButtonAction.Dispose();
+            _advanceButtonAction = null;
+        }
+    }
+
+    void Update()
+    {
+        if (!spectatorDrivenDialogue) return;
+
+        bool isSpectator = LocalPlayerSide.Current == PlayerSide.Spectator;
+        bool editorTest = editorKeyboardAdvanceForTest && Application.isEditor;
+
+        bool advance = false;
+
+        // 실기/빌드: 관전자가 오른손 컨트롤러 A 버튼을 누르면 다음 대사.
+        if (isSpectator && _advanceButtonAction != null && _advanceButtonAction.WasPressedThisFrame())
+            advance = true;
+
+        // Editor 테스트 편의: 키보드 R.
+        if (editorTest && Keyboard.current != null && Keyboard.current.rKey.wasPressedThisFrame)
+            advance = true;
+
+        if (advance)
+            RequestAdvanceDialogue();
+    }
+
+    /// <summary>
+    /// 관전자가 "다음 대사" 를 요청 — 로컬이 권한자가 아니면 RPC로 호스트(StateAuthority)에 전달.
+    /// RequestAdvanceToNextPuzzle 패턴과 동일.
+    /// </summary>
+    public void RequestAdvanceDialogue()
+    {
+        if (Object != null && Object.IsValid && !HasStateAuthority)
+        {
+            RequestAdvanceDialogueRpc();
+            return;
+        }
+        _dialogueAdvanceRequested = true;
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    void RequestAdvanceDialogueRpc()
+    {
+        _dialogueAdvanceRequested = true;
+    }
+
+    /// <summary>호스트 측에서 관전자가 한 명이라도 접속해 있는지 확인 (대사 수동/자동 진행 분기).</summary>
+    bool AnySpectatorPresent()
+    {
+        var players = FindObjectsByType<NetworkPlayer>(FindObjectsSortMode.None);
+        foreach (var p in players)
+            if (p != null && p.IsSpectator) return true;
+        return false;
     }
 
     /// <summary>측정한 클리어 타임을 모든 피어에 브로드캐스트(RPC). 어느 클라가 호출해도 됨 — 권한 무관.</summary>
@@ -171,11 +256,7 @@ public class GameManager : NetworkBehaviour
     {
         yield return new WaitForSeconds(introDelay);
 
-        if (introDialogueIds != null)
-        {
-            foreach (var id in introDialogueIds)
-                yield return PlayDialogueAndWait(id);
-        }
+        yield return PlayDialogueSequence(introDialogueIds);
 
         AdvanceToNextPuzzle();
     }
@@ -333,17 +414,14 @@ public class GameManager : NetworkBehaviour
     IEnumerator PlayPuzzleStartDialogue(int index)
     {
         var puzzle = puzzles[index];
-        if (puzzle == null || puzzle.startDialogueIds == null) yield break;
-        foreach (var id in puzzle.startDialogueIds)
-            yield return PlayDialogueAndWait(id);
+        if (puzzle == null) yield break;
+        yield return PlayDialogueSequence(puzzle.startDialogueIds);
     }
 
     IEnumerator OutroSequence()
     {
         OnAllPuzzlesCompleted?.Invoke();
-        if (outroDialogueIds == null) yield break;
-        foreach (var id in outroDialogueIds)
-            yield return PlayDialogueAndWait(id);
+        yield return PlayDialogueSequence(outroDialogueIds);
     }
 
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
@@ -365,11 +443,8 @@ public class GameManager : NetworkBehaviour
     IEnumerator AdvanceAfterCompleteDialogue(int index)
     {
         var puzzle = puzzles[index];
-        if (puzzle != null && puzzle.completeDialogueIds != null)
-        {
-            foreach (var id in puzzle.completeDialogueIds)
-                yield return PlayDialogueAndWait(id);
-        }
+        if (puzzle != null)
+            yield return PlayDialogueSequence(puzzle.completeDialogueIds);
         AdvanceToNextPuzzle();
     }
 
@@ -396,6 +471,43 @@ public class GameManager : NetworkBehaviour
         if (line == null) yield break;
         PlayDialogueRpc(id);
         yield return new WaitForSeconds(DialogueDisplayTime(line));
+    }
+
+    /// <summary>
+    /// 대사 묶음을 순서대로 재생. 관전자가 접속해 있고 spectatorDrivenDialogue가 켜져 있으면
+    /// 매 줄마다 관전자의 R 키 입력을 기다렸다가 다음 오디오+자막을 재생(수동 진행).
+    /// 관전자가 없으면 기존처럼 보이스 클립 길이에 맞춰 자동 진행 — 2인 플레이가 멈추지 않도록.
+    /// (StateAuthority 코루틴에서만 호출됨)
+    /// </summary>
+    IEnumerator PlayDialogueSequence(IEnumerable<string> ids)
+    {
+        if (ids == null) yield break;
+
+        bool manual = spectatorDrivenDialogue && AnySpectatorPresent();
+
+        foreach (var id in ids)
+        {
+            var line = dialogue != null ? dialogue.Find(id) : null;
+            if (line == null) continue;
+
+            if (manual)
+            {
+                // 관전자가 R 키를 누를 때까지 대기 → 그때 다음 대사 재생.
+                _dialogueAdvanceRequested = false;
+                yield return new WaitUntil(() => _dialogueAdvanceRequested);
+                _dialogueAdvanceRequested = false;
+
+                PlayDialogueRpc(id);
+
+                // 같은 프레임의 중복 트리거가 다음 줄을 즉시 건너뛰지 않도록 한 프레임 양보.
+                yield return null;
+            }
+            else
+            {
+                PlayDialogueRpc(id);
+                yield return new WaitForSeconds(DialogueDisplayTime(line));
+            }
+        }
     }
 
     /// <summary>자막이 화면에 떠 있어야 할 시간. 보이스가 있으면 클립 길이에 맞춰 다음 대사로 넘어감.</summary>
