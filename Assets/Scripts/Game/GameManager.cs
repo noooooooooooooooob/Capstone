@@ -64,6 +64,10 @@ public class GameManager : NetworkBehaviour
 
     bool _debugCompletingAll;
 
+    /// <summary>이미 재생된 이벤트 NPC 대사 큐(중복 방지). 권한자 측이 유일한 판정 주체라
+    /// 양쪽 피어가 같은 트리거를 발사해도 한 번만 재생된다.</summary>
+    readonly HashSet<string> _firedNpcCues = new HashSet<string>();
+
     /// <summary>(speaker, text, duration, voiceClip) — SubtitleHUD가 구독해 화면에 표시 + 보이스 재생.</summary>
     public event Action<string, string, float, AudioClip> OnDialoguePlayed;
 
@@ -529,6 +533,70 @@ public class GameManager : NetworkBehaviour
             return;
         }
         OnDialoguePlayed?.Invoke(line.speaker, line.text, line.duration, line.voiceClip);
+    }
+
+    // ===== 이벤트 기반 NPC 대사 (버튼/도착/퍼즐 해결 등에서 호출) =====
+
+    /// <summary>
+    /// 게임 이벤트에서 호출하는 NPC 대사 트리거.
+    /// - 어느 피어(P1/P2/관전자)에서 호출하든 StateAuthority로 라우팅되어 한 번만 처리됨.
+    /// - 같은 cue 가 다시 발사돼도 무시(1회 재생).
+    /// - id 를 여러 개 넘기면 (예: "A1","A2") 보이스 클립 길이에 맞춰 순서대로 재생.
+    /// 자막/음성은 기존 PlayDialogueRpc 경로로 모든 피어에 동기 표시된다.
+    /// </summary>
+    public void TriggerNpcCue(params string[] ids)
+    {
+        if (ids == null || ids.Length == 0) return;
+        string key = string.Join(",", ids);
+
+        // 권한자가 아니면 호스트(StateAuthority)에 요청을 넘긴다. (RequestAdvanceDialogue 패턴과 동일)
+        if (Object != null && Object.IsValid && !HasStateAuthority)
+        {
+            TriggerNpcCueRpc(key);
+            return;
+        }
+
+        FireNpcCueAuthoritative(key);
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    void TriggerNpcCueRpc(string key)
+    {
+        FireNpcCueAuthoritative(key);
+    }
+
+    /// <summary>권한자(또는 네트워크 미스폰 에디터 단독) 측에서만 실제 재생. 중복 cue 는 무시.</summary>
+    void FireNpcCueAuthoritative(string key)
+    {
+        // 스폰된 네트워크 객체인데 권한이 없으면 무시 (RPC 권한 충돌 방지).
+        if (Object != null && Object.IsValid && !HasStateAuthority) return;
+        if (string.IsNullOrEmpty(key)) return;
+        if (!_firedNpcCues.Add(key)) return; // 이미 재생한 cue — 중복 트리거 무시
+        StartCoroutine(PlayNpcCueRoutine(key.Split(',')));
+    }
+
+    IEnumerator PlayNpcCueRoutine(string[] ids)
+    {
+        foreach (var id in ids)
+        {
+            var line = dialogue != null ? dialogue.Find(id) : null;
+            if (line == null)
+            {
+                Debug.LogWarning($"[GameManager] NPC cue id 없음: '{id}'");
+                continue;
+            }
+            EmitDialogue(id, line);
+            yield return new WaitForSeconds(DialogueDisplayTime(line));
+        }
+    }
+
+    /// <summary>네트워크 스폰 상태면 RPC로 전 피어 동기 재생, 미스폰(에디터 단독)이면 로컬에서 바로 표시.</summary>
+    void EmitDialogue(string id, ResearcherDialogue.Line line)
+    {
+        if (Object != null && Object.IsValid)
+            PlayDialogueRpc(id);
+        else
+            OnDialoguePlayed?.Invoke(line.speaker, line.text, line.duration, line.voiceClip);
     }
 
     /// <summary>현재 활성 퍼즐의 힌트 문자열 (UI에서 사용).</summary>
