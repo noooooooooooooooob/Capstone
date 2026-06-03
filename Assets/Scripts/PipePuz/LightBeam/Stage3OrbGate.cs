@@ -46,7 +46,8 @@ namespace PipePuz.LightBeam
         {
             if (IsRevealed) return;
             var gm = GameManager.Instance;
-            if (gm != null && gm.CurrentPuzzleIndex >= RevealAtPuzzleIndex)
+            // Spawned() 전에는 [Networked] CurrentPuzzleIndex 접근이 예외를 던지므로 먼저 가드.
+            if (gm != null && gm.IsSpawnedAndReady && gm.CurrentPuzzleIndex >= RevealAtPuzzleIndex)
                 Reveal();
         }
 
