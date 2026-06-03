@@ -68,3 +68,29 @@ MonoBehaviour:
       \uAD6C\uC5ED\uC73C\uB85C \uC774\uB3D9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4."
     duration: 7
     voiceClip: {fileID: 8300000, guid: 5ad2331c04387044fae1b54c5617b8ec, type: 3}
+  - id: C1
+    speaker: Reasearcher Lee
+    text: "\uC774\uB7F0! \uBC14\uB2E5\uC774 \uBD95\uAD34\uB410\uC5B4\uC694! \uACF5\uC911
+      \uBC1C\uD310\uC73C\uB85C\uB9CC \uC774\uB3D9\uD574\uC57C \uD569\uB2C8\uB2E4.
+      \uCD94\uB77D\uD558\uBA74 \uC785\uAD6C\uBD80\uD130 \uB2E4\uC2DC\uB2C8\uAE4C
+      \uC870\uC2EC\uD558\uC138\uC694. \uC810\uD504\uB294 \uBB34\uB9AC\uB2C8, \uD55C
+      \uBA85\uC774 \uC704\uCE35\uC5D0\uC11C \uBC1C\uD310\uC744 \uB358\uC838 \uB2E4\uB9AC\uB97C
+      \uB194\uC918\uC57C \uD569\uB2C8\uB2E4!"
+    duration: 13
+    voiceClip: {fileID: 8300000, guid: 1d1211f2645fa2b48881524c3e42ab4d, type: 3}
+  - id: C2
+    speaker: Reasearcher Lee
+    text: "\uBAA9\uD45C\uB294 \uBE5B\uC744 \uC5F0\uACB0\uD558\uB294 \uAC81\uB2C8\uB2E4!
+      \uAC70\uC6B8\uB4E4\uC744 \uB3CC\uB824 \uC785\uAD6C\uC758 \uAD6C\uCCB4\uAE4C\uC9C0
+      \uBE5B\uC744 \uC3D8\uC138\uC694!"
+    duration: 7
+    voiceClip: {fileID: 8300000, guid: fb56a27f4b365894fafbee0c1d20ac61, type: 3}
+  - id: C3
+    speaker: Reasearcher Lee
+    text: "\uC218\uC2E0\uAE30 \uC810\uB4F1 \uD655\uC778\uD588\uC2B5\uB2C8\uB2E4.
+      \uC2DC\uC124\uC758 \uCF54\uC5B4\uAC00 \uB2E4\uC2DC \uC0B4\uC544\uB098\uACE0
+      \uC788\uC5B4\uC694. \uB450 \uBD84 \uB355\uBD84\uC5D0 \uC5F0\uAD6C\uC18C\uAC00\u2014
+      \uC815\uB9D0, \uAC10\uC0AC\uD569\uB2C8\uB2E4. \uC774\uC81C \uB9C8\uC9C0\uB9C9
+      \uACA9\uB9AC \uD574\uC81C\uB97C \uC704\uD55C \uCD9C\uAD6C\uB85C \uD5A5\uD574\uC8FC\uC138\uC694."
+    duration: 13
+    voiceClip: {fileID: 8300000, guid: 861763242df168b4c9e47008c5636bcd, type: 3}
