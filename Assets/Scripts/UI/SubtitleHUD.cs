@@ -43,6 +43,11 @@ public class SubtitleHUD : MonoBehaviour
     public float fadeInDuration = 0.18f;
     public float fadeOutDuration = 0.28f;
 
+    [Header("문장 분할")]
+    [Tooltip("켜면 한 클립의 긴 대사를 문장(. ! ? … / 개행) 단위로 나눠 클립 길이 안에서 순서대로 표시. " +
+             "보이스는 1회만 재생되고 자막만 전환됨. 끄면 전체 텍스트를 한 번에 표시(기존 동작).")]
+    public bool splitLongTextIntoSentences = true;
+
     [Header("읽기 시간")]
     [Tooltip("보이스 클립이 없을 때만 적용 — 타이핑 완료 후 최소 정지(읽기) 시간(초).")]
     public float minReadTime = 1.2f;
@@ -167,20 +172,22 @@ public class SubtitleHUD : MonoBehaviour
 
         bool hasVoice = voice != null;
 
+        // 한 클립(한 줄)을 문장 단위로 나눠 순서대로 표시. 보이스 클립은 1회만 재생되고,
+        // 자막만 문장별로 전환되어 긴 대사도 화면에 다 안 들어가는 일이 없도록 한다.
+        var segments = splitLongTextIntoSentences ? SplitIntoSentences(text) : null;
+        if (segments == null || segments.Count == 0)
+            segments = new List<string> { text };
+
+        int totalChars = 0;
+        for (int i = 0; i < segments.Count; i++) totalChars += Mathf.Max(1, segments[i].Length);
+
         // 표시 총 시간: 보이스가 있으면 클립 길이에 맞춰 끝나자마자 사라짐(+voiceTail 여유).
         // 없으면 duration을 따르되, 긴 자막이 잘리지 않게 타이핑+최소 읽기 시간을 보장.
         float total = hasVoice
             ? voice.length + voiceTail
             : Mathf.Max(duration, fadeInDuration + text.Length * typeInterval + minReadTime + fadeOutDuration);
 
-        // 보이스가 있으면 타이핑이 보이스 길이 안에서 끝나도록 간격을 압축(동숲식 리빌은 유지).
-        float interval = typeInterval;
-        if (hasVoice && text.Length > 0)
-        {
-            float typingWindow = Mathf.Max(0.01f, total - fadeInDuration - fadeOutDuration);
-            interval = Mathf.Min(typeInterval, typingWindow * 0.9f / text.Length);
-        }
-
+        // 보이스는 줄 시작 시 한 번만 재생.
         if (hasVoice)
         {
             _voiceSource.Stop();
@@ -192,29 +199,90 @@ public class SubtitleHUD : MonoBehaviour
         _textMesh.text = prefix;
         yield return Fade(0f, 1f, fadeInDuration);
 
-        float typeTime = 0f;
-        for (int i = 0; i < text.Length; i++)
-        {
-            _textMesh.text = prefix + text.Substring(0, i + 1);
+        // 문장 전환에 쓸 수 있는 총 시간(페이드 제외)을 문장 길이에 비례 배분.
+        float typingRegion = Mathf.Max(0.01f, total - fadeInDuration - fadeOutDuration);
 
-            // 실제 보이스가 재생 중이면 글자별 animalese는 생략 (보이스 없을 때 폴백 전용).
-            if (!hasVoice && !char.IsWhiteSpace(text[i]) && animaleseSyllables != null && animaleseSyllables.Length > 0)
+        for (int s = 0; s < segments.Count; s++)
+        {
+            string seg = segments[s];
+            float segDuration = typingRegion * (Mathf.Max(1, seg.Length) / (float)totalChars);
+
+            // 글자별 리빌(동숲식). 보이스가 있으면 클립 길이에 맞춰 타이핑 간격 압축.
+            float interval = typeInterval;
+            if (seg.Length > 0)
+                interval = Mathf.Min(typeInterval, segDuration * 0.6f / seg.Length);
+
+            float typeTime = 0f;
+            for (int i = 0; i < seg.Length; i++)
             {
-                _animaleseSource.clip = animaleseSyllables[Random.Range(0, animaleseSyllables.Length)];
-                _animaleseSource.pitch = Random.Range(pitchMin, pitchMax);
-                _animaleseSource.Play();
+                _textMesh.text = prefix + seg.Substring(0, i + 1);
+
+                // 실제 보이스가 재생 중이면 글자별 animalese는 생략 (보이스 없을 때 폴백 전용).
+                if (!hasVoice && !char.IsWhiteSpace(seg[i]) && animaleseSyllables != null && animaleseSyllables.Length > 0)
+                {
+                    _animaleseSource.clip = animaleseSyllables[Random.Range(0, animaleseSyllables.Length)];
+                    _animaleseSource.pitch = Random.Range(pitchMin, pitchMax);
+                    _animaleseSource.Play();
+                }
+
+                typeTime += interval;
+                yield return new WaitForSeconds(interval);
             }
 
-            typeTime += interval;
-            yield return new WaitForSeconds(interval);
+            // 남은 시간 동안 해당 문장을 유지(읽기 시간).
+            float hold = segDuration - typeTime;
+            if (hold > 0f) yield return new WaitForSeconds(hold);
         }
-
-        float remaining = total - fadeInDuration - fadeOutDuration - typeTime;
-        if (remaining > 0f)
-            yield return new WaitForSeconds(remaining);
 
         yield return Fade(1f, 0f, fadeOutDuration);
         _textMesh.text = string.Empty;
+    }
+
+    /// <summary>
+    /// 한 줄 텍스트를 문장 단위로 분할. 개행과 종결부호(. ! ? …)를 경계로 사용하되,
+    /// 연속된 부호("...", "?!")는 한 문장으로 묶고, 줄표(—)는 분할하지 않는다.
+    /// </summary>
+    static List<string> SplitIntoSentences(string text)
+    {
+        var result = new List<string>();
+        if (string.IsNullOrEmpty(text)) return result;
+
+        int start = 0;
+        for (int i = 0; i < text.Length; i++)
+        {
+            char c = text[i];
+            bool isNewline = (c == '\n');
+            bool isEnder = (c == '.' || c == '!' || c == '?' || c == '…'); // …
+
+            if (isEnder)
+            {
+                // 다음 비공백 문자가 또 종결부호면 아직 끊지 않음 ("...", "?!" 등).
+                int j = i + 1;
+                if (j < text.Length)
+                {
+                    char n = text[j];
+                    if (n == '.' || n == '!' || n == '?' || n == '…') continue;
+                }
+            }
+
+            if (isEnder || isNewline)
+            {
+                int len = i - start + (isNewline ? 0 : 1);
+                if (len > 0)
+                {
+                    string seg = text.Substring(start, len).Trim();
+                    if (seg.Length > 0) result.Add(seg);
+                }
+                start = i + 1;
+            }
+        }
+
+        if (start < text.Length)
+        {
+            string tail = text.Substring(start).Trim();
+            if (tail.Length > 0) result.Add(tail);
+        }
+        return result;
     }
 
     IEnumerator Fade(float from, float to, float duration)

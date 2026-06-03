@@ -43,6 +43,12 @@ public class MainControlSystem : NetworkBehaviour
     [Header("Debug")]
     public Button debugSkipCurrentButton;
 
+    [Header("NPC 대사 (이 박사) — 비우면 해당 트리거 비활성")]
+    [Tooltip("Idle 상태에서 안정화 버튼을 처음 누를 때 순서대로 재생. (인트로 A1 → 디스플레이 안내 A2)")]
+    public string[] introCueIds = { "A1", "A2" };
+    [Tooltip("충전 배터리 3개 설치 후 버튼으로 복구(안정화)에 성공할 때 재생. (배관 파열 안내 A3)")]
+    public string[] pipeBurstCueIds = { "A3" };
+
     public enum SystemState { Idle, Stabilizing, BatteryLow, PowerOff, Rebooting }
     
     [Networked]
@@ -304,6 +310,7 @@ public class MainControlSystem : NetworkBehaviour
             return;
         }
         Debug.Log("[MainControlSystem] 배터리 3개 + 버튼 → 복구(안정화) 시작.");
+        FireNpcCue(pipeBurstCueIds);   // A3 — 배관 파열 안내
         StartCoroutine(Reboot());
     }
 
@@ -313,7 +320,16 @@ public class MainControlSystem : NetworkBehaviour
         // 권한자에서만 실행 — [Networked] 상태는 권한자만 쓸 수 있다.
         if (CurrentState != SystemState.Idle) return; // 동시 입력 가드
         Debug.Log("[MainControlSystem] Starting Stabilize Sequence.");
+        FireNpcCue(introCueIds);   // A1, A2 — 인트로 + 디스플레이 안내
         StartCoroutine(StabilizeSequence());
+    }
+
+    /// <summary>이벤트 NPC 대사를 GameManager 경유로 재생(네트워크 안전·1회). 이 RPC 본문은 권한자에서만 실행됨.</summary>
+    void FireNpcCue(string[] ids)
+    {
+        if (ids == null || ids.Length == 0) return;
+        if (GameManager.Instance == null) return;
+        GameManager.Instance.TriggerNpcCue(ids);
     }
 
     IEnumerator StabilizeSequence()

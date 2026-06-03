@@ -1912,6 +1912,7 @@ GameObject:
   - component: {fileID: 31580337}
   - component: {fileID: 31580338}
   - component: {fileID: 31580341}
+  - component: {fileID: 31580342}
   m_Layer: 0
   m_Name: LightOrbSocket
   m_TagString: Untagged
@@ -2020,6 +2021,24 @@ MonoBehaviour:
   NestedObjects: []
   NetworkedBehaviours: []
   ForceRemoteRenderTimeframe: 0
+--- !u!114 &31580342
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 31580336}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 897988fb56aefb141ab44ae9e35e02c9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcCueBinder
+  source: 2
+  cueIds:
+  - C2
+  fireOnce: 1
+  fireDelay: 0
+  searchChildrenAndParent: 1
 --- !u!1001 &32368135
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -92580,6 +92599,8 @@ MonoBehaviour:
   outroDialogueIds: []
   introDelay: 1
   dialogueTail: 0.3
+  spectatorDrivenDialogue: 1
+  editorKeyboardAdvanceForTest: 1
   _CurrentPuzzleIndex: 0
   _AllCompleted:
     _value: 0
@@ -94852,7 +94873,7 @@ MonoBehaviour:
   version: 2
   globalVolume: 0
   mode: 1
-  size: {x: 50.990673, y: 7, z: 88.10333}
+  size: {x: 50.99067, y: 7, z: 88.10333}
   overrideRendererFilters: 0
   minRendererVolumeSize: 0.1
   objectLayerMask:
@@ -94890,7 +94911,7 @@ Transform:
   m_GameObject: {fileID: 662307333}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -14.994661, y: 1.75, z: 21.45589}
+  m_LocalPosition: {x: -14.994663, y: 1.75, z: 21.45589}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -95724,6 +95745,7 @@ GameObject:
   - component: {fileID: 673692659}
   - component: {fileID: 673692660}
   - component: {fileID: 673692661}
+  - component: {fileID: 673692662}
   m_Layer: 0
   m_Name: SoundMaker
   m_TagString: Untagged
@@ -95808,6 +95830,24 @@ MonoBehaviour:
   NetworkedBehaviours:
   - {fileID: 673692659}
   ForceRemoteRenderTimeframe: 0
+--- !u!114 &673692662
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 673692657}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 897988fb56aefb141ab44ae9e35e02c9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcCueBinder
+  source: 1
+  cueIds:
+  - B2
+  fireOnce: 1
+  fireDelay: 3
+  searchChildrenAndParent: 1
 --- !u!1 &673985253
 GameObject:
   m_ObjectHideFlags: 0
@@ -95851,6 +95891,7 @@ MonoBehaviour:
   backgroundAlpha: 0.55
   fadeInDuration: 0.18
   fadeOutDuration: 0.28
+  splitLongTextIntoSentences: 1
   minReadTime: 1.2
   voiceTail: 0.3
   animaleseSyllables:
@@ -128070,6 +128111,7 @@ GameObject:
   - component: {fileID: 969308294}
   - component: {fileID: 969308296}
   - component: {fileID: 969308295}
+  - component: {fileID: 969308297}
   m_Layer: 0
   m_Name: LightBeamController
   m_TagString: Untagged
@@ -128238,6 +128280,24 @@ LineRenderer:
   m_UseWorldSpace: 1
   m_Loop: 0
   m_ApplyActiveColorSpace: 1
+--- !u!114 &969308297
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 969308293}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 897988fb56aefb141ab44ae9e35e02c9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcCueBinder
+  source: 3
+  cueIds:
+  - C3
+  fireOnce: 1
+  fireDelay: 0
+  searchChildrenAndParent: 1
 --- !u!21 &969551511
 Material:
   serializedVersion: 8
@@ -150001,6 +150061,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1121843964}
   - component: {fileID: 1121843965}
+  - component: {fileID: 1121843966}
   m_Layer: 0
   m_Name: Door Stairs
   m_TagString: Untagged
@@ -150055,6 +150116,24 @@ MonoBehaviour:
   OnClosed:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &1121843966
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1121843963}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 897988fb56aefb141ab44ae9e35e02c9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcCueBinder
+  source: 4
+  cueIds:
+  - C1
+  fireOnce: 1
+  fireDelay: 0
+  searchChildrenAndParent: 1
 --- !u!1 &1125910332
 GameObject:
   m_ObjectHideFlags: 0
@@ -199212,6 +199291,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1647185868}
   - component: {fileID: 1647185867}
+  - component: {fileID: 1647185869}
   m_Layer: 0
   m_Name: MiniGame2
   m_TagString: Untagged
@@ -199338,6 +199418,24 @@ Transform:
   - {fileID: 1461000031}
   m_Father: {fileID: 287789905}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1647185869
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1647185866}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 897988fb56aefb141ab44ae9e35e02c9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcCueBinder
+  source: 0
+  cueIds:
+  - A4
+  fireOnce: 1
+  fireDelay: 0
+  searchChildrenAndParent: 1
 --- !u!1 &1648191958
 GameObject:
   m_ObjectHideFlags: 0
@@ -206262,7 +206360,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 892758181003375738, guid: c2a5020a729e96c46bba295eff24094d, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1292139664640859952, guid: c2a5020a729e96c46bba295eff24094d, type: 3}
       propertyPath: m_LocalPosition.x
@@ -209453,6 +209551,78 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1718765329}
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1719573571
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1719573574}
+  - component: {fileID: 1719573573}
+  - component: {fileID: 1719573572}
+  m_Layer: 0
+  m_Name: NPC_CueTrigger_B1_CageRoom
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1719573572
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1719573571}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 897988fb56aefb141ab44ae9e35e02c9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::NpcCueBinder
+  source: 5
+  cueIds:
+  - B1
+  fireOnce: 1
+  fireDelay: 0
+  searchChildrenAndParent: 1
+--- !u!65 &1719573573
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1719573571}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 3, y: 3, z: 3}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!4 &1719573574
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1719573571}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 2.93, y: 1.76, z: 38.54}
+  m_LocalScale: {x: 2, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1720200616
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -291530,3 +291700,4 @@ SceneRoots:
   - {fileID: 124187942}
   - {fileID: 2066567845}
   - {fileID: 615116774}
+  - {fileID: 1719573574}
