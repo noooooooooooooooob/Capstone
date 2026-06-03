@@ -78684,6 +78684,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BatterySlot
   expectedColor: 2
   panel: {fileID: 1349552647}
+  centerBatteryOnSlot: 1
 --- !u!1 &555129619
 GameObject:
   m_ObjectHideFlags: 0
@@ -112449,6 +112450,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BatterySlot
   expectedColor: 1
   panel: {fileID: 1349552647}
+  centerBatteryOnSlot: 1
 --- !u!1001 &760670727
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -146204,11 +146206,11 @@ PrefabInstance:
       objectReference: {fileID: 2100000, guid: 8dbc2a07b8c3e714f978dd42afcdbe8f, type: 2}
     - target: {fileID: 2102909219017503601, guid: 469536fe115374645b07098c6d60da5e, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -0.095
       objectReference: {fileID: 0}
     - target: {fileID: 2102909219017503601, guid: 469536fe115374645b07098c6d60da5e, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.53
+      value: 0.764
       objectReference: {fileID: 0}
     - target: {fileID: 3548615068396631717, guid: 469536fe115374645b07098c6d60da5e, type: 3}
       propertyPath: useSlotTriggers
@@ -222251,6 +222253,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BatterySlot
   expectedColor: 0
   panel: {fileID: 1349552647}
+  centerBatteryOnSlot: 1
 --- !u!1 &1835531177
 GameObject:
   m_ObjectHideFlags: 0
