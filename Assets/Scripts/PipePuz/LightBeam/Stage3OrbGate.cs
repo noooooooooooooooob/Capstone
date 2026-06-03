@@ -20,8 +20,13 @@ namespace PipePuz.LightBeam
     [DisallowMultipleComponent]
     public class Stage3OrbGate : MonoBehaviour
     {
-        [Tooltip("이 퍼즐 인덱스가 활성화되면 orb 공개. LightBeam(Stage3) = 2 (= Stage2 클리어 직후).")]
-        public int RevealAtPuzzleIndex = 2;
+        [Tooltip("이 퍼즐(보통 Stage2/Zoo 케이지)이 완료되면 orb 공개. " +
+                 "지정되어 있으면 RevealAtPuzzleIndex 보다 우선하며, 퍼즐 진행 순서와 무관하게 " +
+                 "해당 퍼즐이 클리어되는 즉시 공개한다. (권장)")]
+        public PuzzleController RevealWhenCompleted;
+
+        [Tooltip("RevealWhenCompleted 가 비어 있을 때만 사용. CurrentPuzzleIndex 가 이 값 이상이면 공개.")]
+        public int RevealAtPuzzleIndex = 3;
 
         [Tooltip("공개 후에도 orb를 공중에 띄워 둔다(kinematic). 플레이어가 첫 grab 후 놓으면 LightOrb가 낙하 처리.")]
         public bool FloatAfterReveal = true;
@@ -45,8 +50,18 @@ namespace PipePuz.LightBeam
         void Update()
         {
             if (IsRevealed) return;
-            var gm = GameManager.Instance;
+
+            // 권장 경로 — 지정한 퍼즐(Stage2/Zoo)이 완료되면 공개. 진행 순서·네트워크 권위와 무관.
+            // PuzzleController.IsCompleted 는 모든 피어에서 CompletePuzzle() 호출 시 true 가 되므로 일관됨.
+            if (RevealWhenCompleted != null)
+            {
+                if (RevealWhenCompleted.IsCompleted) Reveal();
+                return;
+            }
+
+            // 폴백 — 퍼즐 참조가 없을 때만 인덱스로 판정.
             // Spawned() 전에는 [Networked] CurrentPuzzleIndex 접근이 예외를 던지므로 먼저 가드.
+            var gm = GameManager.Instance;
             if (gm != null && gm.IsSpawnedAndReady && gm.CurrentPuzzleIndex >= RevealAtPuzzleIndex)
                 Reveal();
         }

@@ -16,12 +16,13 @@ using UnityEngine;
 public static class Stage3OrbGateSetupTool
 {
     const string Root = "Tools/Stage3/LightOrb Gate/";
-    const int RevealAtPuzzleIndex = 2; // LightBeam = Stage3 = Stage2 클리어 직후
+    const int RevealAtPuzzleIndexFallback = 3; // 퍼즐 참조를 못 찾을 때만 사용하는 폴백 인덱스
 
     [MenuItem(Root + "1) Dry-Run Report (변경 없음)")]
     public static void DryRun()
     {
         var orbs = Object.FindObjectsByType<LightOrb>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        var stage2 = FindStage2Puzzle();
         var sb = new StringBuilder();
         sb.AppendLine($"[Stage3-OrbGate] Dry-Run — 변경 없음. LightOrb {orbs.Length}개:\n");
         foreach (var o in orbs)
@@ -29,9 +30,29 @@ public static class Stage3OrbGateSetupTool
             bool has = o.GetComponent<Stage3OrbGate>() != null;
             sb.AppendLine($"  · {Path(o.gameObject)}  (Stage3OrbGate:{(has ? "있음" : "추가")})");
         }
+        sb.AppendLine();
+        sb.AppendLine(stage2 != null
+            ? $"공개 트리거(Stage2 퍼즐) = {Path(stage2.gameObject)} (puzzleIndex={stage2.puzzleIndex})"
+            : $"Stage2 퍼즐(ClearSoundMaker)을 못 찾음 → 폴백: CurrentPuzzleIndex >= {RevealAtPuzzleIndexFallback}");
         if (orbs.Length == 0)
             sb.AppendLine("  (LightOrb 를 못 찾음 — Main Scene 이 열려 있는지 확인하세요.)");
         Debug.Log(sb.ToString());
+    }
+
+    /// <summary>Stage2(Zoo/케이지) 퍼즐의 PuzzleController 를 찾는다.
+    /// ClearSoundMaker 가 붙은 오브젝트의 PuzzleController 우선, 없으면 최고 인덱스 PuzzleController.</summary>
+    static PuzzleController FindStage2Puzzle()
+    {
+        var cage = Object.FindFirstObjectByType<ClearSoundMaker>(FindObjectsInactive.Include);
+        if (cage != null)
+        {
+            var pc = cage.GetComponent<PuzzleController>();
+            if (pc != null) return pc;
+        }
+        PuzzleController best = null;
+        foreach (var p in Object.FindObjectsByType<PuzzleController>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            if (best == null || p.puzzleIndex > best.puzzleIndex) best = p;
+        return best;
     }
 
     [MenuItem(Root + "2) Apply to Scene")]
@@ -45,9 +66,14 @@ public static class Stage3OrbGateSetupTool
             return;
         }
 
+        var stage2 = FindStage2Puzzle();
+
         if (!EditorUtility.DisplayDialog("Stage3 OrbGate Apply",
-            $"LightOrb {orbs.Length}개에 Stage3OrbGate(RevealAtPuzzleIndex={RevealAtPuzzleIndex})를 적용합니다.\n" +
-            "Stage2 클리어 전까지 숨김 → 클리어 시 공중에 떠 있는 상태로 공개.\n" +
+            $"LightOrb {orbs.Length}개에 Stage3OrbGate 를 적용합니다.\n\n" +
+            (stage2 != null
+                ? $"공개 트리거: '{stage2.name}' (Stage2/Zoo 퍼즐) 완료 시"
+                : $"⚠ Stage2 퍼즐을 못 찾음 → 폴백 인덱스 {RevealAtPuzzleIndexFallback} 사용") + "\n" +
+            "그 전까지는 숨김 → 완료 시 공중에 떠 있는 상태로 공개.\n" +
             "Undo 가능. 적용 후 씬 저장 필요. 계속할까요?",
             "Apply", "Cancel"))
             return;
@@ -63,13 +89,17 @@ public static class Stage3OrbGateSetupTool
             var gate = o.GetComponent<Stage3OrbGate>();
             if (gate == null) gate = Undo.AddComponent<Stage3OrbGate>(o.gameObject);
             Undo.RecordObject(gate, "Stage3 OrbGate Config");
-            gate.RevealAtPuzzleIndex = RevealAtPuzzleIndex;
+            gate.RevealWhenCompleted = stage2;             // 권장 — 퍼즐 완료에 직접 묶음
+            gate.RevealAtPuzzleIndex = RevealAtPuzzleIndexFallback;
             gate.FloatAfterReveal = true;
             EditorUtility.SetDirty(gate);
             sb.AppendLine($"  · {Path(o.gameObject)}");
             count++;
         }
-        sb.AppendLine($"\nLightOrb {count}개에 Stage3OrbGate 적용 완료. 반드시 씬을 저장하세요(Ctrl+S).");
+        sb.AppendLine(stage2 != null
+            ? $"\n공개 트리거 = {Path(stage2.gameObject)} 완료 시."
+            : $"\n⚠ Stage2 퍼즐 미발견 → 폴백 인덱스 {RevealAtPuzzleIndexFallback} 사용.");
+        sb.AppendLine($"LightOrb {count}개에 Stage3OrbGate 적용 완료. 반드시 씬을 저장하세요(Ctrl+S).");
 
         Undo.CollapseUndoOperations(group);
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
