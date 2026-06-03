@@ -50,20 +50,26 @@ namespace PipePuz.LightBeam
         void Update()
         {
             if (IsRevealed) return;
+            if (ShouldReveal()) Reveal();
+        }
 
-            // 권장 경로 — 지정한 퍼즐(Stage2/Zoo)이 완료되면 공개. 진행 순서·네트워크 권위와 무관.
-            // PuzzleController.IsCompleted 는 모든 피어에서 CompletePuzzle() 호출 시 true 가 되므로 일관됨.
-            if (RevealWhenCompleted != null)
-            {
-                if (RevealWhenCompleted.IsCompleted) Reveal();
-                return;
-            }
+        /// <summary>
+        /// 공개 시점 판정. 모든 피어(Host/Guest)에서 동일하게 true 가 되는 신호를 우선 사용해
+        /// orb 가 한쪽에만 보이는 일이 없게 한다.
+        /// </summary>
+        bool ShouldReveal()
+        {
+            // 1) 가장 견고 — 프로젝트가 제공하는 네트워크 동기 클리어 플래그.
+            //    ClearSoundMaker.Solved 는 [Networked] 라 Host/Guest 양쪽에서 동일하게 true 가 되며,
+            //    IsSolved 가 스폰/유효성까지 내부에서 가드한다. (Stage2 케이지 퍼즐)
+            if (ClearSoundMaker.IsSolved) return true;
 
-            // 폴백 — 퍼즐 참조가 없을 때만 인덱스로 판정.
-            // Spawned() 전에는 [Networked] CurrentPuzzleIndex 접근이 예외를 던지므로 먼저 가드.
+            // 2) 명시 지정한 퍼즐(Stage2/Zoo)의 완료. 모든 피어에서 CompletePuzzle() 시 true.
+            if (RevealWhenCompleted != null) return RevealWhenCompleted.IsCompleted;
+
+            // 3) 폴백 — 퍼즐 인덱스. Spawned() 전 [Networked] 접근 예외 방지 가드.
             var gm = GameManager.Instance;
-            if (gm != null && gm.IsSpawnedAndReady && gm.CurrentPuzzleIndex >= RevealAtPuzzleIndex)
-                Reveal();
+            return gm != null && gm.IsSpawnedAndReady && gm.CurrentPuzzleIndex >= RevealAtPuzzleIndex;
         }
 
         /// <summary>orb 를 숨기고 물리를 정지(보이지도/상호작용도/낙하도 안 함).</summary>

@@ -48239,7 +48239,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c258a70f43c886a49bd1b5d06884a0b5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.LightBeam.Stage3OrbGate
-  RevealAtPuzzleIndex: 2
+  RevealWhenCompleted: {fileID: 673692660}
+  RevealAtPuzzleIndex: 3
   FloatAfterReveal: 1
 --- !u!1 &404059624
 GameObject:
@@ -114046,7 +114047,7 @@ MonoBehaviour:
     m_RotationOrder: 4
   m_ThrowVelocityScale: 1.5
   m_ThrowAngularVelocityScale: 1
-  m_ForceGravityOnDetach: 0
+  m_ForceGravityOnDetach: 1
   m_RetainTransformParent: 1
   m_StartingSingleGrabTransformers: []
   m_StartingMultipleGrabTransformers: []
@@ -114223,7 +114224,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d7fda9926b6d55840bc89ebd330769b3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbableSync
-  forceNoThrowOnDetach: 1
+  forceNoThrowOnDetach: 0
   allowNonTransferableObject: 0
   verboseLog: 0
   onGrab:
@@ -151120,7 +151121,7 @@ Transform:
   m_GameObject: {fileID: 1137163478}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 11.242, y: 1.862, z: -17.869}
+  m_LocalPosition: {x: 11.298, y: 1.821, z: -17.869}
   m_LocalScale: {x: 0.16, y: 0.16, z: 0.16}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -151465,7 +151466,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c258a70f43c886a49bd1b5d06884a0b5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PipePuz.LightBeam.Stage3OrbGate
-  RevealAtPuzzleIndex: 2
+  RevealWhenCompleted: {fileID: 673692660}
+  RevealAtPuzzleIndex: 3
   FloatAfterReveal: 1
 --- !u!1001 &1137778371
 PrefabInstance:
@@ -164379,7 +164381,7 @@ MonoBehaviour:
     m_RotationOrder: 4
   m_ThrowVelocityScale: 1.5
   m_ThrowAngularVelocityScale: 1
-  m_ForceGravityOnDetach: 0
+  m_ForceGravityOnDetach: 1
   m_RetainTransformParent: 1
   m_StartingSingleGrabTransformers: []
   m_StartingMultipleGrabTransformers: []
@@ -164589,7 +164591,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d7fda9926b6d55840bc89ebd330769b3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbableSync
-  forceNoThrowOnDetach: 1
+  forceNoThrowOnDetach: 0
   allowNonTransferableObject: 0
   verboseLog: 0
   onGrab:
@@ -175717,7 +175719,7 @@ MonoBehaviour:
     m_RotationOrder: 4
   m_ThrowVelocityScale: 1.5
   m_ThrowAngularVelocityScale: 1
-  m_ForceGravityOnDetach: 0
+  m_ForceGravityOnDetach: 1
   m_RetainTransformParent: 1
   m_StartingSingleGrabTransformers: []
   m_StartingMultipleGrabTransformers: []
@@ -175894,7 +175896,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d7fda9926b6d55840bc89ebd330769b3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NetworkGrabbableSync
-  forceNoThrowOnDetach: 1
+  forceNoThrowOnDetach: 0
   allowNonTransferableObject: 0
   verboseLog: 0
   onGrab:
