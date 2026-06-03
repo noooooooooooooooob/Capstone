@@ -48,12 +48,12 @@ public static class NpcDialogueSetupTool
 
         // B2 — Stage2 클리어 (ClearSoundMaker + ZooPuzzleController 둘 다 지원)
         var clear = Object.FindFirstObjectByType<ClearSoundMaker>(FindObjectsInactive.Include);
-        if (clear != null && AddBinder(clear.gameObject, NpcCueBinder.TriggerSource.Stage2Solved, new[] { "B2" }, log))
+        if (clear != null && AddBinder(clear.gameObject, NpcCueBinder.TriggerSource.Stage2Solved, new[] { "B2" }, log, 3f))
             wired++;
         var zoo = Object.FindFirstObjectByType<PipePuz.Zoo.ZooPuzzleController>(FindObjectsInactive.Include);
         if (zoo != null && (clear == null || zoo.gameObject != clear.gameObject))
         {
-            if (AddBinder(zoo.gameObject, NpcCueBinder.TriggerSource.Stage2Solved, new[] { "B2" }, log))
+            if (AddBinder(zoo.gameObject, NpcCueBinder.TriggerSource.Stage2Solved, new[] { "B2" }, log, 3f))
                 wired++;
         }
         if (clear == null && zoo == null)
@@ -113,17 +113,18 @@ public static class NpcDialogueSetupTool
 
     // ── 헬퍼 ────────────────────────────────────────────────────────────────
 
-    static bool AddBinder(GameObject go, NpcCueBinder.TriggerSource source, string[] cueIds, StringBuilder log)
+    static bool AddBinder(GameObject go, NpcCueBinder.TriggerSource source, string[] cueIds, StringBuilder log, float fireDelay = 0f)
     {
-        // 같은 source 의 binder 가 이미 있으면 cueIds 만 갱신(중복 부착 방지).
+        // 같은 source 의 binder 가 이미 있으면 cueIds/지연만 갱신(중복 부착 방지).
         foreach (var existing in go.GetComponents<NpcCueBinder>())
         {
             if (existing.source == source)
             {
                 Undo.RecordObject(existing, "Update NpcCueBinder");
                 existing.cueIds = cueIds;
+                existing.fireDelay = fireDelay;
                 EditorUtility.SetDirty(existing);
-                log.AppendLine($"• {string.Join(",", cueIds)}: '{go.name}' 의 기존 binder 갱신 (source={source}).");
+                log.AppendLine($"• {string.Join(",", cueIds)}: '{go.name}' 의 기존 binder 갱신 (source={source}, delay={fireDelay}s).");
                 return true;
             }
         }
@@ -132,8 +133,9 @@ public static class NpcDialogueSetupTool
         binder.source = source;
         binder.cueIds = cueIds;
         binder.fireOnce = true;
+        binder.fireDelay = fireDelay;
         EditorUtility.SetDirty(binder);
-        log.AppendLine($"• {string.Join(",", cueIds)}: '{go.name}' 에 NpcCueBinder 부착 (source={source}).");
+        log.AppendLine($"• {string.Join(",", cueIds)}: '{go.name}' 에 NpcCueBinder 부착 (source={source}, delay={fireDelay}s).");
         return true;
     }
 
