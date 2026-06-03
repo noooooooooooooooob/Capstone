@@ -2037,6 +2037,7 @@ MonoBehaviour:
   cueIds:
   - C2
   fireOnce: 1
+  fireDelay: 0
   searchChildrenAndParent: 1
 --- !u!1001 &32368135
 PrefabInstance:
@@ -95845,6 +95846,7 @@ MonoBehaviour:
   cueIds:
   - B2
   fireOnce: 1
+  fireDelay: 3
   searchChildrenAndParent: 1
 --- !u!1 &673985253
 GameObject:
@@ -128294,6 +128296,7 @@ MonoBehaviour:
   cueIds:
   - C3
   fireOnce: 1
+  fireDelay: 0
   searchChildrenAndParent: 1
 --- !u!21 &969551511
 Material:
@@ -150129,6 +150132,7 @@ MonoBehaviour:
   cueIds:
   - C1
   fireOnce: 1
+  fireDelay: 0
   searchChildrenAndParent: 1
 --- !u!1 &1125910332
 GameObject:
@@ -199430,6 +199434,7 @@ MonoBehaviour:
   cueIds:
   - A4
   fireOnce: 1
+  fireDelay: 0
   searchChildrenAndParent: 1
 --- !u!1 &1648191958
 GameObject:
@@ -209580,6 +209585,7 @@ MonoBehaviour:
   cueIds:
   - B1
   fireOnce: 1
+  fireDelay: 0
   searchChildrenAndParent: 1
 --- !u!65 &1719573573
 BoxCollider:

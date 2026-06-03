@@ -39,6 +39,9 @@ public class NpcCueBinder : MonoBehaviour
     [Tooltip("한 번만 재생(권장). GameManager 에 전역 중복방지가 있어 양쪽 피어 합산 1회지만, 로컬에서도 가드.")]
     public bool fireOnce = true;
 
+    [Tooltip("이벤트 발생 후 이 시간(초)만큼 기다렸다가 대사를 재생. 0 이면 즉시.")]
+    public float fireDelay = 0f;
+
     [Header("대상 탐색")]
     [Tooltip("대상 컴포넌트를 자기 자신뿐 아니라 자식/부모에서도 찾는다. (Door/DoorCenter 처럼 한 단계 떨어진 경우 대비)")]
     public bool searchChildrenAndParent = true;
@@ -122,19 +125,37 @@ public class NpcCueBinder : MonoBehaviour
     public void Fire()
     {
         if (fireOnce && _fired) return;
-
-        if (GameManager.Instance == null)
-        {
-            Debug.LogWarning($"[NpcCueBinder] '{name}': GameManager 가 아직 없어 cue 재생을 건너뜀.", this);
-            return; // _fired 를 세우지 않아 다음 발생 때 재시도
-        }
         if (cueIds == null || cueIds.Length == 0)
         {
             Debug.LogWarning($"[NpcCueBinder] '{name}': cueIds 가 비어 있습니다.", this);
             return;
         }
 
+        // 지연이 있으면 예약 시점에 _fired 를 세워 중복 예약을 막고, 코루틴에서 대기 후 재생.
         _fired = true;
+        StartCoroutine(FireRoutine());
+    }
+
+    System.Collections.IEnumerator FireRoutine()
+    {
+        if (fireDelay > 0f)
+            yield return new WaitForSeconds(fireDelay);
+
+        // GameManager 가 아직 스폰되지 않았으면 잠깐 대기(최대 5초).
+        float wait = 0f;
+        while (GameManager.Instance == null && wait < 5f)
+        {
+            wait += Time.deltaTime;
+            yield return null;
+        }
+
+        if (GameManager.Instance == null)
+        {
+            Debug.LogWarning($"[NpcCueBinder] '{name}': GameManager 가 없어 cue 재생 실패.", this);
+            _fired = false; // 다음 발생 때 재시도 가능
+            yield break;
+        }
+
         GameManager.Instance.TriggerNpcCue(cueIds);
     }
 
